@@ -1,1 +1,0 @@
-<?php /**PATH C:\pbl\vendor\filament\filament\resources\views\components\layouts\app\sidebar\footer.blade.php ENDPATH**/ ?>
