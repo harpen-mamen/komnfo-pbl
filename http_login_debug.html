@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html
+    lang="en"
+    dir="ltr"
+    class="filament js-focus-visible min-h-screen antialiased"
+>
+    <head>
+        
+
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="csrf-token" content="3SDDGKOtEUX5jt4Tsz7PyaRNKsE1BLtDGNA2NRMn" />
+
+        
+        
+        <title>
+            Login -  Laravel
+        </title>
+
+        
+
+        <style>
+            [x-cloak=''],
+            [x-cloak='x-cloak'],
+            [x-cloak='1'] {
+                display: none !important;
+            }
+
+            @media (max-width: 1023px) {
+                [x-cloak='-lg'] {
+                    display: none !important;
+                }
+            }
+
+            @media (min-width: 1024px) {
+                [x-cloak='lg'] {
+                    display: none !important;
+                }
+            }
+
+            :root {
+                --sidebar-width: 20rem;
+                --collapsed-sidebar-width: 5.4rem;
+            }
+        </style>
+
+        <!-- Livewire Styles -->
+<style >
+    [wire\:loading], [wire\:loading\.delay], [wire\:loading\.inline-block], [wire\:loading\.inline], [wire\:loading\.block], [wire\:loading\.flex], [wire\:loading\.table], [wire\:loading\.grid], [wire\:loading\.inline-flex] {
+        display: none;
+    }
+
+    [wire\:loading\.delay\.shortest], [wire\:loading\.delay\.shorter], [wire\:loading\.delay\.short], [wire\:loading\.delay\.long], [wire\:loading\.delay\.longer], [wire\:loading\.delay\.longest] {
+        display:none;
+    }
+
+    [wire\:offline] {
+        display: none;
+    }
+
+    [wire\:dirty]:not(textarea):not(input):not(select) {
+        display: none;
+    }
+
+    input:-webkit-autofill, select:-webkit-autofill, textarea:-webkit-autofill {
+        animation-duration: 50000s;
+        animation-name: livewireautofill;
+    }
+
+    @keyframes livewireautofill { from {} }
+</style>
+
+                    <link rel="preconnect" href="https://fonts.googleapis.com" />
+            <link
+                rel="preconnect"
+                href="https://fonts.gstatic.com"
+                crossorigin
+            />
+            <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,700;1,400;1,500;1,700&amp;display=swap" rel="stylesheet" />
+        
+        
+        <link rel="stylesheet" href="http://127.0.0.1:8000/filament/assets/app.css?id=051ae0c568738c610482ba758aff7ae4" />
+
+        
+
+        
+        
+    </head>
+
+    <body
+        class="filament-body min-h-screen overflow-y-auto bg-gray-100 text-gray-900"
+    >
+        
+
+        <div
+        class="filament-login-page flex min-h-screen items-center justify-center bg-gray-100 py-12 text-gray-900"
+    >
+        <div
+            class="-mt-16 w-screen space-y-8 px-6 md:mt-0 md:px-2 max-w-md"
+        >
+            <div
+                class="relative space-y-4 rounded-2xl border border-gray-200 bg-white/50 p-8 shadow-2xl backdrop-blur-xl"
+            >
+                <div class="flex w-full justify-center">
+                    <div
+        class="filament-brand text-xl font-bold leading-5 tracking-tight"
+    >
+        Laravel
+    </div>
+                </div>
+
+                                    <h2 class="text-center text-2xl font-bold tracking-tight">
+                        Login
+                    </h2>
+                
+                <div >
+                    <form wire:id="Z5TqWaHzFbCASYDxYK0O" wire:initial-data="{&quot;fingerprint&quot;:{&quot;id&quot;:&quot;Z5TqWaHzFbCASYDxYK0O&quot;,&quot;name&quot;:&quot;filament.core.auth.login&quot;,&quot;locale&quot;:&quot;en&quot;,&quot;path&quot;:&quot;admin\/login&quot;,&quot;method&quot;:&quot;GET&quot;,&quot;v&quot;:&quot;acj&quot;},&quot;effects&quot;:{&quot;listeners&quot;:[]},&quot;serverMemo&quot;:{&quot;children&quot;:[],&quot;errors&quot;:[],&quot;htmlHash&quot;:&quot;89093e75&quot;,&quot;data&quot;:{&quot;email&quot;:null,&quot;password&quot;:null,&quot;remember&quot;:false,&quot;componentFileAttachments&quot;:[],&quot;mountedFormComponentAction&quot;:null,&quot;mountedFormComponentActionArguments&quot;:[],&quot;mountedFormComponentActionData&quot;:[],&quot;mountedFormComponentActionComponent&quot;:null},&quot;dataMeta&quot;:[],&quot;checksum&quot;:&quot;f4a3ad7772f40134a5c797dff312b9aac4a62204695ea4644f17b8db30fe4ca3&quot;}}" wire:submit.prevent="authenticate" class="space-y-8">
+    <div
+    class="grid grid-cols-1      filament-forms-component-container gap-6"
+>
+    <div
+    class="col-span-1" wire:key="Z5TqWaHzFbCASYDxYK0O.email.Filament\Forms\Components\TextInput"
+>
+    <div class="filament-forms-field-wrapper">
+    
+    <div class="space-y-2">
+                    <div
+                class="flex items-center justify-between space-x-2 rtl:space-x-reverse"
+            >
+                                    <label
+    class="filament-forms-field-wrapper-label inline-flex items-center space-x-3 rtl:space-x-reverse" for="email"
+>
+    
+
+    <span
+        class="text-sm fon

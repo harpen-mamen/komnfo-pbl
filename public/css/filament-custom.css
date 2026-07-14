@@ -1,0 +1,10 @@
+:root{
+  --ringkasan-border: rgba(15,23,42,0.06);
+  --ringkasan-bg: #fff;
+}
+.ringkasan-container{display:flex;flex-wrap:wrap;gap:12px}
+.ringkasan-card{min-width:160px;padding:12px;border-radius:8px;border:1px solid var(--ringkasan-border);background:var(--ringkasan-bg);box-shadow:0 1px 2px rgba(0,0,0,0.03)}
+.ringkasan-card strong{display:block;margin-bottom:6px;color:var(--filament-text-color,#0f172a)}
+@media (max-width:640px){
+  .ringkasan-card{min-width:140px;padding:10px}
+}
