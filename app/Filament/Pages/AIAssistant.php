@@ -18,7 +18,7 @@ use Illuminate\Support\Str;
 
 class AIAssistant extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-cpu-chip';
+    protected static ?string $navigationIcon = 'heroicon-o-sparkles';
     protected static ?string $navigationLabel = 'AI Assistant';
     protected static ?string $title = 'AI Assistant';
     protected static ?int $navigationSort = 11;
