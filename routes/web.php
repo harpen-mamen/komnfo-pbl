@@ -1,6 +1,7 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\LaporanController;
 
 /*
 |--------------------------------------------------------------------------
@@ -31,3 +32,17 @@ Route::get('/', fn () => response()->json([
     'docs' => '/api/v1',
     'admin' => '/admin',
 ]))->name('root');
+
+// Laporan routes - named routes expected by Filament pages/actions.
+Route::middleware(['auth:web'])->group(function (): void {
+    Route::get('/laporan/rumah/pdf',   [LaporanController::class, 'rumahPdf'])->name('laporan.rumah.pdf');
+    Route::get('/laporan/rumah/excel',  [LaporanController::class, 'rumahExcel'])->name('laporan.rumah.excel');
+    Route::get('/laporan/keluarga/pdf', [LaporanController::class, 'keluargaPdf'])->name('laporan.keluarga.pdf');
+    Route::get('/laporan/keluarga/excel', [LaporanController::class, 'keluargaExcel'])->name('laporan.keluarga.excel');
+    Route::get('/laporan/penduduk/pdf',  [LaporanController::class, 'pendudukPdf'])->name('laporan.penduduk.pdf');
+    Route::get('/laporan/penduduk/excel', [LaporanController::class, 'pendudukExcel'])->name('laporan.penduduk.excel');
+    Route::get('/laporan/pendidikan-bulanan/pdf',  [LaporanController::class, 'pendidikanBulananPdf'])->name('laporan.pendidikan.pdf');
+    Route::get('/laporan/pendidikan-bulanan/excel', [LaporanController::class, 'pendidikanBulananExcel'])->name('laporan.pendidikan.excel');
+    Route::get('/laporan/kesehatan-bulanan/pdf',   [LaporanController::class, 'kesehatanBulananPdf'])->name('laporan.kesehatan.pdf');
+    Route::get('/laporan/kesehatan-bulanan/excel',  [LaporanController::class, 'kesehatanBulananExcel'])->name('laporan.kesehatan.excel');
+});

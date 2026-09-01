@@ -40,15 +40,15 @@ class Laporan extends Page
 
         if (PanelAccess::canAccessKabupatenPanel() || PanelAccess::canAccessKecamatanPanel()) {
             $reports = array_merge($reports, [
-                ['label' => 'Pendidikan Bulanan PDF', 'url' => route('laporan.pendidikan-bulanan.pdf')],
-                ['label' => 'Pendidikan Bulanan Excel', 'url' => route('laporan.pendidikan-bulanan.excel')],
+                ['label' => 'Pendidikan Bulanan PDF', 'url' => route('laporan.pendidikan.pdf')],
+                ['label' => 'Pendidikan Bulanan Excel', 'url' => route('laporan.pendidikan.excel')],
             ]);
         }
 
         if (PanelAccess::canAccessKabupatenPanel() || PanelAccess::canAccessKecamatanPanel()) {
             $reports = array_merge($reports, [
-                ['label' => 'Kesehatan Bulanan PDF', 'url' => route('laporan.kesehatan-bulanan.pdf')],
-                ['label' => 'Kesehatan Bulanan Excel', 'url' => route('laporan.kesehatan-bulanan.excel')],
+                ['label' => 'Kesehatan Bulanan PDF', 'url' => route('laporan.kesehatan.pdf')],
+                ['label' => 'Kesehatan Bulanan Excel', 'url' => route('laporan.kesehatan.excel')],
             ]);
         }
 
