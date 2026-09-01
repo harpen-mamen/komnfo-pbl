@@ -23,95 +23,313 @@ class ViewSubmissionBatch extends ViewRecord
     protected static string $resource = SubmissionBatchResource::class;
     protected static string $view = 'filament.pages.submission-batch-review';
 
+    protected function getTitle(): string
+    {
+        return PanelAccess::isAdminKecamatan()
+            ? 'Review Verifikasi Tingkat Kecamatan'
+            : 'Review Verifikasi Kominfo';
+    }
+
+    public function getBreadcrumb(): string
+    {
+        return 'Review';
+    }
+
+    /**
+     * SPRINT 6: Simplified actions based on user role and batch status.
+     *
+     * SIPANDU Workflow:
+     * Flow for Admin Desa:
+     *   - Create batch → PENDING → notification to Admin Kecamatan
+     *
+     * Flow for Admin Kecamatan:
+     *   - See batch from Admin Desa → PENDING
+     *   - "Mulai Review" → IN_REVIEW
+     *   - "Tolak" → REJECTED
+     *   - "Minta Revisi" → REVISION (Admin Desa can resubmit)
+     *   - "Teruskan ke Kominfo" → IN_REVIEW (forwarded_at set) → notify Kominfo
+     *   ⚠ Admin Kecamatan CANNOT approve master data (rumah/keluarga/penduduk)
+     *
+     * Flow for Admin Kominfo:
+     *   - See batch forwarded from Admin Kecamatan → IN_REVIEW
+     *   - "Setujui" → APPROVED + publish
+     *   - "Tolak" → REJECTED
+     *   - "Minta Revisi" → REVISION
+     */
     protected function getActions(): array
     {
-        return [
-            Actions\Action::make('startReview')
-                ->label('Mulai Verifikasi')
-                ->color('primary')
-                ->requiresConfirmation()
-                ->visible(fn (): bool => PanelAccess::isKominfoKabupaten()
-                    && $this->record->status === SubmissionBatch::STATUS_PENDING)
-                ->action(function (): void {
-                    app(BatchApprovalService::class)->startReview($this->record, PanelAccess::user());
+        $actions = [];
+
+        // 1. Mulai Review (Kecamatan/Kominfo) - only for PENDING batches
+        $actions[] = Actions\Action::make('startReview')
+            ->label('Mulai Review')
+            ->color('primary')
+            ->icon('heroicon-o-clipboard-check')
+            ->visible(fn (): bool =>
+                $this->record->status === SubmissionBatch::STATUS_PENDING
+                && (
+                    (PanelAccess::isAdminKecamatan() && $this->isDesaSubmission())
+                    || PanelAccess::isKominfoKabupaten()
+                )
+            )
+            ->action(function (): void {
+                $this->record = app(BatchApprovalService::class)->startReview(
+                    $this->record,
+                    PanelAccess::user()
+                );
+
+                Notification::make()
+                    ->title('Review dimulai')
+                    ->body('Batch sedang dalam proses review.')
+                    ->success()
+                    ->send();
+            });
+
+        // 2. Setujui (Kecamatan untuk batch wilayahnya, atau Kominfo)
+        $actions[] = Actions\Action::make('approve')
+            ->label('Setujui')
+            ->color('success')
+            ->icon('heroicon-o-check')
+            ->form([
+                Textarea::make('catatan')
+                    ->label('Catatan Persetujuan')
+                    ->placeholder('Catatan opsional...')
+                    ->rows(2),
+            ])
+            ->visible(fn (): bool =>
+                $this->record->status === SubmissionBatch::STATUS_IN_REVIEW
+                && $this->canApproveCurrentBatch()
+            )
+            ->action(function (array $data): void {
+                try {
+                    $this->record = app(BatchApprovalService::class)->approve(
+                        $this->record,
+                        PanelAccess::user(),
+                        $data['catatan'] ?? null
+                    );
 
                     Notification::make()
-                        ->title('Verifikasi dimulai')
+                        ->title('Batch Disetujui')
+                        ->body('Batch telah disetujui dan dipublikasikan.')
                         ->success()
                         ->send();
-                }),
-            Actions\Action::make('approve')
-                ->label('Setujui')
-                ->color('success')
-                ->form([
-                    Textarea::make('catatan')
-                        ->label('Catatan')
-                        ->rows(3),
-                ])
-                ->requiresConfirmation()
-                ->visible(fn (): bool => PanelAccess::isKominfoKabupaten()
-                    && $this->record->status === SubmissionBatch::STATUS_IN_REVIEW)
-                ->action(function (array $data): void {
-                    app(BatchApprovalService::class)->approve($this->record, PanelAccess::user(), $data['catatan'] ?? null);
-
+                } catch (\Exception $e) {
                     Notification::make()
-                        ->title('Batch disetujui')
-                        ->success()
-                        ->send();
-                }),
-            Actions\Action::make('requestRevision')
-                ->label('Minta Revisi')
-                ->color('warning')
-                ->form([
-                    Textarea::make('catatan')
-                        ->label('Alasan')
-                        ->required(),
-                ])
-                ->requiresConfirmation()
-                ->visible(fn (): bool => PanelAccess::isKominfoKabupaten()
-                    && $this->record->status === SubmissionBatch::STATUS_IN_REVIEW)
-                ->action(function (array $data): void {
-                    app(BatchApprovalService::class)->requestRevision($this->record, PanelAccess::user(), 'Catatan Kominfo: '.$data['catatan']);
-
-                    Notification::make()
-                        ->title('Permintaan revisi terkirim')
-                        ->warning()
-                        ->send();
-                }),
-            Actions\Action::make('reject')
-                ->label('Tolak')
-                ->color('danger')
-                ->form([
-                    Textarea::make('catatan')
-                        ->label('Catatan')
-                        ->required(),
-                ])
-                ->requiresConfirmation()
-                ->visible(fn (): bool => PanelAccess::isKominfoKabupaten()
-                    && $this->record->status === SubmissionBatch::STATUS_IN_REVIEW)
-                ->action(function (array $data): void {
-                    app(BatchApprovalService::class)->reject($this->record, PanelAccess::user(), 'Catatan Kominfo: '.$data['catatan']);
-
-                    Notification::make()
-                        ->title('Batch ditolak')
+                        ->title('Gagal')
+                        ->body($e->getMessage())
                         ->danger()
                         ->send();
-                }),
-            Actions\Action::make('archive')
-                ->label('Arsipkan')
-                ->color('gray')
-                ->requiresConfirmation()
-                ->visible(fn (): bool => PanelAccess::isKominfoKabupaten()
-                    && in_array($this->record->status, [SubmissionBatch::STATUS_APPROVED, SubmissionBatch::STATUS_REJECTED], true))
-                ->action(function (): void {
-                    app(BatchApprovalService::class)->archive($this->record, PanelAccess::user());
+                }
+            });
 
-                    Notification::make()
-                        ->title('Batch diarsipkan')
-                        ->success()
-                        ->send();
-                }),
-        ];
+        // 3. Tolak (Admin Kecamatan CAN reject; Kominfo can reject all)
+        $actions[] = Actions\Action::make('reject')
+            ->label('Tolak')
+            ->color('danger')
+            ->icon('heroicon-o-x')
+            ->form([
+                Textarea::make('catatan')
+                    ->label('Alasan Penolakan')
+                    ->placeholder('Jelaskan alasan penolakan...')
+                    ->required(),
+            ])
+            ->requiresConfirmation()
+            ->visible(fn (): bool =>
+                $this->record->status === SubmissionBatch::STATUS_IN_REVIEW
+                && $this->canRejectOrRequestRevision()
+            )
+            ->action(function (array $data): void {
+                $this->record = app(BatchApprovalService::class)->reject(
+                    $this->record,
+                    PanelAccess::user(),
+                    $data['catatan']
+                );
+
+                Notification::make()
+                    ->title('Batch Ditolak')
+                    ->body('Batch telah ditolak. Admin Desa akan diberitahu.')
+                    ->danger()
+                    ->send();
+            });
+
+        // 4. Minta Revisi (Admin Kecamatan CAN request revision; Kominfo can request revision)
+        $actions[] = Actions\Action::make('requestRevision')
+            ->label('Minta Revisi')
+            ->color('warning')
+            ->icon('heroicon-o-arrow-right')
+            ->form([
+                Textarea::make('catatan')
+                    ->label('Catatan / Alasan Revisi')
+                    ->placeholder('Jelaskan apa yang perlu direvisi...')
+                    ->required(),
+            ])
+            ->requiresConfirmation()
+            ->visible(fn (): bool =>
+                $this->record->status === SubmissionBatch::STATUS_IN_REVIEW
+                && $this->canRejectOrRequestRevision()
+            )
+            ->action(function (array $data): void {
+                $prefix = PanelAccess::isAdminKecamatan() ? '[Kecamatan] ' : '[Kominfo] ';
+                $this->record = app(BatchApprovalService::class)->requestRevision(
+                    $this->record,
+                    PanelAccess::user(),
+                    $prefix . $data['catatan']
+                );
+
+                Notification::make()
+                    ->title('Permintaan Revisi Terkirim')
+                    ->body('Admin Desa akan diminta untuk merevisi data.')
+                    ->warning()
+                    ->send();
+            });
+
+        // 5. Teruskan ke Kominfo (Kecamatan only — must NOT already be forwarded)
+        $actions[] = Actions\Action::make('forwardToKominfo')
+            ->label('Teruskan ke Kominfo')
+            ->color('info')
+            ->icon('heroicon-o-paper-airplane')
+            ->form([
+                Textarea::make('catatan')
+                    ->label('Catatan')
+                    ->placeholder('Catatan opsional untuk Kominfo...')
+                    ->rows(2),
+            ])
+            ->requiresConfirmation()
+            ->visible(fn (): bool =>
+                PanelAccess::isAdminKecamatan()
+                && $this->isDesaSubmission()
+                && $this->record->status === SubmissionBatch::STATUS_IN_REVIEW
+                && ! $this->record->isForwarded()
+            )
+            ->action(function (array $data): void {
+                $this->record = app(BatchApprovalService::class)->forwardToKominfo(
+                    $this->record,
+                    PanelAccess::user(),
+                    $data['catatan'] ?? null
+                );
+
+                Notification::make()
+                    ->title('Batch Diteruskan ke Kominfo')
+                    ->body('Admin Kominfo telah diberitahu untuk ikut mereview batch ini.')
+                    ->info()
+                    ->send();
+            });
+
+        // 6. Kirim Ulang (untuk batch REVISION)
+        $actions[] = Actions\Action::make('resubmit')
+            ->label('Kirim Ulang')
+            ->color('warning')
+            ->icon('heroicon-o-arrow-up')
+            ->visible(fn (): bool =>
+                $this->record->status === SubmissionBatch::STATUS_REVISION
+                && PanelAccess::isAdminDesa()
+            )
+            ->action(function (): void {
+                $this->record = app(BatchApprovalService::class)->submit(
+                    $this->record,
+                    PanelAccess::user()
+                );
+
+                Notification::make()
+                    ->title('Batch Dikirim Ulang')
+                    ->body('Batch telah dikirim ulang untuk diverifikasi.')
+                    ->success()
+                    ->send();
+            });
+
+        // 7. Arsipkan (Kominfo only - untuk batch yang sudah final)
+        $actions[] = Actions\Action::make('archive')
+            ->label('Arsipkan')
+            ->color('gray')
+            ->icon('heroicon-o-archive')
+            ->requiresConfirmation()
+            ->visible(fn (): bool =>
+                PanelAccess::isKominfoKabupaten()
+                && in_array($this->record->status, [
+                    SubmissionBatch::STATUS_APPROVED,
+                    SubmissionBatch::STATUS_REJECTED,
+                ], true)
+            )
+            ->action(function (): void {
+                $this->record = app(BatchApprovalService::class)->archive(
+                    $this->record,
+                    PanelAccess::user()
+                );
+
+                Notification::make()
+                    ->title('Batch Diarsipkan')
+                    ->body('Batch telah dipindahkan ke arsip.')
+                    ->success()
+                    ->send();
+            });
+
+        return $actions;
+    }
+
+    /**
+     * Check if user can approve/reject the current batch.
+     *
+     * CRITICAL FIX C2: Admin Kecamatan CANNOT approve master-data batches.
+     *   Only Admin Kominfo (or kabupaten admins) can approve master data.
+     *   Admin Kecamatan can only: start review, reject, request revision, forward.
+     */
+    private function canApproveCurrentBatch(): bool
+    {
+        $user = PanelAccess::user();
+
+        if (! $user) {
+            return false;
+        }
+
+        // Admin Kominfo can approve all batches (after forward for master data)
+        if (PanelAccess::isKominfoKabupaten()) {
+            // For master-data batches, require that they were forwarded by Kecamatan
+            if ($this->record->isMasterData() && ! $this->record->isForwarded()) {
+                return false;
+            }
+
+            return true;
+        }
+
+        // Admin Kecamatan CANNOT approve master-data batches — they can only forward.
+        if (PanelAccess::isAdminKecamatan()) {
+            return false;
+        }
+
+        return false;
+    }
+
+    /**
+     * Admin Kecamatan can reject/request-revision for batches in their wilayah.
+     * Admin Kominfo can reject/request-revision for all batches.
+     */
+    private function canRejectOrRequestRevision(): bool
+    {
+        $user = PanelAccess::user();
+
+        if (! $user) {
+            return false;
+        }
+
+        // Admin Kominfo can reject/revision any batch in IN_REVIEW
+        if (PanelAccess::isKominfoKabupaten()) {
+            return true;
+        }
+
+        // Admin Kecamatan can reject/revision batches from their wilayah
+        if (PanelAccess::isAdminKecamatan()) {
+            $userKecamatanId = $user->kecamatan_id ?? $user->desa?->kecamatan_id;
+            return (int) $userKecamatanId === (int) $this->record->kecamatan_id;
+        }
+
+        return false;
+    }
+
+    private function isDesaSubmission(): bool
+    {
+        $this->record->loadMissing('createdBy');
+
+        return $this->record->createdBy?->hasRole('admin_desa') ?? false;
     }
 
     public function getEntitySummary(): array
@@ -127,6 +345,7 @@ class ViewSubmissionBatch extends ViewRecord
             ['label' => 'Tahun', 'value' => $this->record->periode_tahun ?? '-'],
             ['label' => 'Status', 'value' => SubmissionBatch::statusLabel($this->record->status)],
             ['label' => 'Pengirim', 'value' => $this->record->createdBy?->name],
+            ['label' => 'Role Pengirim', 'value' => $this->isDesaSubmission() ? 'Admin Desa' : 'Admin Kecamatan'],
             ['label' => 'Tanggal Kirim', 'value' => $this->record->submitted_at?->format('d M Y H:i')],
             ['label' => 'Diverifikasi Oleh', 'value' => $this->record->verifiedBy?->name],
             ['label' => 'Tanggal Verifikasi', 'value' => $this->record->verified_at?->format('d M Y H:i')],
@@ -232,6 +451,39 @@ class ViewSubmissionBatch extends ViewRecord
             ->all();
     }
 
+    public function getVersionHistory(): array
+    {
+        $this->record->loadMissing('items');
+        $modules = $this->record->package_keys ?: [$this->record->module];
+        $signature = implode('+', collect($modules)->sort()->values()->all());
+
+        return SubmissionBatch::query()
+            ->where('kecamatan_id', $this->record->kecamatan_id)
+            ->where('package_signature', $signature)
+            ->with(['createdBy', 'verifiedBy', 'items'])
+            ->orderBy('id')
+            ->get()
+            ->filter(fn (SubmissionBatch $batch): bool => collect($modules)->every(
+                fn (string $module): bool => $this->versionContainsSameModulePeriod($batch, $module)
+            ))
+            ->map(fn (SubmissionBatch $batch): array => [
+                'id' => $batch->id,
+                'submission_number' => $batch->submission_number,
+                'snapshot_version' => $batch->payload_snapshot['snapshot_version'] ?? $batch->payload_snapshot['revision']['number'] ?? $batch->version,
+                'status' => SubmissionBatch::statusLabel($batch->status),
+                'is_current' => $batch->id === $this->record->id,
+                'is_active' => $batch->id === $this->latestActiveVersionId($modules),
+                'submitted_at' => $batch->submitted_at,
+                'reviewed_at' => $batch->verified_at,
+                'reviewer' => $batch->verifiedBy?->name,
+                'sender' => $batch->createdBy?->name,
+                'rejection_reasons' => $this->batchReasons($batch, SubmissionBatch::STATUS_REJECTED),
+                'comments' => $this->batchComments($batch),
+            ])
+            ->values()
+            ->all();
+    }
+
     public function getTimeline()
     {
         $workflowInstanceId = $this->workflowInstanceId();
@@ -274,7 +526,7 @@ class ViewSubmissionBatch extends ViewRecord
             [
                 'waktu' => $this->record->submitted_at,
                 'status_baru' => SubmissionBatch::statusLabel(SubmissionBatch::STATUS_PENDING),
-                'catatan' => 'Batch dikirim ke Kominfo',
+                'catatan' => 'Batch dikirim untuk diverifikasi',
                 'dilakukan_oleh' => $this->record->createdBy?->name,
             ],
             [
@@ -291,6 +543,85 @@ class ViewSubmissionBatch extends ViewRecord
         return DB::table('workflow_instances')
             ->where('submission_batch_id', $this->record->id)
             ->value('id');
+    }
+
+    private function versionContainsSameModulePeriod(SubmissionBatch $batch, string $module): bool
+    {
+        $snapshot = $this->moduleSnapshotFor($batch, $module);
+        $currentSnapshot = $this->moduleSnapshotFor($this->record, $module);
+
+        if (! $snapshot || ! $currentSnapshot) {
+            return false;
+        }
+
+        return ($snapshot['periode_bulan'] ?? null) === ($currentSnapshot['periode_bulan'] ?? null)
+            && ($snapshot['semester'] ?? null) === ($currentSnapshot['semester'] ?? null)
+            && ($snapshot['periode_tahun'] ?? null) === ($currentSnapshot['periode_tahun'] ?? null);
+    }
+
+    private function moduleSnapshotFor(SubmissionBatch $batch, string $module): ?array
+    {
+        $snapshot = $batch->payload_snapshot ?? [];
+
+        if (($snapshot['module'] ?? null) === $module) {
+            return $snapshot;
+        }
+
+        return collect($snapshot['modules'] ?? [])->firstWhere('module', $module);
+    }
+
+    private function latestActiveVersionId($modules): ?int
+    {
+        return SubmissionBatch::query()
+            ->where('kecamatan_id', $this->record->kecamatan_id)
+            ->where('package_signature', implode('+', collect($modules)->sort()->values()->all()))
+            ->whereIn('status', [
+                SubmissionBatch::STATUS_PENDING,
+                SubmissionBatch::STATUS_IN_REVIEW,
+                SubmissionBatch::STATUS_APPROVED,
+            ])
+            ->orderByDesc('id')
+            ->value('id');
+    }
+
+    private function batchReasons(SubmissionBatch $batch, string $status): array
+    {
+        $workflowInstanceId = DB::table('workflow_instances')
+            ->where('submission_batch_id', $batch->id)
+            ->value('id');
+
+        if (! $workflowInstanceId) {
+            return [];
+        }
+
+        return DB::table('workflow_histories')
+            ->join('workflow_status', 'workflow_status.id', '=', 'workflow_histories.status_baru')
+            ->where('workflow_histories.workflow_instance_id', $workflowInstanceId)
+            ->where('workflow_status.kode', $status)
+            ->orderBy('workflow_histories.created_at')
+            ->pluck('workflow_histories.alasan')
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function batchComments(SubmissionBatch $batch): array
+    {
+        $workflowInstanceId = DB::table('workflow_instances')
+            ->where('submission_batch_id', $batch->id)
+            ->value('id');
+
+        if (! $workflowInstanceId) {
+            return [];
+        }
+
+        return DB::table('verification_comments')
+            ->where('workflow_instance_id', $workflowInstanceId)
+            ->orderBy('created_at')
+            ->pluck('komentar')
+            ->filter()
+            ->values()
+            ->all();
     }
 
     private function summarizeItem(SubmissionBatchItem $item): array

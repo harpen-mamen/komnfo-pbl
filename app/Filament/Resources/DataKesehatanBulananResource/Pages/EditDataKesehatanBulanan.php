@@ -34,8 +34,6 @@ class EditDataKesehatanBulanan extends EditRecord
             $data['status'] = $this->record->status ?: 'Terkirim';
         }
 
-        abort_unless(Desa::query()->whereKey($data['desa_id'])->where('kecamatan_id', $data['kecamatan_id'])->exists(), 403);
-
         return $data;
     }
 }

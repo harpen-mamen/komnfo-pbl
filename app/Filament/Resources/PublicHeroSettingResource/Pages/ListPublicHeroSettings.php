@@ -1,0 +1,1 @@
+<?php namespace App\Filament\Resources\PublicHeroSettingResource\Pages; use App\Filament\Resources\PublicHeroSettingResource; use Filament\Resources\Pages\ListRecords; class ListPublicHeroSettings extends ListRecords {protected static string $resource=PublicHeroSettingResource::class;}

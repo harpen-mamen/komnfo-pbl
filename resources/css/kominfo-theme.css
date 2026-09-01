@@ -1,0 +1,568 @@
+/* ============================================
+   KOMINFO PROFESSIONAL THEME
+   Designed for Production Use
+   Color Palette: Slate (Primary), Green (Accent), Blue (Info)
+   ============================================ */
+
+/* CSS Variables for Theme Customization */
+:root {
+    /* Primary Colors */
+    --kominfo-primary: #2D3748;
+    --kominfo-primary-dark: #1A202C;
+    --kominfo-primary-light: #4A5568;
+    
+    /* Accent Colors */
+    --kominfo-accent: #48BB78;
+    --kominfo-accent-dark: #38A169;
+    --kominfo-accent-light: #9AE6B4;
+    
+    /* Info Colors */
+    --kominfo-info: #3182CE;
+    --kominfo-info-dark: #2C5282;
+    --kominfo-info-light: #63B3ED;
+    
+    /* Status Colors */
+    --kominfo-success: #38A169;
+    --kominfo-warning: #ED8936;
+    --kominfo-danger: #F56565;
+    
+    /* Neutral Colors */
+    --kominfo-bg: #F7FAFC;
+    --kominfo-bg-secondary: #EDF2F7;
+    --kominfo-bg-dark: #1A202C;
+    --kominfo-text: #1A202C;
+    --kominfo-text-light: #4A5568;
+    --kominfo-border: #E2E8F0;
+    
+    /* Shadows */
+    --kominfo-shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --kominfo-shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    --kominfo-shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --kominfo-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --kominfo-shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    --kominfo-shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    
+    /* Spacing */
+    --kominfo-gap: 1.25rem;
+    --kominfo-gap-sm: 0.75rem;
+    --kominfo-gap-lg: 2rem;
+    
+    /* Border Radius */
+    --kominfo-rounded: 0.75rem;
+    --kominfo-rounded-lg: 1rem;
+    --kominfo-rounded-full: 9999px;
+}
+
+/* ============================================
+   GLOBAL STYLES
+   ============================================ */
+
+html {
+    scroll-behavior: smooth;
+}
+
+body {
+    background-color: var(--kominfo-bg);
+    color: var(--kominfo-text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    line-height: 1.6;
+}
+
+body.dark {
+    background-color: var(--kominfo-bg-dark);
+    color: #F7FAFC;
+}
+
+/* ============================================
+   CARD & CONTAINER STYLES
+   ============================================ */
+
+.card-kominfo {
+    background: white;
+    border-radius: var(--kominfo-rounded-lg);
+    box-shadow: var(--kominfo-shadow-sm);
+    border: 1px solid var(--kominfo-border);
+    overflow: hidden;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-kominfo:hover {
+    box-shadow: var(--kominfo-shadow-lg);
+    transform: translateY(-2px);
+}
+
+.card-kominfo.card-kominfo-elevated {
+    box-shadow: var(--kominfo-shadow-md);
+}
+
+.card-kominfo-header {
+    background: linear-gradient(135deg, var(--kominfo-primary) 0%, var(--kominfo-primary-light) 100%);
+    color: white;
+    padding: 1.5rem;
+    border-bottom: 3px solid var(--kominfo-accent);
+}
+
+.card-kominfo-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.card-kominfo-body {
+    padding: var(--kominfo-gap);
+}
+
+.card-kominfo-footer {
+    background: var(--kominfo-bg-secondary);
+    padding: var(--kominfo-gap-sm);
+    border-top: 1px solid var(--kominfo-border);
+}
+
+/* ============================================
+   HEADER & NAVIGATION STYLES
+   ============================================ */
+
+.kominfo-header {
+    background: linear-gradient(135deg, var(--kominfo-primary-dark) 0%, var(--kominfo-primary) 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: var(--kominfo-rounded-lg);
+    margin-bottom: 2rem;
+    box-shadow: var(--kominfo-shadow-lg);
+}
+
+.kominfo-header h1 {
+    margin: 0 0 0.5rem 0;
+    font-size: 2.5rem;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+}
+
+.kominfo-header p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 1.1rem;
+}
+
+/* ============================================
+   BUTTON STYLES
+   ============================================ */
+
+.btn-kominfo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: var(--kominfo-rounded);
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-decoration: none;
+}
+
+.btn-kominfo:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--kominfo-shadow-md);
+}
+
+.btn-kominfo:active {
+    transform: translateY(0);
+}
+
+.btn-kominfo-primary {
+    background: linear-gradient(135deg, var(--kominfo-accent) 0%, var(--kominfo-accent-dark) 100%);
+    color: white;
+}
+
+.btn-kominfo-primary:hover {
+    box-shadow: 0 0 20px rgba(72, 187, 120, 0.3);
+}
+
+.btn-kominfo-secondary {
+    background: var(--kominfo-bg-secondary);
+    color: var(--kominfo-text);
+    border: 1px solid var(--kominfo-border);
+}
+
+.btn-kominfo-secondary:hover {
+    background: white;
+    border-color: var(--kominfo-accent);
+}
+
+.btn-kominfo-outline {
+    background: transparent;
+    color: var(--kominfo-accent);
+    border: 2px solid var(--kominfo-accent);
+}
+
+.btn-kominfo-outline:hover {
+    background: var(--kominfo-accent);
+    color: white;
+}
+
+.btn-kominfo-danger {
+    background: var(--kominfo-danger);
+    color: white;
+}
+
+.btn-kominfo-danger:hover {
+    background: #E53E3E;
+    box-shadow: 0 0 20px rgba(245, 101, 101, 0.3);
+}
+
+.btn-kominfo-small {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.btn-kominfo-large {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+}
+
+.btn-kominfo-block {
+    width: 100%;
+    justify-content: center;
+}
+
+/* ============================================
+   FORM STYLES
+   ============================================ */
+
+.form-group {
+    margin-bottom: var(--kominfo-gap);
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--kominfo-text);
+    font-size: 0.95rem;
+}
+
+.form-label.required::after {
+    content: ' *';
+    color: var(--kominfo-danger);
+}
+
+.form-input,
+.form-select,
+.form-textarea {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 2px solid var(--kominfo-border);
+    border-radius: var(--kominfo-rounded);
+    font-size: 1rem;
+    font-family: inherit;
+    transition: all 0.3s ease;
+    background: white;
+    color: var(--kominfo-text);
+}
+
+.form-input:focus,
+.form-select:focus,
+.form-textarea:focus {
+    outline: none;
+    border-color: var(--kominfo-accent);
+    box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.1);
+}
+
+.form-input::placeholder {
+    color: var(--kominfo-text-light);
+}
+
+.form-helper {
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--kominfo-text-light);
+}
+
+.form-error {
+    margin-top: 0.25rem;
+    font-size: 0.875rem;
+    color: var(--kominfo-danger);
+}
+
+/* ============================================
+   BADGE & TAG STYLES
+   ============================================ */
+
+.badge-kominfo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.875rem;
+    border-radius: var(--kominfo-rounded-full);
+    font-size: 0.8rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.badge-kominfo-primary {
+    background: var(--kominfo-bg-secondary);
+    color: var(--kominfo-primary);
+}
+
+.badge-kominfo-success {
+    background: rgba(56, 161, 105, 0.1);
+    color: var(--kominfo-success);
+}
+
+.badge-kominfo-warning {
+    background: rgba(237, 137, 54, 0.1);
+    color: var(--kominfo-warning);
+}
+
+.badge-kominfo-danger {
+    background: rgba(245, 101, 101, 0.1);
+    color: var(--kominfo-danger);
+}
+
+.badge-kominfo-info {
+    background: rgba(49, 130, 206, 0.1);
+    color: var(--kominfo-info);
+}
+
+/* ============================================
+   STAT WIDGET STYLES
+   ============================================ */
+
+.stat-widget {
+    background: white;
+    border-radius: var(--kominfo-rounded-lg);
+    padding: 1.5rem;
+    box-shadow: var(--kominfo-shadow-sm);
+    border-left: 4px solid var(--kominfo-accent);
+    transition: all 0.3s ease;
+}
+
+.stat-widget:hover {
+    box-shadow: var(--kominfo-shadow-lg);
+    transform: translateY(-2px);
+}
+
+.stat-widget-value {
+    font-size: 2.5rem;
+    font-weight: 800;
+    color: var(--kominfo-primary);
+    margin: 0;
+    line-height: 1;
+}
+
+.stat-widget-label {
+    font-size: 0.9rem;
+    color: var(--kominfo-text-light);
+    margin-top: 0.5rem;
+    font-weight: 500;
+}
+
+.stat-widget-change {
+    font-size: 0.85rem;
+    margin-top: 0.75rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.stat-widget-change.positive {
+    color: var(--kominfo-success);
+}
+
+.stat-widget-change.negative {
+    color: var(--kominfo-danger);
+}
+
+/* ============================================
+   TABLE STYLES
+   ============================================ */
+
+.table-kominfo {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: var(--kominfo-rounded-lg);
+    overflow: hidden;
+    box-shadow: var(--kominfo-shadow-sm);
+}
+
+.table-kominfo thead {
+    background: var(--kominfo-bg-secondary);
+    border-bottom: 2px solid var(--kominfo-border);
+}
+
+.table-kominfo th {
+    padding: 1rem;
+    text-align: left;
+    font-weight: 700;
+    color: var(--kominfo-text);
+    font-size: 0.9rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.table-kominfo td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--kominfo-border);
+    color: var(--kominfo-text-light);
+}
+
+.table-kominfo tbody tr:hover {
+    background: var(--kominfo-bg-secondary);
+    transition: background-color 0.3s ease;
+}
+
+.table-kominfo tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* ============================================
+   ALERT & NOTIFICATION STYLES
+   ============================================ */
+
+.alert-kominfo {
+    padding: 1rem;
+    border-radius: var(--kominfo-rounded);
+    border-left: 4px solid;
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.alert-kominfo-success {
+    background: rgba(56, 161, 105, 0.1);
+    border-color: var(--kominfo-success);
+    color: var(--kominfo-success);
+}
+
+.alert-kominfo-warning {
+    background: rgba(237, 137, 54, 0.1);
+    border-color: var(--kominfo-warning);
+    color: var(--kominfo-warning);
+}
+
+.alert-kominfo-danger {
+    background: rgba(245, 101, 101, 0.1);
+    border-color: var(--kominfo-danger);
+    color: var(--kominfo-danger);
+}
+
+.alert-kominfo-info {
+    background: rgba(49, 130, 206, 0.1);
+    border-color: var(--kominfo-info);
+    color: var(--kominfo-info);
+}
+
+/* ============================================
+   GRID & LAYOUT STYLES
+   ============================================ */
+
+.grid-kominfo {
+    display: grid;
+    gap: var(--kominfo-gap);
+}
+
+.grid-kominfo-2 {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.grid-kominfo-3 {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+}
+
+.grid-kominfo-4 {
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+
+.text-kominfo-primary {
+    color: var(--kominfo-primary);
+}
+
+.text-kominfo-accent {
+    color: var(--kominfo-accent);
+}
+
+.text-kominfo-muted {
+    color: var(--kominfo-text-light);
+}
+
+.bg-kominfo-light {
+    background: var(--kominfo-bg-secondary);
+}
+
+.border-kominfo {
+    border-color: var(--kominfo-border);
+}
+
+.shadow-kominfo {
+    box-shadow: var(--kominfo-shadow-md);
+}
+
+.rounded-kominfo {
+    border-radius: var(--kominfo-rounded);
+}
+
+/* ============================================
+   RESPONSIVE DESIGN
+   ============================================ */
+
+@media (max-width: 768px) {
+    .kominfo-header {
+        padding: 1.5rem;
+    }
+
+    .kominfo-header h1 {
+        font-size: 1.875rem;
+    }
+
+    .grid-kominfo-3 {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+
+    .btn-kominfo {
+        padding: 0.625rem 1.25rem;
+        font-size: 0.875rem;
+    }
+}
+
+/* ============================================
+   DARK MODE SUPPORT
+   ============================================ */
+
+@media (prefers-color-scheme: dark) {
+    .card-kominfo {
+        background: #1E293B;
+        border-color: #334155;
+    }
+
+    .form-input,
+    .form-select,
+    .form-textarea {
+        background: #0F172A;
+        border-color: #334155;
+        color: #F1F5F9;
+    }
+
+    .table-kominfo {
+        background: #1E293B;
+    }
+
+    .table-kominfo thead {
+        background: #0F172A;
+        border-color: #334155;
+    }
+
+    .table-kominfo td {
+        border-color: #334155;
+    }
+
+    .table-kominfo tbody tr:hover {
+        background: #0F172A;
+    }
+}

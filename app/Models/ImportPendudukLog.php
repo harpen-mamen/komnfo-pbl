@@ -2,11 +2,11 @@
 
 namespace App\Models;
 
+use App\Support\UserScope;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Support\AdminKecamatan;
 
 class ImportPendudukLog extends Model
 {
@@ -42,14 +42,7 @@ class ImportPendudukLog extends Model
 
     public function scopeVisibleToCurrentUser(Builder $query): Builder
     {
-        if (AdminKecamatan::isAdminKecamatan()) {
-            $query->where(function (Builder $query): void {
-                $query
-                    ->where('kecamatan_id', AdminKecamatan::kecamatanId())
-                    ->orWhereHas('desa', fn (Builder $desa) => $desa->where('kecamatan_id', AdminKecamatan::kecamatanId()));
-            });
-        }
-
-        return $query;
+        // SPEC-004: Single source of truth — UserScope::visibleTo().
+        return UserScope::visibleTo($query);
     }
 }

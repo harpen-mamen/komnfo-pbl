@@ -14,6 +14,7 @@ use Illuminate\Validation\Rule;
 
 class PendudukImportService
 {
+    public const MAX_ROWS = 10000;
     public const HEADERS = [
         'nomor_kk',
         'nik',
@@ -31,7 +32,14 @@ class PendudukImportService
 
     public function import(string $path): array
     {
+        if (! is_file($path) || filesize($path) > 10 * 1024 * 1024) {
+            throw new \InvalidArgumentException('File import tidak ditemukan atau melebihi batas 10 MB.');
+        }
+
         $rows = $this->readRows($path);
+        if (count($rows) > self::MAX_ROWS) {
+            throw new \InvalidArgumentException('File import maksimal berisi '.self::MAX_ROWS.' baris data.');
+        }
         $created = 0;
         $failed = 0;
 
@@ -49,6 +57,7 @@ class PendudukImportService
                 continue;
             }
 
+                
             $validator = Validator::make($data, [
                 'nomor_kk' => ['required'],
                 'nik' => ['required', 'max:32', Rule::unique('penduduk', 'nik')],

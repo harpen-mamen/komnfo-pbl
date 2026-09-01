@@ -2,48 +2,328 @@
 
 namespace App\Services;
 
+use App\Enums\AppRole;
 use App\Models\SubmissionBatch;
 use App\Models\User;
-use App\Notifications\BatchNotification;
+use App\Services\Notification\BatchNotificationDispatcher;
+use App\Services\Workflow\WorkflowEngine;
 use Illuminate\Auth\Access\AuthorizationException;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Notification as NotificationFacade;
 
+/**
+ * Sprint 5: Facade over the WorkflowEngine + BatchNotificationDispatcher.
+ *
+ * SIPANDU Workflow Architecture (enforced):
+ * ==========================================
+ *
+ *  Admin Desa  → submit()      → PENDING   → notify Admin Kecamatan
+ *  Admin Kecamatan → startReview() → IN_REVIEW
+ *     ├─ reject()          → REJECTED  → notify creator
+ *     ├─ requestRevision() → REVISION  → notify creator
+ *     └─ forwardToKominfo() → IN_REVIEW (forwarded_at set) → notify Kominfo
+ *
+ *  Admin Kominfo (ONLY) → approve()   → APPROVED + publish → notify all
+ *  Admin Kominfo       → reject()    → REJECTED           → notify creator
+ *  Admin Kominfo       → requestRevision() → REVISION      → notify creator
+ *
+ * CRITICAL RULE: Admin Kecamatan CANNOT final-approve master-data batches.
+ *   They can ONLY: startReview, reject, requestRevision, forwardToKominfo.
+ *   Kominfo is the mandatory final gate for rumah/keluarga/penduduk.
+ */
 class BatchApprovalService
 {
+    public function __construct(
+        private readonly WorkflowEngine $engine,
+        private readonly BatchNotificationDispatcher $notifier,
+    ) {}
+
+    /**
+     * Submit batch - oleh Admin Desa atau Admin Kecamatan.
+     * Status: DRAFT → PENDING
+     */
     public function submit(SubmissionBatch $batch, ?User $actor = null, ?string $catatan = null, bool $notify = true): SubmissionBatch
     {
-        return $this->transition($batch, SubmissionBatch::STATUS_PENDING, $actor, $catatan, $notify, 'submit');
+        return $this->engine->transition(
+            $batch,
+            SubmissionBatch::STATUS_PENDING,
+            $actor,
+            $catatan,
+            $notify ? 'submit' : null,
+        );
     }
 
+    /**
+     * Mulai review - oleh Admin Kecamatan.
+     * Status: PENDING → IN_REVIEW
+     */
     public function startReview(SubmissionBatch $batch, ?User $actor = null, ?string $catatan = null): SubmissionBatch
     {
-        return $this->transition($batch, SubmissionBatch::STATUS_IN_REVIEW, $actor, $catatan, false, null);
+        return $this->engine->transition(
+            $batch,
+            SubmissionBatch::STATUS_IN_REVIEW,
+            $actor,
+            $catatan,
+            notificationType: null,
+        );
     }
 
+    /**
+     * FINAL APPROVE — only Admin Kominfo (or kabupaten admins).
+     * Status: IN_REVIEW → APPROVED (triggers publish via afterCommit in WorkflowEngine)
+     *
+     * CRITICAL FIX C2: Admin Kecamatan CANNOT call this for master-data batches.
+     *   The WorkflowEngine enforces this, but this docblock makes it explicit.
+     */
     public function approve(SubmissionBatch $batch, ?User $actor = null, ?string $catatan = null, bool $notify = true): SubmissionBatch
     {
-        return $this->transition($batch, SubmissionBatch::STATUS_APPROVED, $actor, $catatan, $notify, 'kecamatan');
+        return $this->engine->transition(
+            $batch,
+            SubmissionBatch::STATUS_APPROVED,
+            $actor,
+            $catatan,
+            $notify ? 'approve' : null,
+        );
     }
 
+    /**
+     * REJECT oleh Admin Kecamatan ATAU Admin Kominfo.
+     * Status: IN_REVIEW → REJECTED
+     */
     public function reject(SubmissionBatch $batch, ?User $actor = null, ?string $alasan = null, bool $notify = true): SubmissionBatch
     {
-        return $this->transition($batch, SubmissionBatch::STATUS_REJECTED, $actor, $alasan, $notify, 'kecamatan');
+        return $this->engine->transition(
+            $batch,
+            SubmissionBatch::STATUS_REJECTED,
+            $actor,
+            $alasan,
+            $notify ? 'reject' : null,
+        );
     }
 
+    /**
+     * Request Revision - oleh Admin Kecamatan ATAU Admin Kominfo.
+     * Status: IN_REVIEW → REVISION
+     */
     public function requestRevision(SubmissionBatch $batch, ?User $actor = null, ?string $alasan = null, bool $notify = true): SubmissionBatch
     {
-        return $this->transition($batch, SubmissionBatch::STATUS_REVISION, $actor, $alasan, $notify, 'kecamatan');
+        return $this->engine->transition(
+            $batch,
+            SubmissionBatch::STATUS_REVISION,
+            $actor,
+            $alasan,
+            $notify ? 'revision' : null,
+        );
     }
 
+    /**
+     * Archive batch - hanya Admin Kominfo.
+     * Status: APPROVED/REJECTED → ARCHIVED
+     */
     public function archive(SubmissionBatch $batch, ?User $actor = null, ?string $catatan = null, bool $notify = true): SubmissionBatch
     {
-        return $this->transition($batch, SubmissionBatch::STATUS_ARCHIVED, $actor, $catatan, $notify, 'kecamatan');
+        return $this->engine->transition(
+            $batch,
+            SubmissionBatch::STATUS_ARCHIVED,
+            $actor,
+            $catatan,
+            $notify ? 'archive' : null,
+        );
     }
 
+    /**
+     * Forward batch from Admin Kecamatan to Admin Kominfo.
+     * Status: IN_REVIEW → IN_REVIEW (status unchanged, but forwarded_at/forwarded_by set)
+     *
+     * CRITICAL FIX: Forward now sets explicit forwarded_at/forwarded_by columns.
+     *   Previously used `catatan LIKE '%forward%'` — fragile and unreliable.
+     *   Now uses a proper timestamp + foreign key on submission_batches.
+     */
+    public function forwardToKominfo(SubmissionBatch $batch, ?User $actor = null, ?string $catatan = null): SubmissionBatch
+    {
+        return $this->engine->transition(
+            $batch,
+            SubmissionBatch::STATUS_IN_REVIEW,
+            $actor,
+            $catatan,
+            notificationType: 'forward_to_kominfo',
+        );
+    }
+
+    /**
+     * Publish batch yang sudah approved.
+     */
+    public function publish(SubmissionBatch $batch, ?User $actor = null): array
+    {
+        return $this->engine->publish($batch, $actor);
+    }
+
+    /**
+     * Submit batch for review (draft → in_review).
+     * Used by puskes/sekolah operators to submit their data for review.
+     */
+    public function submitForReview(SubmissionBatch $batch, ?User $actor = null, ?string $catatan = null, bool $notify = true): SubmissionBatch
+    {
+        return $this->engine->transition(
+            $batch,
+            SubmissionBatch::STATUS_IN_REVIEW,
+            $actor,
+            $catatan,
+            $notify ? $this->notificationTypeForModule($batch->module) : null,
+        );
+    }
+
+    /**
+     * Check if a user can approve this batch.
+     *
+     * CRITICAL FIX C2:
+     *   Before: Admin Kecamatan could approve master-data batches in their wilayah.
+     *   After:  Only Admin Kominfo (or kabupaten admins) can approve.
+     *           Admin Kecamatan is limited to: startReview, reject, requestRevision, forward.
+     *
+     * @param  User  $user
+     * @param  SubmissionBatch  $batch
+     * @return bool
+     */
+    public function canApprove(User $user, SubmissionBatch $batch): bool
+    {
+        $module = $batch->module;
+
+        // Kabupaten level: can approve all batches
+        if ($user->hasAnyRole(['super_admin', 'admin', 'admin_kominfo'])) {
+            // For master-data batches, also require that the batch was forwarded to Kominfo.
+            // (defense-in-depth; the WorkflowEngine also enforces this)
+            if ($batch->isMasterData() && ! $batch->isForwarded()) {
+                return false;
+            }
+
+            return true;
+        }
+
+        // Admin Kecamatan CANNOT approve master data — they can only forward.
+        // OPD module approvals are handled by OPD admins.
+        if ($user->hasRole('admin_kecamatan')) {
+            return false;
+        }
+
+        // OPD module approvals — oleh OPD admin terkait
+        if (in_array($module, [SubmissionBatch::MODULE_KESEHATAN, SubmissionBatch::MODULE_PUSKES], true)) {
+            return $user->hasAnyRole([
+                AppRole::ADMIN_KESEHATAN->value,
+                AppRole::ADMIN_DINKES->value,
+                AppRole::ADMIN_PUSKESMAS->value,
+            ]);
+        }
+
+        if (in_array($module, [SubmissionBatch::MODULE_PENDIDIKAN, SubmissionBatch::MODULE_SEKOLAH], true)) {
+            return $user->hasAnyRole([
+                AppRole::ADMIN_PENDIDIKAN->value,
+                AppRole::ADMIN_DISPEND->value,
+                AppRole::ADMIN_SEKOLAH->value,
+            ]);
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if a user can START REVIEW (PENDING → IN_REVIEW) this batch.
+     * Admin Kecamatan AND Admin Kominfo can both start review.
+     */
+    public function canStartReview(User $user, SubmissionBatch $batch): bool
+    {
+        if ($batch->status !== SubmissionBatch::STATUS_PENDING) {
+            return false;
+        }
+
+        // Admin Kominfo can start review on any batch
+        if ($user->hasAnyRole(['super_admin', 'admin', 'admin_kominfo'])) {
+            return true;
+        }
+
+        // Admin Kecamatan can start review on batches in their wilayah
+        if ($user->hasRole('admin_kecamatan')) {
+            $userKecamatanId = $user->kecamatan_id ?? $user->desa?->kecamatan_id;
+            return (int) $userKecamatanId === (int) $batch->kecamatan_id;
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if user can forward batch to Kominfo.
+     * Only Admin Kecamatan can forward batches in their wilayah.
+     */
+    public function canForwardToKominfo(User $user, SubmissionBatch $batch): bool
+    {
+        // Already forwarded — no need to forward again
+        if ($batch->isForwarded()) {
+            return false;
+        }
+
+        if ($batch->status !== SubmissionBatch::STATUS_IN_REVIEW) {
+            return false;
+        }
+
+        if ($user->hasRole('admin_kecamatan')) {
+            $userKecamatanId = $user->kecamatan_id ?? $user->desa?->kecamatan_id;
+            return (int) $userKecamatanId === (int) $batch->kecamatan_id;
+        }
+
+        return false;
+    }
+
+    /**
+     * Whether a master-data batch from Admin Desa has passed the Kecamatan gate
+     * and is ready for Kominfo final verification.
+     *
+     * CRITICAL FIX: Replaced `catatan LIKE '%forward%'` with explicit forwarded_at check.
+     *
+     * @param  SubmissionBatch  $batch
+     * @return bool  true if Kominfo can now review/approve this batch
+     */
+    public function isReadyForKominfoVerification(SubmissionBatch $batch): bool
+    {
+        // Batches created directly by Admin Kecamatan (not from Admin Desa) skip forward.
+        if (! $this->wasCreatedByAdminDesa($batch)) {
+            return true;
+        }
+
+        // Master-data batches from Admin Desa require explicit forward.
+        // OPD batches follow their own approval path.
+        if ($batch->isMasterData()) {
+            return $batch->isForwarded();
+        }
+
+        return false;
+    }
+
+    /**
+     * Check if batch was created by Admin Desa.
+     */
+    private function wasCreatedByAdminDesa(SubmissionBatch $batch): bool
+    {
+        $batch->loadMissing('createdBy.roles');
+
+        return $batch->createdBy?->hasRole('admin_desa') ?? false;
+    }
+
+    /**
+     * Determine notification type based on module.
+     */
+    private function notificationTypeForModule(string $module): string
+    {
+        return match ($module) {
+            SubmissionBatch::MODULE_PUSKES => 'puskes',
+            SubmissionBatch::MODULE_SEKOLAH => 'sekolah',
+            default => 'kecamatan',
+        };
+    }
+
+    /**
+     * Build a human-readable timeline of the batch for the UI.
+     */
     public function createTimeline(SubmissionBatch $batch): Collection
     {
         return collect([
@@ -58,7 +338,7 @@ class BatchApprovalService
                 'jenis' => 'batch',
                 'waktu' => $batch->submitted_at,
                 'status_baru' => SubmissionBatch::statusLabel(SubmissionBatch::STATUS_PENDING),
-                'catatan' => 'Batch dikirim ke Kominfo',
+                'catatan' => 'Batch dikirim untuk diverifikasi',
                 'dilakukan_oleh' => $batch->createdBy?->name,
             ],
             [
@@ -71,251 +351,13 @@ class BatchApprovalService
         ])->filter(fn (array $item): bool => ! empty($item['waktu']))->values();
     }
 
-    private function transition(SubmissionBatch $batch, string $statusBaru, ?User $actor, ?string $catatan, bool $notify, ?string $notificationType): SubmissionBatch
+    /**
+     * Get workflow status ID by kode.
+     */
+    private function getWorkflowStatusId(string $status): ?int
     {
-        $actor ??= Auth::user();
-
-        if (! $actor) {
-            throw new AuthorizationException('Pengguna belum terautentikasi.');
-        }
-
-        return DB::transaction(function () use ($batch, $statusBaru, $actor, $catatan, $notify, $notificationType): SubmissionBatch {
-            $lockedBatch = SubmissionBatch::query()
-                ->whereKey($batch->getKey())
-                ->lockForUpdate()
-                ->firstOrFail();
-
-            $statusLama = $lockedBatch->status;
-            $updatedBatch = $this->changeBatchStatus($lockedBatch, $statusBaru, $actor, $catatan);
-            $this->recordWorkflowTransition($updatedBatch, $statusLama, $statusBaru, $actor, $catatan);
-
-            if ($notify && $notificationType !== null) {
-                DB::afterCommit(function () use ($updatedBatch, $actor, $notificationType): void {
-                    if ($notificationType === 'submit') {
-                        $this->notifyKominfo($updatedBatch, $actor);
-
-                        return;
-                    }
-
-                    $this->notifyKecamatan($updatedBatch, $updatedBatch->status, $actor);
-                });
-            }
-
-            return $updatedBatch;
-        });
-    }
-
-    private function changeBatchStatus(SubmissionBatch $batch, string $statusBaru, User $actor, ?string $catatan = null): SubmissionBatch
-    {
-        $this->assertTransitionAllowed($actor, $batch, $statusBaru);
-
-        $verifiedAt = match ($statusBaru) {
-            SubmissionBatch::STATUS_APPROVED, SubmissionBatch::STATUS_REJECTED => now(),
-            SubmissionBatch::STATUS_ARCHIVED => $batch->verified_at,
-            default => null,
-        };
-
-        $verifiedBy = match ($statusBaru) {
-            SubmissionBatch::STATUS_APPROVED, SubmissionBatch::STATUS_REJECTED => $actor->id,
-            SubmissionBatch::STATUS_ARCHIVED => $batch->verified_by,
-            default => null,
-        };
-
-        $batch->forceFill([
-            'status' => $statusBaru,
-            'submitted_at' => $statusBaru === SubmissionBatch::STATUS_PENDING ? now() : $batch->submitted_at,
-            'verified_at' => $verifiedAt,
-            'verified_by' => $verifiedBy,
-            'version' => (int) $batch->version + 1,
-            'notes' => $catatan ? trim(($batch->notes ? $batch->notes."\n" : '').$catatan) : $batch->notes,
-        ])->saveQuietly();
-
-        return $batch->fresh(['kecamatan', 'createdBy', 'verifiedBy', 'items.entity']);
-    }
-
-    private function recordWorkflowTransition(SubmissionBatch $batch, string $statusLama, string $statusBaru, User $actor, ?string $catatan = null): void
-    {
-        $workflowInstanceId = $this->workflowInstanceId($batch, $actor);
-        $previousStatusId = $this->workflowStatusId($statusLama);
-        $newStatusId = $this->workflowStatusId($statusBaru);
-
-        DB::table('workflow_instances')
-            ->where('id', $workflowInstanceId)
-            ->update([
-                'status_id' => $newStatusId,
-                'kecamatan_id' => $batch->kecamatan_id,
-                'dibuat_oleh' => $batch->created_by,
-                'diverifikasi_oleh' => in_array($statusBaru, [SubmissionBatch::STATUS_APPROVED, SubmissionBatch::STATUS_REJECTED], true) ? $actor->id : $batch->verified_by,
-                'tanggal_submit' => $batch->submitted_at,
-                'tanggal_verifikasi' => $batch->verified_at,
-                'updated_at' => now(),
-            ]);
-
-        DB::table('workflow_histories')->insert([
-            'workflow_instance_id' => $workflowInstanceId,
-            'status_sebelumnya' => $previousStatusId,
-            'status_baru' => $newStatusId,
-            'catatan' => $catatan,
-            'alasan' => in_array($statusBaru, [SubmissionBatch::STATUS_REJECTED, SubmissionBatch::STATUS_REVISION], true) ? $catatan : null,
-            'dilakukan_oleh' => $actor->id,
-            'role' => $actor->roles->pluck('name')->first(),
-            'ip_address' => request()?->ip(),
-            'user_agent' => request()?->userAgent(),
-            'created_at' => now(),
-        ]);
-
-        if ($catatan) {
-            DB::table('verification_comments')->insert([
-                'workflow_instance_id' => $workflowInstanceId,
-                'pengguna_id' => $actor->id,
-                'komentar' => $catatan,
-                'tipe' => $statusBaru,
-                'created_at' => now(),
-            ]);
-        }
-    }
-
-    private function workflowInstanceId(SubmissionBatch $batch, User $actor): int
-    {
-        $existing = DB::table('workflow_instances')
-            ->where('submission_batch_id', $batch->id)
+        return \Illuminate\Support\Facades\DB::table('workflow_status')
+            ->where('kode', $status)
             ->value('id');
-
-        if ($existing) {
-            return (int) $existing;
-        }
-
-        return (int) DB::table('workflow_instances')->insertGetId([
-            'entity_type' => SubmissionBatch::class,
-            'entity_id' => $batch->id,
-            'submission_batch_id' => $batch->id,
-            'status_id' => $this->workflowStatusId($batch->status),
-            'kecamatan_id' => $batch->kecamatan_id,
-            'desa_id' => null,
-            'dibuat_oleh' => $batch->created_by ?? $actor->id,
-            'diverifikasi_oleh' => $batch->verified_by,
-            'tanggal_submit' => $batch->submitted_at,
-            'tanggal_verifikasi' => $batch->verified_at,
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
     }
-
-    private function workflowStatusId(string $status): ?int
-    {
-        return DB::table('workflow_status')->where('kode', $status)->value('id');
-    }
-
-    private function assertTransitionAllowed(User $actor, SubmissionBatch $batch, string $statusBaru): void
-    {
-        $allowedTransitions = [
-            SubmissionBatch::STATUS_DRAFT => [SubmissionBatch::STATUS_PENDING],
-            SubmissionBatch::STATUS_PENDING => [SubmissionBatch::STATUS_IN_REVIEW],
-            SubmissionBatch::STATUS_IN_REVIEW => [
-                SubmissionBatch::STATUS_APPROVED,
-                SubmissionBatch::STATUS_REJECTED,
-                SubmissionBatch::STATUS_REVISION,
-            ],
-            SubmissionBatch::STATUS_REVISION => [SubmissionBatch::STATUS_PENDING],
-            SubmissionBatch::STATUS_APPROVED => [SubmissionBatch::STATUS_ARCHIVED],
-            SubmissionBatch::STATUS_REJECTED => [SubmissionBatch::STATUS_ARCHIVED],
-            SubmissionBatch::STATUS_ARCHIVED => [],
-        ];
-
-        if (! in_array($statusBaru, $allowedTransitions[$batch->status] ?? [], true)) {
-            throw new AuthorizationException(sprintf(
-                'Transisi batch dari [%s] ke [%s] tidak diizinkan.',
-                $batch->status,
-                $statusBaru,
-            ));
-        }
-
-        if ($statusBaru === SubmissionBatch::STATUS_PENDING && $actor->hasRole('admin_kecamatan')) {
-            if ((int) $actor->kecamatan_id !== (int) $batch->kecamatan_id) {
-                throw new AuthorizationException('Admin Kecamatan tidak dapat mengirim batch kecamatan lain.');
-            }
-
-            return;
-        }
-
-        if ($statusBaru !== SubmissionBatch::STATUS_PENDING && $actor->hasRole('admin')) {
-            return;
-        }
-
-        throw new AuthorizationException('Transisi batch tidak diizinkan untuk role ini.');
-    }
-
-    private function notifyKominfo(SubmissionBatch $batch, User $actor): void
-    {
-        $recipients = User::query()
-            ->whereHas('roles', fn (Builder $query) => $query->where('name', 'admin'))
-            ->get();
-
-        if ($recipients->isEmpty()) {
-            return;
-        }
-
-        $title = SubmissionBatch::moduleLabel($batch->module).' menunggu verifikasi';
-        $message = sprintf(
-            'Batch %s untuk %s #%s menunggu verifikasi.',
-            $batch->submission_number,
-            SubmissionBatch::moduleLabel($batch->module),
-            $batch->kecamatan?->nama ?? '-',
-        );
-
-        NotificationFacade::send(
-            $recipients,
-            new BatchNotification(
-                $title,
-                $message,
-                class_basename($batch),
-                $batch->getKey(),
-                $actor->id,
-                $actor->name,
-            ),
-        );
-    }
-
-    private function notifyKecamatan(SubmissionBatch $batch, string $status, User $actor): void
-    {
-        if (! $batch->kecamatan_id) {
-            return;
-        }
-
-        $recipients = User::query()
-            ->whereHas('roles', fn (Builder $query) => $query->where('name', 'admin_kecamatan'))
-            ->where('kecamatan_id', $batch->kecamatan_id)
-            ->get();
-
-        if ($recipients->isEmpty()) {
-            return;
-        }
-
-        $statusLabel = match ($status) {
-            SubmissionBatch::STATUS_APPROVED => 'disetujui',
-            SubmissionBatch::STATUS_REJECTED => 'ditolak',
-            SubmissionBatch::STATUS_REVISION => 'diminta revisi',
-            SubmissionBatch::STATUS_ARCHIVED => 'diarsipkan',
-            default => 'diperbarui',
-        };
-
-        NotificationFacade::send(
-            $recipients,
-            new BatchNotification(
-                'Status batch telah '.$statusLabel,
-                sprintf(
-                    'Batch %s untuk %s #%s telah %s.',
-                    $batch->submission_number,
-                    SubmissionBatch::moduleLabel($batch->module),
-                    $batch->kecamatan?->nama ?? '-',
-                    $statusLabel,
-                ),
-                class_basename($batch),
-                $batch->getKey(),
-                $actor->id,
-                $actor->name,
-            ),
-        );
-    }
-
 }

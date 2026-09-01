@@ -2,13 +2,16 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Forms\Components\LeafletPicker;
 use App\Filament\Resources\RumahResource\Pages;
 use App\Models\Rumah;
 use App\Models\Kecamatan;
 use App\Models\SubmissionBatch;
+use App\Services\Authorization\WewenangService;
 use App\Support\AdminKecamatan;
 use App\Support\PanelAccess;
 use Filament\Forms;
+use Filament\Forms\Components;
 use Filament\Resources\Form;
 use Filament\Resources\Resource;
 use Filament\Resources\Table;
@@ -38,7 +41,25 @@ class RumahResource extends Resource
 
     public static function canCreate(): bool
     {
-        return AdminKecamatan::isAdminKecamatan();
+        $user = auth()->user();
+        if (!$user) return false;
+
+        // SPRINT 6: Admin Kecamatan BISA membuat data master
+        if ($user->isAdminKecamatan()) {
+            return true;
+        }
+
+        // Admin Desa
+        if ($user->isAdminDesa()) {
+            return true;
+        }
+
+        // Kabupaten level
+        if (PanelAccess::canAccessKabupatenPanel()) {
+            return true;
+        }
+
+        return false;
     }
 
     public static function canViewAny(): bool
@@ -48,12 +69,16 @@ class RumahResource extends Resource
 
     public static function canEdit(Model $record): bool
     {
-        return AdminKecamatan::isAdminKecamatan();
+        return app(WewenangService::class)
+            ->setUser(auth()->user())
+            ->canEditRecord(Rumah::class, $record->id);
     }
 
     public static function canDelete(Model $record): bool
     {
-        return AdminKecamatan::isAdminKecamatan();
+        return app(WewenangService::class)
+            ->setUser(auth()->user())
+            ->canDeleteRecord(Rumah::class, $record->id);
     }
 
     public static function canDeleteAny(): bool
@@ -71,16 +96,17 @@ class RumahResource extends Resource
                 ->label('Desa')
                 ->options(fn () => AdminKecamatan::desaOptions())
                 ->searchable()
-                ->required(),
+                ->required()
+                ->disabled(fn () => AdminKecamatan::isAdminDesa()),
             Forms\Components\TextInput::make('kode_rumah')->label('Kode Rumah')->required()->unique(ignoreRecord: true)->maxLength(255),
             Forms\Components\Textarea::make('alamat_lengkap')->label('Alamat Lengkap')->required()->rows(3)->columnSpanFull(),
-            Forms\Components\Grid::make(2)->schema([
-                Forms\Components\TextInput::make('latitude')->required()->numeric()->reactive(),
-                Forms\Components\TextInput::make('longitude')->required()->numeric()->reactive(),
-            ]),
-            Forms\Components\View::make('filament.forms.leaflet-picker')->columnSpanFull(),
+            LeafletPicker::make('koordinat')
+                ->label('Pilih Lokasi di Peta')
+                ->hint('Klik pada peta untuk memilih titik koordinat rumah')
+                ->columnSpanFull(),
             Forms\Components\Select::make('status_rumah')->label('Status Rumah')->options(Rumah::STATUS)->required(),
             Forms\Components\Textarea::make('keterangan')->rows(3)->columnSpanFull(),
+            Forms\Components\Toggle::make('publik')->label('Izinkan pencarian publik')->helperText('Nama kepala keluarga dapat dicari pada Peta Publik.')->default(false),
         ]);
     }
 
@@ -131,6 +157,7 @@ class RumahResource extends Resource
                 Tables\Actions\Action::make('export_excel')->label('Export Excel')->icon('heroicon-o-table')->url(route('laporan.rumah.excel'))->openUrlInNewTab(),
             ])
             ->actions([
+                Tables\Actions\Action::make('publikasi')->label(fn (Rumah $record) => $record->publik ? 'Cabut Publikasi' : 'Publikasikan')->icon('heroicon-o-globe-alt')->visible(fn () => PanelAccess::isKominfoKabupaten())->requiresConfirmation()->action(fn (Rumah $record) => Rumah::query()->whereKey($record->getKey())->update(['publik' => ! (bool) $record->publik])),
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),

@@ -41,6 +41,7 @@ class ImportDataPenduduk extends Page implements Forms\Contracts\HasForms
                 ->label('File Excel (.xls/.xlsx) atau CSV')
                 ->disk('local')
                 ->directory('imports')
+                ->maxSize(10240)
                 ->acceptedFileTypes([
                     'text/csv',
                     'text/plain',

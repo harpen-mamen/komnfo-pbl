@@ -3,7 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasSubmissionBatchApproval;
-use App\Support\AdminKecamatan;
+use App\Support\UserScope;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -57,11 +57,8 @@ class Penduduk extends Model
 
     public function scopeVisibleToCurrentUser(Builder $query): Builder
     {
-        if (AdminKecamatan::isAdminKecamatan()) {
-            $query->whereHas('keluarga.rumah.desa', fn (Builder $desa) => $desa->where('kecamatan_id', AdminKecamatan::kecamatanId()));
-        }
-
-        return $query;
+        // SPEC-004: Single source of truth — UserScope::visibleTo().
+        return UserScope::visibleTo($query);
     }
 
     public function keluarga(): BelongsTo

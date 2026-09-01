@@ -22,14 +22,35 @@ class ManageDesa extends Page implements Forms\Contracts\HasForms
 
     public function mount(): void
     {
-        abort_unless(PanelAccess::isAdminKecamatan(), 403);
+        abort_unless(
+            PanelAccess::isAdminKecamatan() || 
+            PanelAccess::isKominfoKabupaten() || 
+            false || 
+            PanelAccess::isOperatorOpd(), 
+            403
+        );
 
         $this->form->fill();
     }
 
     public static function shouldRegisterNavigation(): bool
     {
-        return PanelAccess::isAdminKecamatan();
+        return PanelAccess::isAdminKecamatan() || 
+               PanelAccess::isKominfoKabupaten() || 
+               false || 
+               PanelAccess::isOperatorOpd();
+    }
+
+    public function getTitle(): string
+    {
+        if (PanelAccess::isKominfoKabupaten()) {
+            return 'Manajemen Desa Kabupaten';
+        } elseif (PanelAccess::isAdminDesa()) {
+            return 'Manajemen Desa';
+        } elseif (PanelAccess::isOperatorOpd()) {
+            return 'Manajemen OPD';
+        }
+        return 'Manajemen Desa';
     }
 
     protected function getFormSchema(): array

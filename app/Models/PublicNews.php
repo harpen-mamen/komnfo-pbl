@@ -1,0 +1,1 @@
+<?php namespace App\Models; use Illuminate\Database\Eloquent\Model; class PublicNews extends Model { protected $table='public_news'; protected $fillable=['judul','slug','ringkasan','isi','gambar','kategori','terbit','terbit_at','created_by']; protected $casts=['terbit'=>'boolean','terbit_at'=>'datetime']; }

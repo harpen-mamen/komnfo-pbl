@@ -2,86 +2,58 @@
 
 namespace App\Services;
 
-use App\Models\DataKesehatanBulanan;
-use App\Models\DataPendidikanBulanan;
 use App\Models\Kecamatan;
-use App\Models\Keluarga;
-use App\Models\Penduduk;
-use App\Models\Rumah;
 use App\Models\SubmissionBatch;
 use App\Models\SubmissionBatchItem;
 use App\Models\User;
-use App\Services\BatchApprovalService;
-use Illuminate\Database\Eloquent\Model;
+use App\Services\Submission\Modules\ModuleRegistry;
 use App\Services\SubmissionSnapshotService;
 use App\Services\SubmissionWorkflowService;
-use Illuminate\Support\Arr;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Schema;
 
+/**
+ * SubmissionBatchService � facade for batch creation.
+ *
+ * Sprint 5: Refactored to delegate module-specific logic to ModuleRegistry.
+ * The class is now a thin orchestrator:
+ *  - auth & scope checks
+ *  - dispatch to module handlers via ModuleRegistry
+ *  - delegation to legacy SubmissionSnapshotService/SubmissionWorkflowService
+ *  - generation of submission number, package signature, etc.
+ *
+ * Module definitions (which entity types, which period semantics) live in
+ * app/Services/Submission/Modules. Add a new module = create handler + register.
+ */
 class SubmissionBatchService
 {
     public const MODULE_RUMAH = SubmissionBatch::MODULE_RUMAH;
-
-    public function __construct(
-        private readonly SubmissionSnapshotService $snapshotService,
-        private readonly SubmissionWorkflowService $workflowService,
-    ) {
-    }
     public const MODULE_KELUARGA = SubmissionBatch::MODULE_KELUARGA;
     public const MODULE_PENDUDUK = SubmissionBatch::MODULE_PENDUDUK;
     public const MODULE_KESEHATAN = SubmissionBatch::MODULE_KESEHATAN;
     public const MODULE_PENDIDIKAN = SubmissionBatch::MODULE_PENDIDIKAN;
+    public const MODULE_PUSKES = SubmissionBatch::MODULE_PUSKES;
+    public const MODULE_SEKOLAH = SubmissionBatch::MODULE_SEKOLAH;
 
-    public const PACKAGE_KEPENDUDUKAN = 'kependudukan';
-    public const PACKAGE_KESEHATAN = 'kesehatan';
-    public const PACKAGE_PENDIDIKAN = 'pendidikan';
+    private readonly ModuleRegistry $registry;
+
+    public function __construct(
+        private readonly SubmissionSnapshotService $snapshotService,
+        private readonly SubmissionWorkflowService $workflowService,
+        ModuleRegistry $registry,
+    ) {
+        $this->registry = $registry->has(self::MODULE_RUMAH) ? $registry : ModuleRegistry::default();
+    }
 
     public function moduleDefinitions(): array
     {
-        return [
-            self::MODULE_RUMAH => [
-                'key' => self::MODULE_RUMAH,
-                'label' => 'Rumah',
-                'description' => 'Master data rumah yang dapat diperbarui kapan saja.',
-                'period_type' => 'master',
-                'badge' => 'Master data',
-            ],
-            self::MODULE_KELUARGA => [
-                'key' => self::MODULE_KELUARGA,
-                'label' => 'Keluarga',
-                'description' => 'Master data kartu keluarga per kecamatan.',
-                'period_type' => 'master',
-                'badge' => 'Master data',
-            ],
-            self::MODULE_PENDUDUK => [
-                'key' => self::MODULE_PENDUDUK,
-                'label' => 'Penduduk',
-                'description' => 'Master data penduduk per keluarga dan desa.',
-                'period_type' => 'master',
-                'badge' => 'Master data',
-            ],
-            self::MODULE_KESEHATAN => [
-                'key' => self::MODULE_KESEHATAN,
-                'label' => 'Kesehatan',
-                'description' => 'Data kesehatan bulanan per puskesmas.',
-                'period_type' => 'monthly',
-                'badge' => 'Data periodik',
-            ],
-            self::MODULE_PENDIDIKAN => [
-                'key' => self::MODULE_PENDIDIKAN,
-                'label' => 'Pendidikan',
-                'description' => 'Data pendidikan semesteran per sekolah.',
-                'period_type' => 'semester',
-                'badge' => 'Data periodik',
-            ],
-        ];
+        return $this->registry->definitions();
     }
 
-    public function preview(int $kecamatanId, ?int $periodeBulan = null, ?string $semester = null, ?int $periodeTahun = null): array
+    public function preview(int $kecamatanId, ?int $periodeBulan = null, ?string $semester = null, ?int $periodeTahun = null, ?User $actor = null): array
     {
         $periodeBulan ??= now()->month;
         $semester ??= $this->defaultSemester();
@@ -91,8 +63,8 @@ class SubmissionBatchService
             'periode_bulan' => $periodeBulan,
             'semester' => $semester,
             'periode_tahun' => $periodeTahun,
-            'modules' => collect($this->moduleDefinitions())
-                ->map(fn (array $definition, string $module): array => $this->modulePreviewRow($module, $kecamatanId, $periodeBulan, $semester, $periodeTahun, $definition))
+            'modules' => collect($this->registry->definitions())
+                ->map(fn (array $definition, string $module): array => $this->modulePreviewRow($module, $kecamatanId, $periodeBulan, $semester, $periodeTahun, $definition, $actor))
                 ->values()
                 ->all(),
         ];
@@ -106,11 +78,25 @@ class SubmissionBatchService
             throw new \RuntimeException('Pengguna harus terautentikasi untuk mengirim batch.');
         }
 
-        if ($actor->hasRole('admin_kecamatan') && (int) $actor->kecamatan_id !== $kecamatanId) {
+        if ($actor->hasRole('admin_desa')) {
+            $modules = array_values(array_intersect(
+                $this->normalizeModules($modules),
+                [self::MODULE_RUMAH, self::MODULE_KELUARGA, self::MODULE_PENDUDUK],
+            ));
+        }
+
+        $desaId = $this->assertActorScope($actor, $kecamatanId, $modules);
+
+        $actorKecamatanId = $actor->kecamatan_id ?: $actor->desa?->kecamatan_id;
+        if ($actor->hasAnyRole(['admin_kecamatan', 'admin_desa']) && (int) $actorKecamatanId !== $kecamatanId) {
             throw new \Illuminate\Auth\Access\AuthorizationException('Admin Kecamatan tidak dapat mengirim data kecamatan lain.');
         }
 
-        return DB::transaction(function () use ($kecamatanId, $modules, $periodeBulan, $semester, $periodeTahun, $notes, $actor): Collection {
+        if (! $actor->hasAnyRole(['admin_kecamatan', 'admin_desa', 'admin', 'super_admin', 'admin_kominfo'])) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('Role ini tidak memiliki izin membuat batch pengiriman.');
+        }
+
+        return DB::transaction(function () use ($kecamatanId, $modules, $periodeBulan, $semester, $periodeTahun, $notes, $actor, $desaId): Collection {
             Kecamatan::query()->findOrFail($kecamatanId);
             $selectedModules = $this->normalizeModules($modules);
 
@@ -119,16 +105,17 @@ class SubmissionBatchService
             }
 
             $modulePayloads = collect($selectedModules)
-                ->map(function (string $module) use ($kecamatanId, $periodeBulan, $semester, $periodeTahun): array {
-                    $context = $this->moduleContext($module, $periodeBulan, $semester, $periodeTahun);
-                    $ids = $this->moduleQuery($module, $kecamatanId, $context['periode_bulan'], $context['semester'], $context['periode_tahun'])
-                        ->pluck('id')
-                        ->values();
+                ->map(function (string $module) use ($kecamatanId, $periodeBulan, $semester, $periodeTahun, $desaId): array {
+                    $handler = $this->registry->get($module);
+                    $context = $handler->context($periodeBulan, $semester, $periodeTahun);
+                    $records = $handler->query($kecamatanId, $context, $desaId)->get();
+                    $ids = $records->pluck('id')->values();
 
                     return [
                         'module' => $module,
                         'context' => $context,
                         'ids' => $ids,
+                        'records' => $records,
                         'count' => $ids->count(),
                     ];
                 })
@@ -156,6 +143,9 @@ class SubmissionBatchService
             $modulesWithData = $modulePayloads->pluck('module')->all();
             $batchModule = count($modulesWithData) === 1 ? $modulesWithData[0] : SubmissionBatch::MODULE_MIXED;
             $primaryContext = $this->batchContext($modulePayloads);
+            $previousVersions = $this->previousSubmissionVersions($kecamatanId, $modulesWithData, $modulePayloads);
+            $previousVersion = $previousVersions->sortByDesc('id')->first();
+            $snapshotVersion = $previousVersions->count() + 1;
 
             $batch = SubmissionBatch::create([
                 'module' => $batchModule,
@@ -176,6 +166,11 @@ class SubmissionBatchService
             $batch->payload_snapshot = count($modulesWithData) === 1
                 ? $moduleSnapshots[0]
                 : $this->snapshotService->buildMixedSnapshot($batch, $moduleSnapshots, $actor);
+            $batch->payload_snapshot = $this->withRevisionMetadata(
+                $batch->payload_snapshot,
+                $snapshotVersion,
+                $previousVersion,
+            );
 
             $batch->version = 1;
             $batch->saveQuietly();
@@ -202,10 +197,251 @@ class SubmissionBatchService
         ], true);
     }
 
-    private function modulePreviewRow(string $module, int $kecamatanId, int $periodeBulan, string $semester, int $periodeTahun, array $definition): array
+    /**
+     * Submit a batch from mobile sync with pre-created entity IDs.
+     *
+     * P1-A FIX: Mobile sync now goes through the same service layer as the web panel,
+     * ensuring consistent batch creation, validation, and workflow transitions.
+     *
+     * BEFORE (broken):
+     *   - MobileSyncController created SubmissionBatch directly, bypassing service
+     *   - submitted_at set while status=DRAFT
+     *   - No active batch conflict check
+     *   - Manual snapshot building
+     *   - No revision metadata
+     *
+     * AFTER (fixed):
+     *   - Goes through service layer (auth, validation, conflict check)
+     *   - submitted_at set when status becomes PENDING (via workflow)
+     *   - activeBatchForModule() conflict check applied
+     *   - Proper payload snapshot with revision metadata
+     *   - Consistent workflow transition
+     *
+     * @param  int      $kecamatanId
+     * @param  array    $entityPayloads  [['module' => 'rumah', 'ids' => [1,2], 'records' => Collection], ...]
+     * @param  string|null $notes
+     * @param  User|null  $actor
+     * @return Collection  Collection containing the submitted SubmissionBatch
+     * @throws \RuntimeException           When no entities provided
+     * @throws \RuntimeException           When active batch already exists
+     * @throws AuthorizationException      When actor not authorized
+     */
+    public function mobileSyncPush(int $kecamatanId, array $entityPayloads, ?string $notes = null, ?User $actor = null): Collection
     {
-        $context = $this->moduleContext($module, $periodeBulan, $semester, $periodeTahun);
-        $count = $this->moduleCount($module, $kecamatanId, $context['periode_bulan'], $context['semester'], $context['periode_tahun']);
+        $actor ??= auth()->user();
+
+        if (! $actor) {
+            throw new \RuntimeException('Pengguna harus terautentikasi untuk mengirim batch.');
+        }
+
+        if (! $actor->hasRole('admin_desa')) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('Hanya Admin Desa yang dapat mengirim data via mobile sync.');
+        }
+
+        $desaId = $actor->desa_id;
+        $actorKecamatanId = $actor->kecamatan_id ?: $actor->desa?->kecamatan_id;
+        if ((int) $actorKecamatanId !== $kecamatanId) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('Admin Desa tidak dapat mengirim data kecamatan lain.');
+        }
+
+        if (! $desaId) {
+            throw new \RuntimeException('Akun Admin Desa belum terhubung ke desa.');
+        }
+
+        if ($entityPayloads === []) {
+            throw new \RuntimeException('Tidak ada data untuk dikirim.');
+        }
+
+        return DB::transaction(function () use ($kecamatanId, $entityPayloads, $notes, $actor, $desaId): Collection {
+            // Flat associative array from mobile controller: ['rumah' => ['ids' => [...], 'records' => ...], ...]
+            // Convert to indexed format for consistent internal processing
+            $flatPayloads = collect($entityPayloads)
+                ->map(function (array $payload, string $module) use ($actor): ?array {
+                    $ids = collect($payload['ids']);
+                    $records = $payload['records'] ?? collect();
+
+                    // Validate that the IDs actually exist and belong to this desa
+                    $validIds = $this->validateMobileEntityIds($module, $ids->all(), $actor);
+
+                    if ($validIds->isEmpty()) {
+                        return null;
+                    }
+
+                    $handler = $this->registry->has($module)
+                        ? $this->registry->get($module)
+                        : null;
+
+                    $context = [
+                        'periode_bulan' => null,
+                        'semester' => null,
+                        'periode_tahun' => null,
+                    ];
+
+                    return [
+                        'module' => $module,
+                        'context' => $context,
+                        'ids' => $validIds,
+                        'records' => $records->filter(fn ($r) => $validIds->contains($r->getKey())),
+                        'count' => $validIds->count(),
+                    ];
+                })
+                ->filter()
+                ->values();
+
+            if ($flatPayloads->isEmpty()) {
+                throw new \RuntimeException('Tidak ada data valid untuk dikirim.');
+            }
+
+            // Check for active batch conflicts
+            $modulesWithData = $flatPayloads->pluck('module')->all();
+            $this->checkMobileBatchConflicts($kecamatanId, $modulesWithData, $flatPayloads);
+
+            $batchModule = count($modulesWithData) === 1 ? $modulesWithData[0] : SubmissionBatch::MODULE_MIXED;
+            $primaryContext = $this->batchContext($flatPayloads);
+            $previousVersions = $this->previousSubmissionVersions($kecamatanId, $modulesWithData, $flatPayloads);
+            $previousVersion = $previousVersions->sortByDesc('id')->first();
+            $snapshotVersion = $previousVersions->count() + 1;
+
+            // Create batch
+            $batch = SubmissionBatch::create([
+                'module' => $batchModule,
+                'submission_number' => $this->generateMobileSubmissionNumber($batchModule, $kecamatanId, $actor),
+                'kecamatan_id' => $kecamatanId,
+                'periode_bulan' => $primaryContext['periode_bulan'],
+                'semester' => $primaryContext['semester'],
+                'periode_tahun' => $primaryContext['periode_tahun'],
+                'package_signature' => $this->packageSignature($modulesWithData),
+                'package_keys' => $modulesWithData,
+                'package_summary' => $this->modulePackageSummary($flatPayloads),
+                'status' => SubmissionBatch::STATUS_DRAFT,
+                'notes' => $notes,
+                'created_by' => $actor->id,
+            ]);
+
+            // Build snapshot
+            $moduleSnapshots = $this->moduleSnapshots($flatPayloads, $actor);
+            $batch->payload_snapshot = count($modulesWithData) === 1
+                ? $moduleSnapshots[0]
+                : $this->snapshotService->buildMixedSnapshot($batch, $moduleSnapshots, $actor);
+            $batch->payload_snapshot = $this->withRevisionMetadata(
+                $batch->payload_snapshot,
+                $snapshotVersion,
+                $previousVersion,
+            );
+            // Mark as mobile source
+            $batch->payload_snapshot['source'] = 'mobile';
+
+            $batch->version = 1;
+            $batch->saveQuietly();
+
+            // Create items linking entities to batch
+            $this->createMixedItems($batch, $flatPayloads);
+
+            // Log audit trail
+            $this->snapshotService->logBatchSnapshot($batch, $actor);
+
+            // Transition to PENDING via workflow service
+            return collect([$this->workflowService->submit($batch, $actor, $notes)]);
+        });
+    }
+
+    /**
+     * Validate that entity IDs exist and belong to the actor's desa.
+     * For mobile, we only accept rumah/keluarga/penduduk entities created by the actor.
+     */
+    private function validateMobileEntityIds(string $module, array $ids, User $actor): \Illuminate\Support\Collection
+    {
+        if ($ids === []) {
+            return collect();
+        }
+
+        $validIds = collect();
+
+        foreach ($ids as $id) {
+            $valid = match ($module) {
+                self::MODULE_RUMAH => \App\Models\Rumah::query()
+                    ->whereKey($id)
+                    ->where('desa_id', $actor->desa_id)
+                    ->exists(),
+                self::MODULE_KELUARGA => \App\Models\Keluarga::query()
+                    ->whereKey($id)
+                    ->whereHas('rumah', fn ($q) => $q->where('desa_id', $actor->desa_id))
+                    ->exists(),
+                self::MODULE_PENDUDUK => \App\Models\Penduduk::query()
+                    ->whereKey($id)
+                    ->whereHas('keluarga.rumah', fn ($q) => $q->where('desa_id', $actor->desa_id))
+                    ->exists(),
+                default => false,
+            };
+
+            if ($valid) {
+                $validId = (int) $id;
+                $validIds->push($validId);
+            }
+        }
+
+        return $validIds;
+    }
+
+    /**
+     * Check for active batch conflicts before mobile sync submission.
+     */
+    private function checkMobileBatchConflicts(int $kecamatanId, array $modules, Collection $modulePayloads): void
+    {
+        $modulePayloads->each(function (array $payload) use ($kecamatanId): void {
+            $existingBatch = $this->activeBatchForModule(
+                $kecamatanId,
+                $payload['module'],
+                $payload['context']['periode_bulan'],
+                $payload['context']['semester'],
+                $payload['context']['periode_tahun'],
+            );
+
+            if ($existingBatch) {
+                throw new \RuntimeException(
+                    'Sudah ada batch aktif untuk modul '.$this->moduleLabel($payload['module'])
+                    .'. Selesaikan atau batalkan batch sebelumnya sebelum mengirim data baru.'
+                );
+            }
+        });
+    }
+
+    /**
+     * Generate submission number for mobile batches.
+     */
+    private function generateMobileSubmissionNumber(string $module, int $kecamatanId, User $actor): string
+    {
+        $prefix = sprintf(
+            'SB-M-%s-%d-%s',
+            strtoupper($module),
+            $kecamatanId,
+            $actor->id,
+        );
+        $hash = substr(md5($actor->email.now()->timestamp), 0, 6);
+        $timestamp = now()->format('ymdHis');
+
+        $sequence = SubmissionBatch::withTrashed()
+            ->where('submission_number', 'like', "{$prefix}%")
+            ->count() + 1;
+
+        return sprintf('%s-%s-%03d', $prefix, $hash, $sequence);
+    }
+
+    public function registry(): ModuleRegistry
+    {
+        return $this->registry;
+    }
+
+    // ===========================
+    // Internal helpers
+    // ===========================
+
+    private function modulePreviewRow(string $module, int $kecamatanId, int $periodeBulan, string $semester, int $periodeTahun, array $definition, ?User $actor = null): array
+    {
+        $handler = $definition['handler'] ?? $this->registry->get($module);
+        $context = $handler->context($periodeBulan, $semester, $periodeTahun);
+        $desaId = $actor ? $this->assertActorScope($actor, $kecamatanId, [$module]) : null;
+        $count = $handler->query($kecamatanId, $context, $desaId)->count();
         $latestBatch = SubmissionBatch::query()
             ->forModule($module)
             ->where('kecamatan_id', $kecamatanId)
@@ -229,55 +465,27 @@ class SubmissionBatchService
         ];
     }
 
-    private function moduleContext(string $module, ?int $periodeBulan, ?string $semester, ?int $periodeTahun): array
+    private function assertActorScope(User $actor, int $kecamatanId, array $modules): ?int
     {
-        $periodeTahun ??= now()->year;
+        $actorKecamatanId = $actor->kecamatan_id ?: $actor->desa?->kecamatan_id;
+        if ($actor->hasAnyRole(['admin_kecamatan', 'admin_desa']) && (int) $actorKecamatanId !== $kecamatanId) {
+            throw new \Illuminate\Auth\Access\AuthorizationException('Akun tidak dapat mengirim data kecamatan lain.');
+        }
 
-        return match ($module) {
-            self::MODULE_KESEHATAN => [
-                'periode_bulan' => $periodeBulan ?? now()->month,
-                'semester' => null,
-                'periode_tahun' => $periodeTahun,
-            ],
-            self::MODULE_PENDIDIKAN => [
-                'periode_bulan' => null,
-                'semester' => $semester ?? $this->defaultSemester(),
-                'periode_tahun' => $periodeTahun,
-            ],
-            default => [
-                'periode_bulan' => null,
-                'semester' => null,
-                'periode_tahun' => null,
-            ],
-        };
-    }
+        if ($actor->hasRole('admin_desa')) {
+            if (! $actor->desa_id || (int) $actor->desa?->kecamatan_id !== $kecamatanId) {
+                throw new \Illuminate\Auth\Access\AuthorizationException('Akun Desa belum memiliki wilayah yang valid.');
+            }
 
-    private function moduleCount(string $module, int $kecamatanId, ?int $periodeBulan = null, ?string $semester = null, ?int $periodeTahun = null): int
-    {
-        return $this->moduleQuery($module, $kecamatanId, $periodeBulan, $semester, $periodeTahun)->count();
-    }
+            return (int) $actor->desa_id;
+        }
 
-    private function moduleQuery(string $module, int $kecamatanId, ?int $periodeBulan = null, ?string $semester = null, ?int $periodeTahun = null)
-    {
-        return match ($module) {
-            self::MODULE_RUMAH => Rumah::query()->whereHas('desa', fn ($query) => $query->where('kecamatan_id', $kecamatanId)),
-            self::MODULE_KELUARGA => Keluarga::query()->whereHas('rumah.desa', fn ($query) => $query->where('kecamatan_id', $kecamatanId)),
-            self::MODULE_PENDUDUK => Penduduk::query()->whereHas('keluarga.rumah.desa', fn ($query) => $query->where('kecamatan_id', $kecamatanId)),
-            self::MODULE_KESEHATAN => DataKesehatanBulanan::query()
-                ->where('kecamatan_id', $kecamatanId)
-                ->when($periodeBulan !== null, fn ($query) => $query->where('periode_bulan', $periodeBulan))
-                ->when($periodeTahun !== null, fn ($query) => $query->where('periode_tahun', $periodeTahun)),
-            self::MODULE_PENDIDIKAN => DataPendidikanBulanan::query()
-                ->where('kecamatan_id', $kecamatanId)
-                ->tap(fn ($query) => $this->applySemesterFilterOnTable($query, 'data_pendidikan_bulanans', $semester))
-                ->when($periodeTahun !== null, fn ($query) => $query->where('periode_tahun', $periodeTahun)),
-            default => throw new \InvalidArgumentException("Modul [{$module}] tidak dikenal."),
-        };
+        return null;
     }
 
     private function moduleLabel(string $module): string
     {
-        return SubmissionBatch::moduleLabel($module);
+        return $this->registry->has($module) ? $this->registry->get($module)->label() : SubmissionBatch::moduleLabel($module);
     }
 
     private function generateSubmissionNumber(string $module, int $kecamatanId, ?int $periodeBulan = null, ?string $semester = null, ?int $periodeTahun = null): string
@@ -285,6 +493,8 @@ class SubmissionBatchService
         $periodKey = match ($module) {
             self::MODULE_KESEHATAN => sprintf('B%02d-T%d', $periodeBulan ?? now()->month, $periodeTahun ?? now()->year),
             self::MODULE_PENDIDIKAN => sprintf('%s-T%d', strtoupper($semester ?? $this->defaultSemester()), $periodeTahun ?? now()->year),
+            self::MODULE_PUSKES => sprintf('PKS-B%02d-T%d', $periodeBulan ?? now()->month, $periodeTahun ?? now()->year),
+            self::MODULE_SEKOLAH => sprintf('SKL-%s-T%d', strtoupper($semester ?? $this->defaultSemester()), $periodeTahun ?? now()->year),
             SubmissionBatch::MODULE_MIXED => sprintf('MIXED-T%d', $periodeTahun ?? now()->year),
             default => 'MASTER',
         };
@@ -297,163 +507,107 @@ class SubmissionBatchService
         return sprintf('%s-%03d', $prefix, $sequence);
     }
 
-    private function logBatchSnapshot(SubmissionBatch $batch, User $actor): void
-    {
-        try {
-            \App\Models\AuditTrail::query()->create([
-                'entity_type' => SubmissionBatch::class,
-                'entity_id' => $batch->getKey(),
-                'field' => 'submission_snapshot',
-                'nilai_lama' => null,
-                'nilai_baru' => json_encode($batch->payload_snapshot ?? [], JSON_UNESCAPED_UNICODE),
-                'aksi' => 'create_batch',
-                'pengguna_id' => $actor->id,
-                'pengguna' => $actor->name,
-                'role' => $actor->roles->pluck('name')->first(),
-                'ip' => null,
-                'browser' => null,
-            ]);
-        } catch (\Throwable $e) {
-            Log::warning('Failed to write submission snapshot audit', ['error' => $e->getMessage()]);
-        }
-    }
-
-    private function buildPackageMetrics(int $kecamatanId, string $semester, int $tahun): array
-    {
-        $rumahCount = Rumah::query()->whereHas('desa', fn ($query) => $query->where('kecamatan_id', $kecamatanId))->count();
-        $keluargaCount = Keluarga::query()->whereHas('rumah.desa', fn ($query) => $query->where('kecamatan_id', $kecamatanId))->count();
-        $pendudukCount = Penduduk::query()->whereHas('keluarga.rumah.desa', fn ($query) => $query->where('kecamatan_id', $kecamatanId))->count();
-
-        $pendidikanQuery = DataPendidikanBulanan::query()->where('kecamatan_id', $kecamatanId)->where('periode_tahun', $tahun);
-        $this->applySemesterFilterOnTable($pendidikanQuery, 'data_pendidikan_bulanans', $semester);
-        $pendidikanCount = $pendidikanQuery->count();
-        $sekolahCount = tap(
-            DataPendidikanBulanan::query()->where('kecamatan_id', $kecamatanId)->where('periode_tahun', $tahun),
-            fn ($query) => $this->applySemesterFilterOnTable($query, 'data_pendidikan_bulanans', $semester),
-        )->distinct('sekolah')->count('sekolah');
-
-        $kesehatanQuery = DataKesehatanBulanan::query()->where('kecamatan_id', $kecamatanId)->where('periode_tahun', $tahun);
-        $this->applySemesterFilterOnTable($kesehatanQuery, 'data_kesehatan_bulanans', $semester);
-        $kesehatanCount = $kesehatanQuery->count();
-        $puskesmasCount = tap(
-            DataKesehatanBulanan::query()->where('kecamatan_id', $kecamatanId)->where('periode_tahun', $tahun),
-            fn ($query) => $this->applySemesterFilterOnTable($query, 'data_kesehatan_bulanans', $semester),
-        )->distinct('puskesmas')->count('puskesmas');
-
-        return [
-            self::PACKAGE_KEPENDUDUKAN => [
-                'key' => self::PACKAGE_KEPENDUDUKAN,
-                'label' => 'Paket Kependudukan',
-                'description' => 'Rumah, keluarga, dan penduduk dalam satu pengiriman.',
-                'badge' => 'Data inti',
-                'total' => $rumahCount + $keluargaCount + $pendudukCount,
-                'items' => [
-                    'Rumah' => [
-                        'label' => 'Rumah',
-                        'count' => $rumahCount,
-                    ],
-                    'Keluarga' => [
-                        'label' => 'Keluarga',
-                        'count' => $keluargaCount,
-                    ],
-                    'Penduduk' => [
-                        'label' => 'Penduduk',
-                        'count' => $pendudukCount,
-                    ],
-                ],
-            ],
-            self::PACKAGE_KESEHATAN => [
-                'key' => self::PACKAGE_KESEHATAN,
-                'label' => 'Paket Kesehatan',
-                'description' => 'Laporan kesehatan bulanan dan puskesmas aktif.',
-                'badge' => 'Data OPD',
-                'total' => $kesehatanCount,
-                'items' => [
-                    'Laporan kesehatan' => [
-                        'label' => 'Laporan kesehatan',
-                        'count' => $kesehatanCount,
-                    ],
-                    'Puskesmas unik' => [
-                        'label' => 'Puskesmas unik',
-                        'count' => $puskesmasCount,
-                    ],
-                ],
-            ],
-            self::PACKAGE_PENDIDIKAN => [
-                'key' => self::PACKAGE_PENDIDIKAN,
-                'label' => 'Paket Pendidikan',
-                'description' => 'Laporan pendidikan bulanan dan sekolah aktif.',
-                'badge' => 'Data OPD',
-                'total' => $pendidikanCount,
-                'items' => [
-                    'Laporan pendidikan' => [
-                        'label' => 'Laporan pendidikan',
-                        'count' => $pendidikanCount,
-                    ],
-                    'Sekolah unik' => [
-                        'label' => 'Sekolah unik',
-                        'count' => $sekolahCount,
-                    ],
-                ],
-            ],
-        ];
-    }
-
-    private function createItems(SubmissionBatch $batch, string $module, ?int $periodeBulan, ?string $semester, ?int $periodeTahun): void
-    {
-        $rows = [];
-        $ids = $this->moduleQuery($module, $batch->kecamatan_id, $periodeBulan, $semester, $periodeTahun)->pluck('id');
-        $entityType = match ($module) {
-            self::MODULE_RUMAH => Rumah::class,
-            self::MODULE_KELUARGA => Keluarga::class,
-            self::MODULE_PENDUDUK => Penduduk::class,
-            self::MODULE_KESEHATAN => DataKesehatanBulanan::class,
-            self::MODULE_PENDIDIKAN => DataPendidikanBulanan::class,
-            default => null,
-        };
-
-        if (! $entityType || $ids->isEmpty()) {
-            return;
-        }
-
-        $this->appendEntityRows($rows, $batch->id, $ids, $entityType, $module);
-
-        SubmissionBatchItem::query()->insert($rows);
-    }
-
     private function createMixedItems(SubmissionBatch $batch, Collection $modulePayloads): void
     {
         $rows = [];
+        $opdBatchAssignments = [];
+        $childTableAssignments = [];
 
         foreach ($modulePayloads as $payload) {
-            $entityType = $this->entityTypeForModule($payload['module']);
+            $handler = $this->registry->get($payload['module']);
+            $entityType = $handler->entityType();
 
             if (! $entityType) {
                 continue;
             }
 
             $this->appendEntityRows($rows, $batch->id, $payload['ids'], $entityType, $payload['module']);
+
+            if (in_array($payload['module'], [self::MODULE_KESEHATAN, self::MODULE_PENDIDIKAN, self::MODULE_PUSKES, self::MODULE_SEKOLAH], true)) {
+                $opdBatchAssignments[] = [
+                    'model' => $entityType,
+                    'ids' => $payload['ids'],
+                    'batch_id' => $batch->id,
+                ];
+            }
+
+            // puskes module: assign child records (stok_obats, rekam_medis)
+            if ($payload['module'] === self::MODULE_PUSKES) {
+                $childTableAssignments[] = [
+                    'model' => \App\Models\StokObat::class,
+                    'foreign_key' => 'fasilitas_kesehatan_id',
+                    'parent_ids' => $payload['ids'],
+                    'batch_id' => $batch->id,
+                ];
+                $childTableAssignments[] = [
+                    'model' => \App\Models\RekamMedis::class,
+                    'foreign_key' => 'fasilitas_kesehatan_id',
+                    'parent_ids' => $payload['ids'],
+                    'batch_id' => $batch->id,
+                ];
+            }
+
+            // sekolah module: assign child records (data_gurus, data_siswas, data_prasaranas)
+            if ($payload['module'] === self::MODULE_SEKOLAH) {
+                $childTableAssignments[] = [
+                    'model' => \App\Models\DataGuru::class,
+                    'foreign_key' => 'sekolah_id',
+                    'parent_ids' => $payload['ids'],
+                    'batch_id' => $batch->id,
+                ];
+                $childTableAssignments[] = [
+                    'model' => \App\Models\DataSiswa::class,
+                    'foreign_key' => 'sekolah_id',
+                    'parent_ids' => $payload['ids'],
+                    'batch_id' => $batch->id,
+                ];
+                $childTableAssignments[] = [
+                    'model' => \App\Models\DataPrasarana::class,
+                    'foreign_key' => 'sekolah_id',
+                    'parent_ids' => $payload['ids'],
+                    'batch_id' => $batch->id,
+                ];
+            }
         }
 
         if ($rows !== []) {
             SubmissionBatchItem::query()->insert($rows);
+        }
+
+        // Assign submission_batch_id to OPD parent tables
+        foreach ($opdBatchAssignments as $assignment) {
+            $assignment['model']::query()
+                ->whereKey($assignment['ids'])
+                ->update(['submission_batch_id' => $assignment['batch_id']]);
+        }
+
+        // Assign submission_batch_id to child tables
+        foreach ($childTableAssignments as $assignment) {
+            $assignment['model']::query()
+                ->whereIn($assignment['foreign_key'], $assignment['parent_ids'])
+                ->update(['submission_batch_id' => $assignment['batch_id']]);
         }
     }
 
     private function moduleSnapshots(Collection $modulePayloads, User $actor): array
     {
         return $modulePayloads
-            ->map(fn (array $payload): array => [
-                'module' => $payload['module'],
-                'module_label' => SubmissionBatch::moduleLabel($payload['module']),
-                'periode_bulan' => $payload['context']['periode_bulan'],
-                'semester' => $payload['context']['semester'],
-                'periode_tahun' => $payload['context']['periode_tahun'],
-                'count' => $payload['count'],
-                'entity_ids' => $payload['ids']->all(),
-                'created_by' => $actor->id,
-                'created_at' => now()->toDateTimeString(),
-            ])
+            ->map(function (array $payload) use ($actor): array {
+                $handler = $this->registry->get($payload['module']);
+
+                return [
+                    'module' => $payload['module'],
+                    'module_label' => $handler->label(),
+                    'periode_bulan' => $payload['context']['periode_bulan'],
+                    'semester' => $payload['context']['semester'],
+                    'periode_tahun' => $payload['context']['periode_tahun'],
+                    'count' => $payload['count'],
+                    'entity_ids' => $payload['ids']->all(),
+                    'records' => $handler->snapshotRows($payload['records'], $payload['context']),
+                    'created_by' => $actor->id,
+                    'created_at' => now()->toDateTimeString(),
+                ];
+            })
             ->values()
             ->all();
     }
@@ -463,7 +617,7 @@ class SubmissionBatchService
         return $modulePayloads
             ->map(fn (array $payload): array => [
                 'key' => $payload['module'],
-                'label' => SubmissionBatch::moduleLabel($payload['module']),
+                'label' => $this->registry->get($payload['module'])->label(),
                 'total' => $payload['count'],
                 'periode_bulan' => $payload['context']['periode_bulan'],
                 'semester' => $payload['context']['semester'],
@@ -484,21 +638,88 @@ class SubmissionBatchService
         ];
     }
 
+    private function previousSubmissionVersions(int $kecamatanId, array $modules, Collection $modulePayloads): Collection
+    {
+        $signature = $this->packageSignature($modules);
+
+        return SubmissionBatch::query()
+            ->where('kecamatan_id', $kecamatanId)
+            ->where('package_signature', $signature)
+            ->with('items')
+            ->get()
+            ->filter(fn (SubmissionBatch $batch): bool => $modulePayloads->every(
+                fn (array $payload): bool => $this->batchContainsModule($batch, $payload['module'])
+                    && $this->batchMatchesModulePeriod(
+                        $batch,
+                        $payload['module'],
+                        $payload['context']['periode_bulan'],
+                        $payload['context']['semester'],
+                        $payload['context']['periode_tahun'],
+                    )
+            ))
+            ->values();
+    }
+
+    private function withRevisionMetadata(array $snapshot, int $snapshotVersion, ?SubmissionBatch $previousVersion): array
+    {
+        $snapshot['snapshot_version'] = $snapshotVersion;
+        $snapshot['revision'] = [
+            'number' => $snapshotVersion,
+            'previous_submission_batch_id' => $previousVersion?->id,
+            'previous_submission_number' => $previousVersion?->submission_number,
+            'previous_status' => $previousVersion?->status,
+            'created_at' => now()->toDateTimeString(),
+        ];
+
+        return $snapshot;
+    }
+
     private function activeBatchForModule(int $kecamatanId, string $module, ?int $periodeBulan, ?string $semester, ?int $periodeTahun): ?SubmissionBatch
     {
-        return SubmissionBatch::query()
+        $query = SubmissionBatch::query()
             ->where('kecamatan_id', $kecamatanId)
             ->whereIn('status', [
                 SubmissionBatch::STATUS_DRAFT,
                 SubmissionBatch::STATUS_PENDING,
                 SubmissionBatch::STATUS_IN_REVIEW,
-                SubmissionBatch::STATUS_REVISION,
             ])
-            ->with('items')
-            ->lockForUpdate()
-            ->get()
-            ->first(fn (SubmissionBatch $batch): bool => $this->batchContainsModule($batch, $module)
-                && $this->batchMatchesModulePeriod($batch, $module, $periodeBulan, $semester, $periodeTahun));
+            ->with('items');
+
+        $query->where(function ($q) use ($module): void {
+            $q->where('module', $module);
+            $q->orWhereRaw('JSON_CONTAINS(package_keys, ?)', [json_encode($module)]);
+        });
+
+        if ($module === self::MODULE_KESEHATAN && $periodeBulan !== null && $periodeTahun !== null) {
+            $query->where('periode_bulan', $periodeBulan)
+                  ->where('periode_tahun', $periodeTahun);
+        }
+        if ($module === self::MODULE_PENDIDIKAN && $semester !== null && $periodeTahun !== null) {
+            $query->where('semester', $semester)
+                  ->where('periode_tahun', $periodeTahun);
+        }
+        if ($module === self::MODULE_PUSKES && $periodeBulan !== null && $periodeTahun !== null) {
+            $query->where('periode_bulan', $periodeBulan)
+                  ->where('periode_tahun', $periodeTahun);
+        }
+        if ($module === self::MODULE_SEKOLAH && $semester !== null && $periodeTahun !== null) {
+            $query->where('semester', $semester)
+                  ->where('periode_tahun', $periodeTahun);
+        }
+
+        $query->lockForUpdate();
+
+        $batch = $query->first();
+
+        if (! $batch) {
+            return null;
+        }
+
+        if (! $this->batchMatchesModulePeriod($batch, $module, $periodeBulan, $semester, $periodeTahun)) {
+            return null;
+        }
+
+        return $batch;
     }
 
     private function batchContainsModule(SubmissionBatch $batch, string $module): bool
@@ -538,18 +759,6 @@ class SubmissionBatchService
             && ($period['periode_tahun'] ?? null) === $periodeTahun;
     }
 
-    private function entityTypeForModule(string $module): ?string
-    {
-        return match ($module) {
-            self::MODULE_RUMAH => Rumah::class,
-            self::MODULE_KELUARGA => Keluarga::class,
-            self::MODULE_PENDUDUK => Penduduk::class,
-            self::MODULE_KESEHATAN => DataKesehatanBulanan::class,
-            self::MODULE_PENDIDIKAN => DataPendidikanBulanan::class,
-            default => null,
-        };
-    }
-
     private function appendEntityRows(array &$rows, int $batchId, Collection $entityIds, string $entityType, ?string $module = null): void
     {
         foreach ($entityIds as $entityId) {
@@ -566,7 +775,7 @@ class SubmissionBatchService
 
     private function normalizePackages(array $packages): array
     {
-        $available = array_keys($this->moduleDefinitions());
+        $available = $this->registry->availableKeys();
         $normalized = collect($packages)
             ->map(fn ($package) => is_string($package) ? strtolower(trim($package)) : null)
             ->filter()
@@ -581,7 +790,7 @@ class SubmissionBatchService
 
     private function normalizeModules(array $modules): array
     {
-        $available = array_keys($this->moduleDefinitions());
+        $available = $this->registry->availableKeys();
 
         return collect($modules)
             ->map(fn ($module) => is_string($module) ? strtolower(trim($module)) : null)
@@ -593,82 +802,13 @@ class SubmissionBatchService
             ->all();
     }
 
-    private function packageSignature(array $packages): string
+    private function packageSignature(array $modules): string
     {
-        return implode('+', $this->normalizePackages($packages));
-    }
-
-    private function serializePackageSummary(array $metrics): array
-    {
-        return collect($metrics)->map(function (array $package): array {
-            return [
-                'key' => $package['key'],
-                'label' => $package['label'],
-                'description' => $package['description'],
-                'badge' => $package['badge'],
-                'total' => $package['total'],
-                'items' => collect($package['items'])->map(fn (array $item): array => [
-                    'label' => $item['label'],
-                    'count' => $item['count'],
-                ])->values()->all(),
-            ];
-        })->values()->all();
-    }
-
-    private function serializeSubmissionCounts(array $metrics): array
-    {
-        return collect($metrics)->mapWithKeys(fn (array $package): array => [
-            $package['key'] => [
-                'label' => $package['label'],
-                'total' => $package['total'],
-                'items' => collect($package['items'])->mapWithKeys(fn (array $item): array => [
-                    $item['label'] => $item['count'],
-                ])->all(),
-            ],
-        ])->all();
-    }
-
-    private function missingModules(array $counts): array
-    {
-        return Arr::where($counts, fn (int $count) => $count === 0);
-    }
-
-    private function legacyGenerateSubmissionNumber(int $kecamatanId, string $semester, int $tahun): string
-    {
-        $prefix = sprintf('SB-%s-%s-%s', $kecamatanId, strtoupper($semester), $tahun);
-        $sequence = SubmissionBatch::query()
-            ->where('submission_number', 'like', "{$prefix}%")
-            ->count() + 1;
-
-        return sprintf('%s-%03d', $prefix, $sequence);
+        return implode('+', $this->normalizeModules($modules));
     }
 
     private function defaultSemester(): string
     {
         return now()->month <= 6 ? 'ganjil' : 'genap';
-    }
-
-    /**
-     * Apply semester filter to a query depending on whether the underlying table
-     * has a `semester` column. For older tables without `semester`, map
-     * semester 'ganjil'|'genap' to periode_bulan ranges (1-6 / 7-12).
-     */
-    private function applySemesterFilterOnTable($query, string $table, ?string $semester): void
-    {
-        if (empty($semester)) {
-            return;
-        }
-
-        if (Schema::hasColumn($table, 'semester')) {
-            $query->where('semester', $semester);
-
-            return;
-        }
-
-        if ($semester === 'ganjil') {
-            $query->whereBetween('periode_bulan', [1, 6]);
-        } elseif ($semester === 'genap') {
-            $query->whereBetween('periode_bulan', [7, 12]);
-        }
     }
 }

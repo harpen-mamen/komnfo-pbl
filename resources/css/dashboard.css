@@ -1,0 +1,381 @@
+/* ============================================
+   PROFESSIONAL PRODUCTION-READY THEME
+   Color Palette: Slate, Green, Blue, Orange
+   ============================================ */
+
+:root {
+    /* Primary Colors */
+    --color-primary: #2D3748;
+    --color-primary-light: #4A5568;
+    --color-primary-lighter: #718096;
+    
+    /* Accent Colors */
+    --color-success: #48BB78;
+    --color-success-dark: #38A169;
+    --color-success-light: #9AE6B4;
+    
+    --color-warning: #ED8936;
+    --color-warning-dark: #DD6B20;
+    
+    --color-danger: #F56565;
+    --color-danger-dark: #E53E3E;
+    
+    /* Neutral */
+    --color-bg: #F7FAFC;
+    --color-bg-light: #FFFFFF;
+    --color-text: #1A202C;
+    --color-text-light: #4A5568;
+    --color-border: #E2E8F0;
+    
+    /* Shadows */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+/* Gradient Backgrounds - Professional */
+.gradient-primary {
+    @apply bg-gradient-to-r from-slate-700 via-slate-800 to-slate-900;
+}
+
+.gradient-success {
+    @apply bg-gradient-to-r from-green-600 to-emerald-600;
+}
+
+.gradient-warning {
+    @apply bg-gradient-to-r from-orange-600 to-amber-600;
+}
+
+.gradient-danger {
+    @apply bg-gradient-to-r from-red-600 to-rose-600;
+}
+
+.gradient-info {
+    @apply bg-gradient-to-r from-blue-600 to-cyan-600;
+}
+
+/* Card Styles - Professional */
+.card-professional {
+    @apply bg-white dark:bg-slate-800 rounded-xl shadow-md hover:shadow-lg transition-all duration-300 border border-slate-100 dark:border-slate-700;
+}
+
+.stat-card {
+    @apply card-professional overflow-hidden;
+}
+
+.stat-card-header {
+    @apply bg-gradient-to-r from-slate-700 to-slate-800 p-5 text-white font-semibold;
+}
+
+.stat-card-content {
+    @apply p-6;
+}
+
+.stat-card-value {
+    @apply text-4xl font-bold text-slate-900 dark:text-white;
+}
+
+.stat-card-label {
+    @apply text-sm font-medium text-slate-600 dark:text-slate-400 mt-2;
+}
+
+/* Chart Containers */
+.chart-container {
+    @apply card-professional p-6 mb-6;
+}
+
+.chart-title {
+    @apply text-lg font-bold text-slate-900 dark:text-white mb-4;
+}
+
+/* Progress Bars */
+.progress-bar {
+    @apply h-3 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden;
+}
+
+.progress-fill {
+    @apply h-full bg-gradient-to-r from-green-600 to-emerald-600 rounded-full transition-all duration-500;
+}
+
+/* Badge Styles */
+.badge-primary {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-800 dark:bg-slate-700 dark:text-slate-200;
+}
+
+.badge-success {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200;
+}
+
+.badge-warning {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200;
+}
+
+.badge-danger {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200;
+}
+
+.badge-info {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
+}
+
+/* Hover Effects */
+.card-hover {
+    @apply hover:shadow-xl hover:-translate-y-1 transition-all duration-300;
+}
+
+.card-hover-subtle {
+    @apply hover:shadow-lg transition-all duration-300;
+}
+
+/* Text Styling */
+.text-gradient {
+    @apply bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent;
+}
+
+.text-primary {
+    @apply text-slate-900 dark:text-white;
+}
+
+.text-secondary {
+    @apply text-slate-600 dark:text-slate-400;
+}
+
+/* Animation */
+@keyframes slideInUp {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes pulse-soft {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+}
+
+.animate-slide-in-up {
+    animation: slideInUp 0.5s ease-out;
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.3s ease-out;
+}
+
+.animate-pulse-soft {
+    animation: pulse-soft 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Stats Grid */
+.stats-grid {
+    @apply grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4;
+}
+
+.stat-item {
+    @apply p-5 rounded-xl border-l-4 transition-all duration-300 hover:shadow-md card-professional;
+}
+
+.stat-item-primary {
+    @apply border-l-slate-500 bg-slate-50 dark:bg-slate-900/20;
+}
+
+.stat-item-success {
+    @apply border-l-green-600 bg-green-50 dark:bg-green-900/20;
+}
+
+.stat-item-warning {
+    @apply border-l-orange-600 bg-orange-50 dark:bg-orange-900/20;
+}
+
+.stat-item-danger {
+    @apply border-l-red-600 bg-red-50 dark:bg-red-900/20;
+}
+
+/* Button Styles */
+.btn-primary {
+    @apply px-4 py-2 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white font-medium rounded-lg transition-all shadow-md hover:shadow-lg;
+}
+
+.btn-secondary {
+    @apply px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-900 dark:text-white font-medium rounded-lg transition-all;
+}
+
+.btn-outline {
+    @apply px-4 py-2 border-2 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white hover:bg-slate-50 dark:hover:bg-slate-700 font-medium rounded-lg transition-all;
+}
+
+/* Input Styles */
+.input-primary {
+    @apply w-full px-4 py-2.5 border-2 border-slate-200 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-green-500 focus:border-green-500 transition-all;
+}
+
+.input-primary::placeholder {
+    @apply text-slate-400 dark:text-slate-500;
+}
+
+/* Table Styles */
+.table-professional {
+    @apply w-full border-collapse;
+}
+
+.table-professional thead {
+    @apply bg-slate-50 dark:bg-slate-800 border-b-2 border-slate-200 dark:border-slate-700;
+}
+
+.table-professional th {
+    @apply px-6 py-3 text-left text-sm font-semibold text-slate-900 dark:text-white;
+}
+
+.table-professional td {
+    @apply px-6 py-4 text-sm text-slate-600 dark:text-slate-400 border-b border-slate-200 dark:border-slate-700;
+}
+
+.table-professional tbody tr:hover {
+    @apply bg-slate-50 dark:bg-slate-700/50 transition-colors;
+}
+
+/* Widget Styles */
+.widget-header {
+    @apply flex items-center justify-between mb-4 pb-3 border-b border-slate-200 dark:border-slate-700;
+}
+
+.widget-title {
+    @apply text-lg font-bold text-slate-900 dark:text-white;
+}
+
+.widget-subtitle {
+    @apply text-sm text-slate-600 dark:text-slate-400;
+}
+
+/* Header Section */
+.page-header {
+    @apply bg-gradient-to-r from-slate-700 via-slate-800 to-slate-900 text-white p-8 rounded-xl shadow-xl mb-6;
+}
+
+.page-header h1 {
+    @apply text-4xl font-bold mb-2;
+}
+
+.page-header p {
+    @apply text-slate-200 text-lg;
+}
+
+/* Alert Styles */
+.alert-success {
+    @apply bg-green-50 dark:bg-green-900/20 border-l-4 border-green-600 p-4 rounded;
+}
+
+.alert-warning {
+    @apply bg-orange-50 dark:bg-orange-900/20 border-l-4 border-orange-600 p-4 rounded;
+}
+
+.alert-danger {
+    @apply bg-red-50 dark:bg-red-900/20 border-l-4 border-red-600 p-4 rounded;
+}
+
+.alert-info {
+    @apply bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-600 p-4 rounded;
+}
+
+/* Separator */
+.divider-primary {
+    @apply border-t-2 border-gradient-to-r from-transparent via-slate-300 to-transparent dark:via-slate-700;
+}
+
+/* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --color-bg: #0F172A;
+        --color-bg-light: #1E293B;
+        --color-text: #F1F5F9;
+    }
+}
+
+.stat-item-success {
+    @apply border-l-green-500 bg-green-50 dark:bg-green-900/20;
+}
+
+.stat-item-warning {
+    @apply border-l-yellow-500 bg-yellow-50 dark:bg-yellow-900/20;
+}
+
+.stat-item-danger {
+    @apply border-l-red-500 bg-red-50 dark:bg-red-900/20;
+}
+
+/* Map Container */
+.map-container {
+    @apply relative bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden;
+}
+
+.map-controls {
+    @apply absolute top-4 left-4 z-10 bg-white dark:bg-gray-800 rounded-lg shadow-md p-3 space-y-2;
+}
+
+/* Data Table Styles */
+.data-table {
+    @apply w-full text-sm;
+}
+
+.data-table th {
+    @apply px-4 py-3 bg-gray-100 dark:bg-gray-700 font-semibold text-gray-900 dark:text-white text-left;
+}
+
+.data-table td {
+    @apply px-4 py-3 border-b border-gray-200 dark:border-gray-700;
+}
+
+.data-table tbody tr:hover {
+    @apply bg-gray-50 dark:bg-gray-700/50;
+}
+
+/* Info Box */
+.info-box {
+    @apply rounded-xl border-l-4 p-6;
+}
+
+.info-box-primary {
+    @apply border-l-blue-500 bg-blue-50 dark:bg-blue-900/20;
+}
+
+.info-box-success {
+    @apply border-l-green-500 bg-green-50 dark:bg-green-900/20;
+}
+
+.info-box-warning {
+    @apply border-l-yellow-500 bg-yellow-50 dark:bg-yellow-900/20;
+}
+
+.info-box-danger {
+    @apply border-l-red-500 bg-red-50 dark:bg-red-900/20;
+}
+
+/* Loading States */
+.loading-skeleton {
+    @apply animate-pulse space-y-4;
+}
+
+.skeleton-line {
+    @apply h-4 bg-gray-200 dark:bg-gray-700 rounded;
+}
+
+.skeleton-box {
+    @apply h-32 bg-gray-200 dark:bg-gray-700 rounded;
+}

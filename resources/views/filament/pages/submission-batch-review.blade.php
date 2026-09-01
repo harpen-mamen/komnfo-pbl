@@ -119,6 +119,57 @@
         </section>
 
         <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h2 class="text-base font-semibold text-slate-900">Riwayat Versi</h2>
+            <div class="mt-4 space-y-3">
+                @foreach ($this->getVersionHistory() as $version)
+                    <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                            <div>
+                                <div class="text-sm font-semibold text-slate-900">
+                                    Versi {{ $version['snapshot_version'] }} - {{ $version['submission_number'] }}
+                                </div>
+                                <div class="mt-1 text-xs text-slate-500">
+                                    Dikirim oleh {{ $version['sender'] ?? '-' }} pada {{ $version['submitted_at']?->format('d M Y H:i') ?? '-' }}
+                                </div>
+                            </div>
+                            <div class="flex flex-wrap gap-2">
+                                @if ($version['is_current'])
+                                    <span class="rounded-full bg-primary-100 px-3 py-1 text-xs font-semibold text-primary-700">Versi dibuka</span>
+                                @endif
+                                @if ($version['is_active'])
+                                    <span class="rounded-full bg-success-100 px-3 py-1 text-xs font-semibold text-success-700">Versi aktif</span>
+                                @endif
+                                <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-600">{{ $version['status'] }}</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-3 text-sm text-slate-600">
+                            Reviewer: {{ $version['reviewer'] ?? '-' }} · {{ $version['reviewed_at']?->format('d M Y H:i') ?? '-' }}
+                        </div>
+
+                        @if (! empty($version['rejection_reasons']))
+                            <div class="mt-3 rounded-lg bg-white p-3">
+                                <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Alasan Penolakan</div>
+                                @foreach ($version['rejection_reasons'] as $reason)
+                                    <div class="mt-1 text-sm text-slate-800">{{ $reason }}</div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        @if (! empty($version['comments']))
+                            <div class="mt-3 rounded-lg bg-white p-3">
+                                <div class="text-xs font-semibold uppercase tracking-[0.14em] text-slate-400">Komentar Reviewer</div>
+                                @foreach ($version['comments'] as $comment)
+                                    <div class="mt-1 text-sm text-slate-800">{{ $comment }}</div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+        </section>
+
+        <section class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 class="text-base font-semibold text-slate-900">Riwayat Verifikasi</h2>
             <div class="mt-4 space-y-3">
                 @forelse ($this->getTimeline() as $item)

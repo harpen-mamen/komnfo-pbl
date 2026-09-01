@@ -18,13 +18,20 @@ class KominfoWilayahAggregationChart extends ChartWidget
 
     protected function getData(): array
     {
-        $desas = Desa::query()
+        // READ MODEL: Only approved data via submission batch joins (Arsitektur §4.3)
+        $desas = \App\Models\Desa::query()
             ->withCount([
-                'rumah',
-                'rumah as keluarga_count' => fn ($query) => $query->join('keluarga', 'keluarga.rumah_id', '=', 'rumah.id'),
-                'rumah as penduduk_count' => fn ($query) => $query
-                    ->join('keluarga', 'keluarga.rumah_id', '=', 'rumah.id')
-                    ->join('penduduk', 'penduduk.keluarga_id', '=', 'keluarga.id'),
+                // Rumah: join through latest submission batch item → approved batch
+                'rumah as rumah_count' => fn ($query) => $query
+                    ->whereHas('latestSubmissionBatchItem.submissionBatch', fn ($sb) => $sb->where('status', \App\Models\SubmissionBatch::STATUS_APPROVED)),
+
+                // Keluarga: join through rumah → approved batch
+                'rumah.keluarga as keluarga_count' => fn ($query) => $query
+                    ->whereHas('rumah.latestSubmissionBatchItem.submissionBatch', fn ($sb) => $sb->where('status', \App\Models\SubmissionBatch::STATUS_APPROVED)),
+
+                // Penduduk: join through keluarga → rumah → approved batch
+                'rumah.keluarga.penduduk as penduduk_count' => fn ($query) => $query
+                    ->whereHas('rumah.keluarga.latestSubmissionBatchItem.submissionBatch', fn ($sb) => $sb->where('status', \App\Models\SubmissionBatch::STATUS_APPROVED)),
             ])
             ->orderBy('nama')
             ->get();

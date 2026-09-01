@@ -8,6 +8,7 @@ use App\Models\Kecamatan;
 use App\Models\Penduduk;
 use App\Models\Rumah;
 use App\Models\SubmissionBatch;
+use App\Services\Authorization\WewenangService;
 use App\Support\AdminKecamatan;
 use App\Support\PanelAccess;
 use Filament\Forms;
@@ -40,7 +41,25 @@ class PendudukResource extends Resource
 
     public static function canCreate(): bool
     {
-        return AdminKecamatan::isAdminKecamatan();
+        $user = auth()->user();
+        if (!$user) return false;
+
+        // SPRINT 6: Admin Kecamatan BISA membuat data master
+        if ($user->isAdminKecamatan()) {
+            return true;
+        }
+
+        // Admin Desa
+        if ($user->isAdminDesa()) {
+            return true;
+        }
+
+        // Kabupaten level
+        if (PanelAccess::canAccessKabupatenPanel()) {
+            return true;
+        }
+
+        return false;
     }
 
     public static function canViewAny(): bool
@@ -50,12 +69,16 @@ class PendudukResource extends Resource
 
     public static function canEdit(Model $record): bool
     {
-        return AdminKecamatan::isAdminKecamatan();
+        return app(WewenangService::class)
+            ->setUser(auth()->user())
+            ->canEditRecord(Penduduk::class, $record->id);
     }
 
     public static function canDelete(Model $record): bool
     {
-        return AdminKecamatan::isAdminKecamatan();
+        return app(WewenangService::class)
+            ->setUser(auth()->user())
+            ->canDeleteRecord(Penduduk::class, $record->id);
     }
 
     public static function canDeleteAny(): bool
@@ -76,6 +99,7 @@ class PendudukResource extends Resource
                 ->searchable()
                 ->required()
                 ->reactive()
+                ->disabled(fn () => AdminKecamatan::isAdminDesa())
                 ->afterStateHydrated(function ($component, $state, ?Penduduk $record): void {
                     if ($record?->keluarga?->rumah?->desa_id) {
                         $component->state($record->keluarga->rumah->desa_id);

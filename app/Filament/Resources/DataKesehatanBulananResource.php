@@ -31,28 +31,49 @@ class DataKesehatanBulananResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->visibleToCurrentUser()->with(['periodePelaporan', 'kecamatan', 'desa', 'createdBy', 'updatedBy', 'latestSubmissionBatchItem.submissionBatch']);
+        return parent::getEloquentQuery()->visibleToCurrentUser()->with([
+            'periodePelaporan',
+            'kecamatan',
+            'desa',
+            'createdBy',
+            'updatedBy',
+            'latestSubmissionBatchItem.submissionBatch',
+            'ibuHamils',
+            'bayis',
+            'tenagaKesehatans',
+            'pelayananKesehatans',
+            'kasusPenyakit'
+        ]);
     }
 
     protected static function shouldRegisterNavigation(): bool
     {
-        return PanelAccess::canAccessKabupatenPanel() || PanelAccess::isAdminKecamatan();
+        // SPRINT 6: Data Kesehatan dihitung otomatis dari data penduduk
+        // Tidak perlu input manual
+        return false;
     }
 
     public static function canViewAny(): bool
     {
-        return PanelAccess::canAccessKabupatenPanel() || PanelAccess::isAdminKecamatan();
+        // SPRINT 6: Tidak ada create manual - hanya lihat data hasil kalkulasi
+        return false;
     }
 
     public static function canCreate(): bool
     {
-        return PanelAccess::isAdminKecamatan();
+        // SPRINT 6: Data Kesehatan dihitung otomatis
+        return false;
     }
 
     public static function canEdit(Model $record): bool
     {
         if (PanelAccess::isAdminKecamatan()) {
             return (int) $record->kecamatan_id === (int) PanelAccess::user()?->kecamatan_id
+                && (bool) $record->periodePelaporan?->isOpenForInput();
+        }
+
+        if (PanelAccess::isOperatorPuskesmas()) {
+            return (int) $record->created_by === (int) PanelAccess::user()?->id
                 && (bool) $record->periodePelaporan?->isOpenForInput();
         }
 
@@ -105,15 +126,6 @@ class DataKesehatanBulananResource extends Resource
                         ->searchable()
                         ->reactive()
                         ->required(),
-                    Forms\Components\Select::make('desa_id')
-                        ->label('Desa')
-                        ->options(fn (callable $get) => Desa::query()
-                            ->when(PanelAccess::isOperatorPuskesmas(), fn (Builder $query) => $query->where('kecamatan_id', PanelAccess::user()?->kecamatan_id))
-                            ->when(! PanelAccess::isOperatorPuskesmas() && $get('kecamatan_id'), fn (Builder $query, $kecamatanId) => $query->where('kecamatan_id', $kecamatanId))
-                            ->orderBy('nama')
-                            ->pluck('nama', 'id'))
-                        ->searchable()
-                        ->required(),
                     Forms\Components\Select::make('jenis')
                         ->label('Jenis')
                         ->options([
@@ -124,41 +136,67 @@ class DataKesehatanBulananResource extends Resource
                         ->required(),
                 ]),
 
-            Forms\Components\Section::make('Pelayanan')
-                ->icon('heroicon-o-clipboard-list')
+            // Section Ringkasan Data - hanya menampilkan statistik
+            Forms\Components\Section::make('Ringkasan Data Kesehatan')
+                ->icon('heroicon-o-chart-bar')
+                ->description('Ringkasan data yang telah diinput. Klik link untuk menambah data.')
                 ->collapsible()
+                ->collapsed()
                 ->schema([
-                    Forms\Components\Grid::make(3)
-                        ->schema([
-                            Forms\Components\TextInput::make('kunjungan')->label('Kunjungan')->numeric()->minValue(0)->default(0),
-                            Forms\Components\TextInput::make('rawat_jalan')->label('Rawat Jalan')->numeric()->minValue(0)->default(0),
-                            Forms\Components\TextInput::make('rawat_inap')->label('Rawat Inap')->numeric()->minValue(0)->default(0),
-                            Forms\Components\TextInput::make('rujukan')->label('Rujukan')->numeric()->minValue(0)->default(0),
-                            Forms\Components\TextInput::make('persalinan')->label('Persalinan')->numeric()->minValue(0)->default(0),
-                        ]),
-                ]),
+                    Forms\Components\Placeholder::make('ringkasan_data')
+                        ->label('Ringkasan')
+                        ->content(function (callable $get, $record) {
+                            $html = '<div class="grid grid-cols-2 md:grid-cols-4 gap-4">';
 
-            Forms\Components\Section::make('Kesehatan Ibu & Anak')
-                ->icon('heroicon-o-user-group')
-                ->collapsible()
-                ->schema([
-                    Forms\Components\Grid::make(3)
-                        ->schema([
-                            Forms\Components\TextInput::make('ibu_hamil')->label('Ibu Hamil')->numeric()->minValue(0)->default(0),
-                            Forms\Components\TextInput::make('balita')->label('Balita')->numeric()->minValue(0)->default(0),
-                            Forms\Components\TextInput::make('bayi')->label('Bayi')->numeric()->minValue(0)->default(0),
-                            Forms\Components\TextInput::make('imunisasi')->label('Imunisasi')->numeric()->minValue(0)->default(0),
-                            Forms\Components\TextInput::make('stunting')->label('Stunting')->numeric()->minValue(0)->default(0),
-                            Forms\Components\TextInput::make('gizi_buruk')->label('Gizi Buruk')->numeric()->minValue(0)->default(0),
-                        ]),
+                            // Stats dari relasi
+                            $ibuHamilCount = $record?->ibuHamils()->count() ?? 0;
+                            $bayiCount = $record?->bayis()->count() ?? 0;
+                            $nakesCount = $record?->tenagaKesehatans()->count() ?? 0;
+                            $pelayananCount = $record?->pelayananKesehatans()->count() ?? 0;
+                            $kasusCount = $record?->kasusPenyakit()->count() ?? 0;
+
+                            $html .= '<div class="bg-blue-50 p-4 rounded-lg"><div class="text-2xl font-bold text-blue-600">' . $ibuHamilCount . '</div><div class="text-sm text-gray-600">Ibu Hamil</div></div>';
+                            $html .= '<div class="bg-green-50 p-4 rounded-lg"><div class="text-2xl font-bold text-green-600">' . $bayiCount . '</div><div class="text-sm text-gray-600">Bayi/Balita</div></div>';
+                            $html .= '<div class="bg-purple-50 p-4 rounded-lg"><div class="text-2xl font-bold text-purple-600">' . $nakesCount . '</div><div class="text-sm text-gray-600">Tenaga Kesehatan</div></div>';
+                            $html .= '<div class="bg-orange-50 p-4 rounded-lg"><div class="text-2xl font-bold text-orange-600">' . $pelayananCount . '</div><div class="text-sm text-gray-600">Pelayanan</div></div>';
+                            $html .= '<div class="bg-red-50 p-4 rounded-lg"><div class="text-2xl font-bold text-red-600">' . $kasusCount . '</div><div class="text-sm text-gray-600">Kasus Penyakit</div></div>';
+
+                            // Statistik tambahan
+                            $ibuHamilAktif = $record?->ibuHamils()->where('status_kehamilan', 'Hamil')->count() ?? 0;
+                            $ibuResikoTinggi = $record?->ibuHamils()->where('kategori_resiko', 'Resiko Tinggi')->count() ?? 0;
+                            $bayiStunting = $record?->bayis()->where('kategori_balita', 'Stunting')->count() ?? 0;
+                            $bayiGiziBuruk = $record?->bayis()->where('status_gizi', 'Buruk')->count() ?? 0;
+
+                            $html .= '<div class="bg-pink-50 p-4 rounded-lg"><div class="text-2xl font-bold text-pink-600">' . $ibuHamilAktif . '</div><div class="text-sm text-gray-600">Ibu Hamil Aktif</div></div>';
+                            $html .= '<div class="bg-yellow-50 p-4 rounded-lg"><div class="text-2xl font-bold text-yellow-600">' . $ibuResikoTinggi . '</div><div class="text-sm text-gray-600">Resiko Tinggi</div></div>';
+                            $html .= '<div class="bg-indigo-50 p-4 rounded-lg"><div class="text-2xl font-bold text-indigo-600">' . $bayiStunting . '</div><div class="text-sm text-gray-600">Bayi Stunting</div></div>';
+                            $html .= '<div class="bg-teal-50 p-4 rounded-lg"><div class="text-2xl font-bold text-teal-600">' . $bayiGiziBuruk . '</div><div class="text-sm text-gray-600">Gizi Buruk</div></div>';
+
+                            $html .= '</div>';
+
+                            $html .= '<div class="mt-4 p-4 bg-gray-50 rounded-lg text-sm text-gray-600">';
+                            $html .= '<p class="font-semibold mb-2">Petunjuk Input Data:</p>';
+                            $html .= '<ul class="list-disc list-inside space-y-1">';
+                            $html .= '<li>Klik menu <strong>"Data Ibu Hamil"</strong> di sidebar untuk input data ibu hamil/bersalin</li>';
+                            $html .= '<li>Klik menu <strong>"Data Bayi & Balita"</strong> untuk input data bayi dan balita</li>';
+                            $html .= '<li>Klik menu <strong>"Data Tenaga Kesehatan"</strong> untuk input data tenaga kesehatan</li>';
+                            $html .= '<li>Klik menu <strong>"Data Pelayanan Kesehatan"</strong> untuk input data pelayanan</li>';
+                            $html .= '<li>Kasus penyakit sudah terintegrasi dengan data penduduk</li>';
+                            $html .= '</ul>';
+                            $html .= '</div>';
+
+                            return new \Illuminate\Support\HtmlString($html);
+                        })
+                        ->columnSpanFull(),
                 ]),
 
             Forms\Components\Section::make('Kasus Penyakit')
                 ->icon('heroicon-o-beaker')
                 ->collapsible()
+                ->collapsed()
                 ->schema([
                     Forms\Components\CheckboxList::make('kasus_penyakit')
-                        ->label('Kasus Penyakit')
+                        ->label('Kasus Penyakit (ceklis jika ada)')
                         ->options([
                             'ISPA' => 'ISPA',
                             'DBD' => 'DBD',
@@ -170,41 +208,91 @@ class DataKesehatanBulananResource extends Resource
                             'Lainnya' => 'Lainnya',
                         ])
                         ->columns(2),
+                    Forms\Components\Placeholder::make('kasus_detail_info')
+                        ->label('Input Detail Kasus')
+                        ->content(new \Illuminate\Support\HtmlString(
+                            '<div class="text-sm text-gray-600">Klik menu <strong>"Data Kasus Penyakit"</strong> di sidebar untuk input detail kasus per penduduk.</div>'
+                        ))
+                        ->columnSpanFull(),
                 ]),
 
-            Forms\Components\Section::make('Tenaga Kesehatan')
-                ->icon('heroicon-o-user')
+            Forms\Components\Section::make('Statistik KIA')
+                ->icon('heroicon-o-identification')
                 ->collapsible()
+                ->collapsed()
+                ->columns(2)
                 ->schema([
-                    Forms\Components\Grid::make(3)
-                        ->schema([
-                            Forms\Components\TextInput::make('dokter')->label('Dokter')->numeric()->minValue(0)->default(0),
-                            Forms\Components\TextInput::make('perawat')->label('Perawat')->numeric()->minValue(0)->default(0),
-                            Forms\Components\TextInput::make('bidan')->label('Bidan')->numeric()->minValue(0)->default(0),
-                            Forms\Components\TextInput::make('apoteker')->label('Apoteker')->numeric()->minValue(0)->default(0),
-                            Forms\Components\TextInput::make('ahli_gizi')->label('Ahli Gizi')->numeric()->minValue(0)->default(0),
-                        ]),
+                    Forms\Components\TextInput::make('ibu_hamil')->label('Ibu Hamil')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('balita')->label('Balita')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('bayi')->label('Bayi (0-11 bulan)')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('stunting')->label('Stunting')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('gizi_buruk')->label('Gizi Buruk')->numeric()->minValue(0)->default(0),
+                ]),
+
+            Forms\Components\Section::make('Pelayanan Kesehatan')
+                ->icon('heroicon-o-plus-circle')
+                ->collapsible()
+                ->collapsed()
+                ->columns(3)
+                ->schema([
+                    Forms\Components\TextInput::make('kunjungan')->label('Total Kunjungan')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('rawat_jalan')->label('Rawat Jalan')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('rawat_inap')->label('Rawat Inap')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('rujukan')->label('Rujukan')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('persalinan')->label('Persalinan')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('imunisasi')->label('Imunisasi')->numeric()->minValue(0)->default(0),
+                ]),
+
+            Forms\Components\Section::make('Statistik Penyakit')
+                ->icon('heroicon-o-beaker')
+                ->collapsible()
+                ->collapsed()
+                ->columns(4)
+                ->schema([
+                    Forms\Components\TextInput::make('ispa')->label('ISPA')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('dbd')->label('DBD')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('malaria')->label('Malaria')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('tbc')->label('TBC')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('hipertensi')->label('Hipertensi')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('diabetes')->label('Diabetes')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('covid')->label('Covid')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('lainnya')->label('Lainnya')->numeric()->minValue(0)->default(0),
+                ]),
+
+            Forms\Components\Section::make('Statistik SDM')
+                ->icon('heroicon-o-user-group')
+                ->collapsible()
+                ->collapsed()
+                ->columns(5)
+                ->schema([
+                    Forms\Components\TextInput::make('dokter')->label('Dokter')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('perawat')->label('Perawat')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('bidan')->label('Bidan')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('apoteker')->label('Apoteker')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('ahli_gizi')->label('Ahli Gizi')->numeric()->minValue(0)->default(0),
                 ]),
 
             Forms\Components\Section::make('Sarana')
                 ->icon('heroicon-o-office-building')
                 ->collapsible()
+                ->collapsed()
                 ->schema([
-                    Forms\Components\Grid::make(3)
+                    Forms\Components\Grid::make(4)
                         ->schema([
-                            Forms\Components\Toggle::make('ambulans')->label('Ambulans')->dehydrated(false),
-                            Forms\Components\Toggle::make('laboratorium')->label('Laboratorium')->dehydrated(false),
-                            Forms\Components\Toggle::make('apotek')->label('Apotek')->dehydrated(false),
-                            Forms\Components\Toggle::make('ruang_bersalin')->label('Ruang Bersalin')->dehydrated(false),
-                            Forms\Components\Toggle::make('internet')->label('Internet')->dehydrated(false),
-                            Forms\Components\Toggle::make('listrik')->label('Listrik')->dehydrated(false),
-                            Forms\Components\Toggle::make('air_bersih')->label('Air Bersih')->dehydrated(false),
+                            Forms\Components\Checkbox::make('ambulans')->label('Ambulans'),
+                            Forms\Components\Checkbox::make('laboratorium')->label('Laboratorium'),
+                            Forms\Components\Checkbox::make('apotek')->label('Apotek'),
+                            Forms\Components\Checkbox::make('ruang_bersalin')->label('Ruang Bersalin'),
+                            Forms\Components\Checkbox::make('internet')->label('Internet'),
+                            Forms\Components\Checkbox::make('listrik')->label('Listrik'),
+                            Forms\Components\Checkbox::make('air_bersih')->label('Air Bersih'),
                         ]),
                 ]),
 
             Forms\Components\Section::make('Obat')
                 ->icon('heroicon-o-cube')
                 ->collapsible()
+                ->collapsed()
                 ->schema([
                     Forms\Components\Radio::make('status_obat')
                         ->label('Status Obat')
@@ -217,9 +305,23 @@ class DataKesehatanBulananResource extends Resource
                         ->required(),
                 ]),
 
+            Forms\Components\Section::make('Data Tambahan')
+                ->icon('heroicon-o-document-report')
+                ->collapsible()
+                ->collapsed()
+                ->columns(3)
+                ->schema([
+                    Forms\Components\TextInput::make('kematian')->label('Kematian')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('kelahiran')->label('Kelahiran')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('disabilitas')->label('Disabilitas')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('bpjs_aktif')->label('BPJS Aktif')->numeric()->minValue(0)->default(0),
+                    Forms\Components\TextInput::make('bpjs_tidak_aktif')->label('BPJS Tidak Aktif')->numeric()->minValue(0)->default(0),
+                ]),
+
             Forms\Components\Section::make('Permasalahan')
                 ->icon('heroicon-o-exclamation-circle')
                 ->collapsible()
+                ->collapsed()
                 ->schema([
                     Forms\Components\CheckboxList::make('permasalahan')
                         ->label('Permasalahan')
@@ -244,41 +346,14 @@ class DataKesehatanBulananResource extends Resource
 
             Forms\Components\Section::make('Catatan')
                 ->collapsible()
+                ->collapsed()
                 ->schema([
                     Forms\Components\Textarea::make('keterangan')
                         ->label('Catatan')
                         ->rows(6)
                         ->columnSpanFull(),
                 ]),
-
-            Forms\Components\Section::make('Ringkasan Otomatis')
-                ->icon('heroicon-o-chart-bar')
-                ->description('Ringkasan cepat tidak tersimpan ke database.')
-                ->collapsible()
-                ->schema([
-                    Forms\Components\Placeholder::make('ringkasan')
-                        ->label('Ringkasan')
-                        ->content(fn (callable $get) =>
-                            '<div class="ringkasan-container">'
-                            .'<div class="ringkasan-card"><strong>Puskesmas</strong><div>' . ($get('puskesmas') ?? '-') . '</div></div>'
-                            .'<div class="ringkasan-card"><strong>Total Pelayanan</strong><div>' . ((int) ($get('kunjungan') ?? 0) + (int) ($get('rawat_jalan') ?? 0) + (int) ($get('rawat_inap') ?? 0)) . '</div></div>'
-                            .'<div class="ringkasan-card"><strong>Jumlah SDM</strong><div>' . ((int) ($get('dokter') ?? 0) + (int) ($get('perawat') ?? 0) + (int) ($get('bidan') ?? 0) + (int) ($get('apoteker') ?? 0) + (int) ($get('ahli_gizi') ?? 0)) . '</div></div>'
-                            .'<div class="ringkasan-card"><strong>Status Obat</strong><div>' . ($get('status_obat') ?? '-') . '</div></div>'
-                            .'<div class="ringkasan-card"><strong>Status Sarana</strong><div>' . (implode(', ', array_filter([
-                                    $get('ambulans') ? 'Ambulans' : null,
-                                    $get('laboratorium') ? 'Laboratorium' : null,
-                                    $get('apotek') ? 'Apotek' : null,
-                                    $get('ruang_bersalin') ? 'Ruang Bersalin' : null,
-                                    $get('internet') ? 'Internet' : null,
-                                    $get('listrik') ? 'Listrik' : null,
-                                    $get('air_bersih') ? 'Air Bersih' : null,
-                                ])) ?: '-') . '</div></div>'
-                            .'<div class="ringkasan-card"><strong>Jumlah Permasalahan</strong><div>' . count($get('permasalahan') ?? []) . '</div></div>'
-                            .'</div>'
-                        )
-                        ->columnSpanFull(),
-                ]),
-        ])->columns(2);
+        ]);
     }
 
     public static function table(Table $table): Table
@@ -297,11 +372,24 @@ class DataKesehatanBulananResource extends Resource
                 ]),
                 Tables\Columns\TextColumn::make('puskesmas')->label('Puskesmas')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('kecamatan.nama')->label('Kecamatan')->searchable(),
-                Tables\Columns\TextColumn::make('desa.nama')->label('Desa')->searchable(),
-                Tables\Columns\TextColumn::make('jumlah_balita')->label('Balita')->sortable(),
-                Tables\Columns\TextColumn::make('jumlah_ibu_hamil')->label('Ibu Hamil')->sortable(),
-                Tables\Columns\TextColumn::make('stunting')->label('Stunting')->sortable(),
-                Tables\Columns\TextColumn::make('gizi_buruk')->label('Gizi Buruk')->sortable(),
+                Tables\Columns\TextColumn::make('ibu_hamil')->label('Ibu Hamil')->sortable(),
+                Tables\Columns\TextColumn::make('balita')->label('Balita')->sortable(),
+                Tables\Columns\TextColumn::make('bayi')->label('Bayi')->sortable(),
+                Tables\Columns\TextColumn::make('stunting')->label('Stunting')->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('gizi_buruk')->label('Gizi Buruk')->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('dokter')->label('Dokter')->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('perawat')->label('Perawat')->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('bidan')->label('Bidan')->sortable()->toggleable(),
+                Tables\Columns\BadgeColumn::make('status_obat')->label('Status Obat')->colors([
+                    'success' => 'Lengkap',
+                    'warning' => 'Cukup',
+                    'danger' => 'Kurang',
+                    'gray' => 'Kosong',
+                ])->toggleable(),
+                Tables\Columns\TextColumn::make('ibuHamils_count')->label('Detail IBU Hamil')->getStateUsing(fn ($record) => $record->ibuHamils()->count())->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('bayis_count')->label('Detail Bayi')->getStateUsing(fn ($record) => $record->bayis()->count())->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('tenagaKesehatans_count')->label('Detail Nakes')->getStateUsing(fn ($record) => $record->tenagaKesehatans()->count())->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('kasusPenyakit_count')->label('Detail Kasus')->getStateUsing(fn ($record) => $record->kasusPenyakit()->count())->sortable()->toggleable(),
                 Tables\Columns\BadgeColumn::make('status')->label('Status'),
                 Tables\Columns\TextColumn::make('createdBy.name')->label('Created By')->toggleable(),
                 Tables\Columns\TextColumn::make('updatedBy.name')->label('Updated By')->toggleable(),

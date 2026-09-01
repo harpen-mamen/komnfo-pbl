@@ -22,14 +22,29 @@ class ManageKecamatan extends Page implements Forms\Contracts\HasForms
 
     public function mount(): void
     {
-        abort_unless(PanelAccess::canAccessKabupatenPanel(), 403);
+        abort_unless(
+            PanelAccess::canManageUsers(),
+            403
+        );
 
         $this->form->fill();
     }
 
     public static function shouldRegisterNavigation(): bool
     {
-        return PanelAccess::canAccessKabupatenPanel();
+        return PanelAccess::canManageUsers();
+    }
+
+    public function getTitle(): string
+    {
+        if (PanelAccess::isKominfoKabupaten()) {
+            return 'Manajemen Kecamatan Kabupaten';
+        } elseif (PanelAccess::isAdminDesa()) {
+            return 'Manajemen Desa';
+        } elseif (PanelAccess::isOperatorOpd()) {
+            return 'Manajemen OPD';
+        }
+        return 'Manajemen Kecamatan';
     }
 
     protected function getFormSchema(): array

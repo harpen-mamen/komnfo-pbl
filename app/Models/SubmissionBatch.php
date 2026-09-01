@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Support\UserScope;
 
 class SubmissionBatch extends Model
 {
@@ -20,6 +21,8 @@ class SubmissionBatch extends Model
     public const MODULE_KESEHATAN = 'kesehatan';
     public const MODULE_PENDIDIKAN = 'pendidikan';
     public const MODULE_MIXED = 'mixed';
+    public const MODULE_PUSKES = 'puskes';
+    public const MODULE_SEKOLAH = 'sekolah';
 
     public const STATUS_DRAFT = 'draft';
     public const STATUS_PENDING = 'menunggu_verifikasi';
@@ -47,6 +50,9 @@ class SubmissionBatch extends Model
         'submitted_at',
         'verified_at',
         'verified_by',
+        'forwarded_at',
+        'forwarded_by',
+        'is_published',
         'payload_snapshot',
         'version',
     ];
@@ -54,12 +60,14 @@ class SubmissionBatch extends Model
     protected $casts = [
         'submitted_at' => 'datetime',
         'verified_at' => 'datetime',
+        'forwarded_at' => 'datetime',
         'periode_bulan' => 'integer',
         'periode_tahun' => 'integer',
         'package_keys' => 'array',
         'package_summary' => 'array',
         'payload_snapshot' => 'array',
         'version' => 'integer',
+        'is_published' => 'boolean',
     ];
 
     public function kecamatan(): BelongsTo
@@ -75,6 +83,11 @@ class SubmissionBatch extends Model
     public function verifiedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'verified_by');
+    }
+
+    public function forwardedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'forwarded_by');
     }
 
     public function items(): HasMany
@@ -98,6 +111,12 @@ class SubmissionBatch extends Model
     public function scopeApproved(Builder $query): Builder
     {
         return $query->where('status', self::STATUS_APPROVED);
+    }
+
+    /** SPEC-004: Single source of truth — delegate to UserScope::visibleTo(). */
+    public function scopeVisibleToCurrentUser(Builder $query): Builder
+    {
+        return UserScope::visibleTo($query);
     }
 
     public function scopeLatestByModule(Builder $query, string $module, int $kecamatanId, ?int $periodeBulan = null, ?string $semester = null, ?int $periodeTahun = null): Builder
@@ -136,5 +155,27 @@ class SubmissionBatch extends Model
             self::STATUS_ARCHIVED => 'Diarsipkan',
             default => $status ?? '-',
         };
+    }
+
+    /** Check if this batch was created from a mobile device. */
+    public function isFromMobile(): bool
+    {
+        return ($this->payload_snapshot['source'] ?? null) === 'mobile';
+    }
+
+    /** True for Rumah/Keluarga/Penduduk — requires Kominfo approval before publish. */
+    public function isMasterData(): bool
+    {
+        return in_array($this->module, [
+            self::MODULE_RUMAH,
+            self::MODULE_KELUARGA,
+            self::MODULE_PENDUDUK,
+        ], true);
+    }
+
+    /** True if this batch has been forwarded to Kominfo. */
+    public function isForwarded(): bool
+    {
+        return $this->forwarded_at !== null;
     }
 }

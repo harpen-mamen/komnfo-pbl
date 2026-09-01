@@ -83,7 +83,17 @@ class EditDataPendidikanBulanan extends EditRecord
             $data['status'] = $this->record->status ?: 'Terkirim';
         }
 
-        abort_unless(Desa::query()->whereKey($data['desa_id'])->where('kecamatan_id', $data['kecamatan_id'])->exists(), 403);
+        // validate desa belongs to kecamatan — surface as validation error instead of abort
+        $desaExists = Desa::query()
+            ->whereKey($data['desa_id'] ?? null)
+            ->when(isset($data['kecamatan_id']), fn ($q) => $q->where('kecamatan_id', $data['kecamatan_id']))
+            ->exists();
+
+        if (! $desaExists) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'desa_id' => ['Desa tidak valid atau tidak berada di kecamatan yang dipilih.'],
+            ]);
+        }
 
         return $data;
     }

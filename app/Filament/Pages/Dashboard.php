@@ -2,8 +2,6 @@
 
 namespace App\Filament\Pages;
 
-use App\Filament\Pages\ImportDataPenduduk;
-use App\Filament\Pages\PetaDesa;
 use App\Filament\Resources\KeluargaResource;
 use App\Filament\Resources\PendudukResource;
 use App\Filament\Resources\RumahResource;
@@ -17,6 +15,7 @@ use App\Models\Keluarga;
 use App\Models\Penduduk;
 use App\Models\Rumah;
 use App\Models\SubmissionBatch;
+use App\Services\DashboardAggregationService;
 use App\Support\PanelAccess;
 use Filament\Pages\Dashboard as BaseDashboard;
 use Illuminate\Database\Eloquent\Builder;
@@ -33,7 +32,7 @@ class Dashboard extends BaseDashboard
 
     public static function shouldRegisterNavigation(): bool
     {
-        return PanelAccess::canAccessKabupatenPanel() || PanelAccess::canAccessKecamatanPanel();
+        return PanelAccess::canAccessKabupatenPanel() || PanelAccess::canAccessKecamatanPanel() || PanelAccess::canAccessOpdPanel() || PanelAccess::canAccessOperatorPanel();
     }
 
     public static function getNavigationLabel(): string
@@ -49,27 +48,33 @@ class Dashboard extends BaseDashboard
     protected function getWidgets(): array
     {
         // Register available dashboard widgets depending on panel access.
-        if (PanelAccess::isAdminKecamatan()) {
+        // Super admin is also allowed on the kabupaten panel, so this branch
+        // must be evaluated first to avoid silently receiving the wrong view.
+        if (PanelAccess::isSuperAdmin()) {
             return [
+                \App\Filament\Widgets\SuperAdminDashboard::class,
+                \App\Filament\Widgets\SuperAdminStatsOverview::class,
+            ];
+        }
+
+        if (PanelAccess::isAdminKecamatan() || PanelAccess::isAdminDesa()) {
+            return [
+                \App\Filament\Widgets\DataQualityMetricsWidget::class,
+                \App\Filament\Widgets\AdminKecamatanDashboard::class,
                 \App\Filament\Widgets\AdminKecamatanStats::class,
                 \App\Filament\Widgets\KecamatanProgressOverview::class,
                 \App\Filament\Widgets\KecamatanWorkflowOverview::class,
-                \App\Filament\Widgets\StatusEkonomiChart::class,
-                \App\Filament\Widgets\AgamaChart::class,
-                \App\Filament\Widgets\PendidikanChart::class,
-                \App\Filament\Widgets\PekerjaanChart::class,
-                \App\Filament\Widgets\PertumbuhanPendudukChart::class,
             ];
         }
 
         if (PanelAccess::canAccessKabupatenPanel()) {
             return [
+                \App\Filament\Widgets\DataQualityMetricsWidget::class,
+                \App\Filament\Widgets\RegistrationVerificationWidget::class,
+                \App\Filament\Widgets\AdminKominfoDashboard::class,
                 \App\Filament\Widgets\KominfoStatsOverview::class,
+                \App\Filament\Widgets\KominfoVerificationStatsOverview::class,
                 \App\Filament\Widgets\KominfoWilayahAggregationChart::class,
-                \App\Filament\Widgets\AgamaChart::class,
-                \App\Filament\Widgets\PendidikanChart::class,
-                \App\Filament\Widgets\PekerjaanChart::class,
-                \App\Filament\Widgets\PertumbuhanPendudukChart::class,
             ];
         }
 
@@ -78,15 +83,15 @@ class Dashboard extends BaseDashboard
 
     public function mount(): void
     {
-        abort_unless(PanelAccess::canAccessKabupatenPanel() || PanelAccess::canAccessKecamatanPanel(), 403);
+        abort_unless(PanelAccess::canAccessKabupatenPanel() || PanelAccess::canAccessKecamatanPanel() || PanelAccess::canAccessOpdPanel() || PanelAccess::canAccessOperatorPanel(), 403);
     }
 
     protected function getViewData(): array
     {
         return [
-            'dashboard' => PanelAccess::isAdminKecamatan()
+            'dashboard' => (PanelAccess::isAdminKecamatan() || PanelAccess::isAdminDesa())
                 ? $this->buildKecamatanDashboard()
-                : $this->buildKabupatenDashboard(),
+                : (PanelAccess::isOperatorOpd() ? $this->buildOperatorDashboard() : $this->buildKabupatenDashboard()),
         ];
     }
 
@@ -115,7 +120,7 @@ class Dashboard extends BaseDashboard
 
         $overallProgress = $this->overallProgress($progressItems);
         $taskCenter = $this->buildKecamatanTaskCenter($rumah, $keluarga, $penduduk);
-        $map = $this->mapData($rumah, 300);
+        $map = $this->mapData((clone $rumah)->inApprovedBatch(), 300);
 
         return [
             'mode' => 'kecamatan',
@@ -162,8 +167,6 @@ class Dashboard extends BaseDashboard
             'quickActions' => [
                 $this->action('Import Penduduk', 'Unggah data penduduk dari file.', ImportDataPenduduk::getUrl(), 'success'),
                 $this->action('Tambah Desa', 'Buat desa baru untuk kecamatan Anda.', ManageDesa::getUrl(), 'primary'),
-                $this->action('Profil Kecamatan', 'Lihat ringkasan wilayah kerja.', PetaDesa::getUrl(), 'gray'),
-                $this->action('Peta Desa', 'Buka peta rumah lengkap.', PetaDesa::getUrl(), 'warning'),
             ],
         ];
     }
@@ -244,10 +247,10 @@ class Dashboard extends BaseDashboard
             'chartPanels' => $infographicsReady
                 ? [
                     ['title' => 'Pertumbuhan Penduduk', 'chart' => $this->growthChartData()],
-                    ['title' => 'Tren Pengiriman Batch', 'chart' => $this->submissionTrendData()],
-                    ['title' => 'Tren Verifikasi', 'chart' => $this->verificationTrendData()],
-                    ['title' => 'Tren Pendidikan', 'chart' => $this->monthlyReportTrendData(DataPendidikanBulanan::query()->inApprovedBatch(), 'Pendidikan Bulanan')],
-                    ['title' => 'Tren Kesehatan', 'chart' => $this->monthlyReportTrendData(DataKesehatanBulanan::query()->inApprovedBatch(), 'Kesehatan Bulanan')],
+                    ['title' => 'Sebaran Pekerjaan', 'chart' => $this->chartData($this->kabupatenPendudukQuery(), 'pekerjaan', null, 'Pekerjaan', 'bar', 10)],
+                    ['title' => 'Sebaran Penghasilan', 'chart' => $this->incomeChartData($this->kabupatenPendudukQuery())],
+                    ['title' => 'Status Ekonomi Keluarga', 'chart' => $this->chartData($this->kabupatenKeluargaQuery(), 'status_ekonomi', array_keys(Keluarga::STATUS_EKONOMI), 'Status Ekonomi', 'doughnut')],
+                    ['title' => 'Sebaran Kasus Penyakit', 'chart' => $this->diseaseChartData()],
                 ]
                 : [],
             'verificationSummary' => [
@@ -278,7 +281,6 @@ class Dashboard extends BaseDashboard
                 $this->action('Tambah KK', 'Tambah data keluarga baru.', route('filament.resources.keluargas.index'), 'warning'),
                 $this->action('Tambah Sekolah', 'Tambah sekolah baru.', route('filament.resources.data-pendidikan-bulanans.index'), 'info'),
                 $this->action('Kirim Batch', 'Kirim data batch ke Kominfo.', "/admin/submission-batches" , 'danger'),
-                $this->action('Lihat GIS', 'Buka peta interaktif wilayah.', PetaDesa::getUrl(), 'primary'),
                 $this->action('Generate Report', 'Ekspor laporan ke PDF atau Excel.', route('laporan.penduduk.pdf'), 'gray'),
             ],
             'summaryPanel' => [
@@ -455,65 +457,7 @@ class Dashboard extends BaseDashboard
 
     private function buildKabupatenRows(): Collection
     {
-        return Kecamatan::query()
-            ->orderBy('nama')
-            ->get()
-            ->map(function (Kecamatan $kecamatan): array {
-                $desas = $kecamatan->desas;
-                $rumah = Rumah::query()
-                    ->inApprovedBatch()
-                    ->whereHas('desa', fn (Builder $query) => $query->where('kecamatan_id', $kecamatan->id))
-                    ->with(['desa', 'keluarga.penduduk'])
-                    ->get();
-                $keluarga = Keluarga::query()
-                    ->inApprovedBatch()
-                    ->whereHas('rumah.desa', fn (Builder $query) => $query->where('kecamatan_id', $kecamatan->id))
-                    ->with(['rumah.desa', 'penduduk'])
-                    ->get();
-                $penduduk = Penduduk::query()
-                    ->inApprovedBatch()
-                    ->whereHas('keluarga.rumah.desa', fn (Builder $query) => $query->where('kecamatan_id', $kecamatan->id))
-                    ->with(['keluarga.rumah.desa'])
-                    ->get();
-
-                $rumahTotal = $rumah->count();
-                $keluargaTotal = $keluarga->count();
-                $pendudukTotal = $penduduk->count();
-                $rumahSelesai = $rumahTotal;
-                $keluargaSelesai = $keluargaTotal;
-                $pendudukSelesai = $pendudukTotal;
-                $progress = $this->overallProgress([
-                    ['done' => $rumahSelesai, 'total' => $rumahTotal],
-                    ['done' => $keluargaSelesai, 'total' => $keluargaTotal],
-                    ['done' => $pendudukSelesai, 'total' => $pendudukTotal],
-                ]);
-                $latestActivity = collect([
-                    $rumah->max('created_at'),
-                    $keluarga->max('created_at'),
-                    $penduduk->max('created_at'),
-                    ImportPendudukLog::query()->where('kecamatan_id', $kecamatan->id)->latest()->value('created_at'),
-                ])->filter()->max();
-
-                return [
-                    'id' => $kecamatan->id,
-                    'nama' => $kecamatan->nama,
-                    'desa_total' => $desas->count(),
-                    'rumah_total' => $rumahTotal,
-                    'keluarga_total' => $keluargaTotal,
-                    'penduduk_total' => $pendudukTotal,
-                    'rumah_selesai' => $rumahSelesai,
-                    'keluarga_selesai' => $keluargaSelesai,
-                    'penduduk_selesai' => $pendudukSelesai,
-                    'rumah_belum_lengkap' => $rumah->filter(fn (Rumah $model) => blank($model->latitude) || blank($model->longitude) || (float) $model->latitude === 0.0 || (float) $model->longitude === 0.0)->count(),
-                    'keluarga_belum_lengkap' => $keluarga->filter(fn (Keluarga $model) => $model->penduduk->isEmpty() || blank($model->jumlah_anggota) || (int) $model->jumlah_anggota <= 0)->count(),
-                    'penduduk_belum_lengkap' => $penduduk->filter(fn (Penduduk $model) => blank($model->nik) || blank($model->pendidikan) || blank($model->pekerjaan))->count(),
-                    'import_gagal' => ImportPendudukLog::query()->where('kecamatan_id', $kecamatan->id)->count(),
-                    'latest_activity' => $latestActivity ? Carbon::parse($latestActivity) : null,
-                    'progress' => $progress,
-                    'status' => $this->statusLabel($progress),
-                    'color' => $this->statusColor($progress),
-                ];
-            });
+        return app(DashboardAggregationService::class)->kecamatanRows();
     }
 
     private function buildKabupatenAttention(Collection $rows): array
@@ -715,6 +659,46 @@ class Dashboard extends BaseDashboard
         ];
     }
 
+    private function kabupatenKeluargaQuery(): Builder
+    {
+        return Keluarga::query();
+    }
+
+    private function incomeChartData(Builder $query): array
+    {
+        $data = (clone $query)->inApprovedBatch()->selectRaw("CASE WHEN COALESCE(penghasilan, 0) = 0 THEN 'Tidak ada penghasilan' WHEN penghasilan < 2000000 THEN '< Rp2 juta' WHEN penghasilan < 5000000 THEN 'Rp2–5 juta' ELSE '≥ Rp5 juta' END as label, COUNT(*) as total")->groupBy('label')->orderByDesc('total')->pluck('total', 'label')->map(fn ($value) => (int) $value)->all();
+        return ['type' => 'doughnut', 'label' => 'Kelompok Penghasilan', 'data' => $data];
+    }
+
+    private function diseaseChartData(): array
+    {
+        $counts = collect();
+
+        DataKesehatanBulanan::query()
+            ->inApprovedBatch()
+            ->get(['kasus_penyakit'])
+            ->each(function (DataKesehatanBulanan $row) use ($counts): void {
+                foreach ((array) $row->kasus_penyakit as $disease) {
+                    if (is_string($disease) && $disease !== '') {
+                        $counts[$disease] = ($counts[$disease] ?? 0) + 1;
+                    }
+                }
+            });
+
+        $counts = $counts->sortDesc()->take(10);
+
+        return [
+            'type' => 'bar',
+            'data' => ['labels' => $counts->keys()->values()->all(), 'datasets' => [[
+                'label' => 'Laporan kasus',
+                'data' => $counts->values()->all(),
+                'backgroundColor' => ['#dc2626', '#f97316', '#eab308', '#7c3aed', '#0891b2', '#16a34a'],
+                'borderRadius' => 8,
+            ]]],
+            'options' => ['plugins' => ['legend' => ['display' => false]], 'scales' => ['y' => ['beginAtZero' => true, 'ticks' => ['precision' => 0]]]],
+        ];
+    }
+
     private function activityFrom($records, string $badge, callable $title, callable $meta, ?callable $link = null): Collection
     {
         return $records->map(fn ($model): array => [
@@ -828,70 +812,6 @@ class Dashboard extends BaseDashboard
             ['title' => 'Batch Lama', 'description' => "{$overdueBatches} batch belum diverifikasi selama lebih dari 7 hari.", 'severity' => 'danger'],
             ['title' => 'Kecamatan Belum Lapor', 'description' => "{$unreportedKecamatan} kecamatan belum melaporkan pendidikan bulan ini.", 'severity' => 'info'],
             ['title' => 'Sistem Operasional', 'description' => 'Semua layanan inti berjalan normal.', 'severity' => 'success'],
-        ];
-    }
-
-    private function submissionTrendData(): array
-    {
-        $lastSixMonths = collect(range(5, 0, -1))->map(fn (int $offset) => now()->subMonths($offset));
-        $labels = $lastSixMonths->map(fn ($date) => $date->translatedFormat('M Y'))->all();
-
-        $data = SubmissionBatch::query()
-            ->selectRaw("DATE_FORMAT(submitted_at, '%b %Y') as label, COUNT(*) as total")
-            ->whereNotNull('submitted_at')
-            ->where('submitted_at', '>=', now()->subMonths(5)->startOfMonth())
-            ->groupByRaw("YEAR(submitted_at), MONTH(submitted_at), DATE_FORMAT(submitted_at, '%b %Y')")
-            ->orderByRaw('YEAR(submitted_at), MONTH(submitted_at)')
-            ->pluck('total', 'label')
-            ->all();
-
-        return [
-            'type' => 'line',
-            'label' => 'Batch Submitted',
-            'data' => array_combine($labels, array_map(fn ($label) => (int) ($data[$label] ?? 0), $labels)),
-        ];
-    }
-
-    private function verificationTrendData(): array
-    {
-        $lastSixMonths = collect(range(5, 0, -1))->map(fn (int $offset) => now()->subMonths($offset));
-        $labels = $lastSixMonths->map(fn ($date) => $date->translatedFormat('M Y'))->all();
-
-        $data = SubmissionBatch::query()
-            ->selectRaw("DATE_FORMAT(verified_at, '%b %Y') as label, COUNT(*) as total")
-            ->whereNotNull('verified_at')
-            ->where('verified_at', '>=', now()->subMonths(5)->startOfMonth())
-            ->groupByRaw("YEAR(verified_at), MONTH(verified_at), DATE_FORMAT(verified_at, '%b %Y')")
-            ->orderByRaw('YEAR(verified_at), MONTH(verified_at)')
-            ->pluck('total', 'label')
-            ->all();
-
-        return [
-            'type' => 'line',
-            'label' => 'Batch Diverifikasi',
-            'data' => array_combine($labels, array_map(fn ($label) => (int) ($data[$label] ?? 0), $labels)),
-        ];
-    }
-
-    private function monthlyReportTrendData(Builder $query, string $label): array
-    {
-        $lastSixMonths = collect(range(5, 0, -1))->map(fn (int $offset) => now()->subMonths($offset));
-        $labels = $lastSixMonths->map(fn ($date) => $date->translatedFormat('M Y'))->all();
-
-        $data = (clone $query)
-            ->selectRaw("CONCAT(LPAD(periode_bulan, 2, '0'), '/', periode_tahun) as label, COUNT(*) as total")
-            ->whereIn('periode_tahun', $lastSixMonths->pluck('year')->unique())
-            ->whereIn('periode_bulan', $lastSixMonths->pluck('month')->unique())
-            ->groupBy('periode_tahun', 'periode_bulan')
-            ->orderBy('periode_tahun')
-            ->orderBy('periode_bulan')
-            ->pluck('total', 'label')
-            ->all();
-
-        return [
-            'type' => 'line',
-            'label' => $label,
-            'data' => array_combine($labels, array_map(fn ($label) => (int) ($data[$label] ?? 0), $labels)),
         ];
     }
 

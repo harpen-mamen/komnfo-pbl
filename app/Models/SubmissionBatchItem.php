@@ -15,6 +15,7 @@ class SubmissionBatchItem extends Model
 
     protected $fillable = [
         'submission_batch_id',
+        'package_key',
         'entity_type',
         'entity_id',
     ];

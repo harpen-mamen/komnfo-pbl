@@ -1,0 +1,1 @@
+<?php namespace App\Filament\Resources\PublicNewsResource\Pages; use App\Filament\Resources\PublicNewsResource; use Filament\Resources\Pages\ListRecords; class ListPublicNews extends ListRecords {protected static string $resource=PublicNewsResource::class;}

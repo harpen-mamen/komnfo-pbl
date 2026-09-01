@@ -16,6 +16,7 @@ class KeluargaFactory extends Factory
             'nomor_kk' => $this->faker->unique()->numerify('############'),
             'nama_kepala_keluarga' => $this->faker->name,
             'jumlah_anggota' => $this->faker->numberBetween(1,6),
+            'status_ekonomi' => $this->faker->randomElement(array_keys(Keluarga::STATUS_EKONOMI)),
         ];
     }
 }

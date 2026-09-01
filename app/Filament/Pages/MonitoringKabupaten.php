@@ -16,12 +16,31 @@ class MonitoringKabupaten extends Page
 
     public static function shouldRegisterNavigation(): bool
     {
-        return PanelAccess::canAccessKabupatenPanel();
+        return PanelAccess::isAdminKecamatan()
+            || PanelAccess::isKominfoKabupaten()
+            || PanelAccess::isOperatorOpd();
     }
 
     public function mount(): void
     {
-        abort_unless(PanelAccess::canAccessKabupatenPanel(), 403);
+        abort_unless(
+            PanelAccess::isAdminKecamatan()
+            || PanelAccess::isKominfoKabupaten()
+            || PanelAccess::isOperatorOpd(),
+            403
+        );
+    }
+
+    public function getTitle(): string
+    {
+        if (PanelAccess::isKominfoKabupaten()) {
+            return 'Monitoring Kabupaten';
+        } elseif (PanelAccess::isAdminDesa()) {
+            return 'Monitoring Desa';
+        } elseif (PanelAccess::isOperatorOpd()) {
+            return 'Monitoring OPD';
+        }
+        return 'Monitoring Kecamatan';
     }
 
     public function getRowsProperty()

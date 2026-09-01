@@ -71,7 +71,7 @@ return [
     |
     */
 
-    'brand' => env('APP_NAME', 'SIPDT Admin Kecamatan'),
+    'brand' => env('APP_NAME', 'SIPANDU — Dinas Komunikasi dan Informatika'),
 
     /*
     |--------------------------------------------------------------------------

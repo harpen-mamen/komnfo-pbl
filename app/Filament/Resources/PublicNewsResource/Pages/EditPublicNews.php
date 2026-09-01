@@ -1,0 +1,1 @@
+<?php namespace App\Filament\Resources\PublicNewsResource\Pages; use App\Filament\Resources\PublicNewsResource; use Filament\Resources\Pages\EditRecord; class EditPublicNews extends EditRecord {protected static string $resource=PublicNewsResource::class;}

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" width="320" height="80">
+  <defs>
+    <linearGradient id="g1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#E8C76A"/>
+      <stop offset="100%" stop-color="#A8861E"/>
+    </linearGradient>
+    <linearGradient id="g2" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#15304F"/>
+      <stop offset="100%" stop-color="#0A1830"/>
+    </linearGradient>
+    <linearGradient id="g3" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2DD4BF"/>
+      <stop offset="100%" stop-color="#0E7C7B"/>
+    </linearGradient>
+  </defs>
+  <path d="M40 8 L72 18 L72 44 Q72 64 40 74 Q8 64 8 44 L8 18 Z" fill="url(#g2)" stroke="url(#g1)" stroke-width="2"/>
+  <circle cx="40" cy="26" r="6" fill="#FCD34D"/>
+  <path d="M16 50 L26 34 L34 42 L42 30 L50 42 L58 32 L64 50 Z" fill="#1E4275" stroke="url(#g1)" stroke-width="0.8"/>
+  <path d="M16 56 Q26 53 36 56 T56 56 T64 56 L64 62 L16 62 Z" fill="url(#g3)"/>
+  <text x="88" y="34" font-family="Georgia, serif" font-size="18" font-weight="700" fill="#F8FAFC" letter-spacing="0.5">SIPANDU</text>
+  <text x="88" y="52" font-family="Inter, sans-serif" font-size="9" font-weight="600" fill="#D4AF37" letter-spacing="2.5">KABUPATEN KEPULAUAN SANGIHE</text>
+  <text x="88" y="66" font-family="Inter, sans-serif" font-size="7" font-weight="500" fill="#94A3B8" letter-spacing="0.8">Dinas Komunikasi dan Informatika</text>
+</svg>

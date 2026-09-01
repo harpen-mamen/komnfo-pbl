@@ -1,56 +1,33 @@
 <?php
 
-use App\Filament\Pages\KirimDataKeKominfo;
-use App\Http\Controllers\LaporanController;
 use Illuminate\Support\Facades\Route;
 
 /*
 |--------------------------------------------------------------------------
-| Web Routes
+| Web Routes (API-Only Mode)
 |--------------------------------------------------------------------------
 |
-| Here is where you can register web routes for your application. These
-| routes are loaded by the RouteServiceProvider and all of them will
-| be assigned to the "web" middleware group. Make something great!
+| This application is now an API-only backend serving:
+|   - Next.js frontend (public web portal)        -> /api/v1/public/*
+|   - Flutter mobile app (Citizen data collector)  -> /api/v1/mobile/*
+|   - Filament admin panel (Kominfo dashboard)     -> /admin/*
+|
+| Filament automatically registers the /admin/* routes via its service
+| provider. This file is intentionally minimal so Laravel's router does
+| not throw "web routes are empty" warnings.
 |
 */
 
-Route::get('/', function () {
-    return view('welcome');
-});
+// Health-check used by uptime monitors and the Next.js frontend.
+Route::get('/up', fn () => response()->json([
+    'status' => 'ok',
+    'service' => 'sipdt-api',
+    'time' => now()->toIso8601String(),
+]))->name('health');
 
-// (debug route removed)
-
-Route::middleware(['auth'])->group(function () {
-    Route::post('/admin/kirim-data-kominfo/submit', [KirimDataKeKominfo::class, 'submit'])
-        ->name('filament.pages.kirim-data-kominfo.submit');
-
-    // API endpoint to trigger snapshot email manually (for testing / webhook)
-    Route::post('/admin/submission-batches/{batch}/notify-kominfo', function (\App\Models\SubmissionBatch $batch) {
-        $recipients = \App\Models\User::query()->role('admin')->get();
-
-        if ($recipients->isEmpty()) {
-            return response()->json(['message' => 'No recipients'], 204);
-        }
-
-        if (! $batch->payload_snapshot) {
-            return response()->json(['message' => 'No snapshot available'], 422);
-        }
-
-        \Illuminate\Support\Facades\Mail::to($recipients->pluck('email')->toArray())
-            ->send(new \App\Mail\SubmissionSnapshotMail($batch->payload_snapshot, $batch->kecamatan?->nama ?? ''));
-
-        return response()->json(['message' => 'Notification sent']);
-    })->middleware('auth');
-
-    Route::get('/laporan/rumah/pdf', [LaporanController::class, 'rumahPdf'])->name('laporan.rumah.pdf');
-    Route::get('/laporan/rumah/excel', [LaporanController::class, 'rumahExcel'])->name('laporan.rumah.excel');
-    Route::get('/laporan/keluarga/pdf', [LaporanController::class, 'keluargaPdf'])->name('laporan.keluarga.pdf');
-    Route::get('/laporan/keluarga/excel', [LaporanController::class, 'keluargaExcel'])->name('laporan.keluarga.excel');
-    Route::get('/laporan/penduduk/pdf', [LaporanController::class, 'pendudukPdf'])->name('laporan.penduduk.pdf');
-    Route::get('/laporan/penduduk/excel', [LaporanController::class, 'pendudukExcel'])->name('laporan.penduduk.excel');
-    Route::get('/laporan/pendidikan-bulanan/pdf', [LaporanController::class, 'pendidikanBulananPdf'])->name('laporan.pendidikan-bulanan.pdf');
-    Route::get('/laporan/pendidikan-bulanan/excel', [LaporanController::class, 'pendidikanBulananExcel'])->name('laporan.pendidikan-bulanan.excel');
-    Route::get('/laporan/kesehatan-bulanan/pdf', [LaporanController::class, 'kesehatanBulananPdf'])->name('laporan.kesehatan-bulanan.pdf');
-    Route::get('/laporan/kesehatan-bulanan/excel', [LaporanController::class, 'kesehatanBulananExcel'])->name('laporan.kesehatan-bulanan.excel');
-});
+// A simple root redirect so any stray browser visit gets a friendly hint.
+Route::get('/', fn () => response()->json([
+    'message' => 'SIPDT Kominfo Kepulauan Sangihe API',
+    'docs' => '/api/v1',
+    'admin' => '/admin',
+]))->name('root');

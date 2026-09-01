@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\UserResource\Pages;
 
 use App\Filament\Resources\UserResource;
+use Illuminate\Auth\Access\AuthorizationException;
 use Filament\Pages\Actions;
 use Filament\Resources\Pages\EditRecord;
 
@@ -24,10 +25,15 @@ class EditUser extends EditRecord
         $this->role = $data['role'] ?? null;
         unset($data['role']);
 
+        if (! UserResource::canEdit($this->record) || ! UserResource::canAssignRole($this->role)) {
+            throw new AuthorizationException('Akun atau role pengguna tidak dapat diubah oleh akun Anda.');
+        }
+
         if (blank($data['password'] ?? null)) {
             unset($data['password']);
         }
 
+        // Reset wilayah for non-wilayah roles
         if (! in_array($this->role, ['admin_kecamatan', 'admin_desa'], true)) {
             $data['kecamatan_id'] = null;
         }
@@ -36,8 +42,14 @@ class EditUser extends EditRecord
             $data['desa_id'] = null;
         }
 
-        if ($this->role !== 'admin_opd') {
+        // Reset OPD for non-OPD roles
+        if (! UserResource::isOpdRole($this->role)) {
             $data['opd_id'] = null;
+        }
+
+        // Reset puskes_id for non-puskes roles
+        if (! in_array($this->role, ['admin_puskes', 'operator_puskes'], true)) {
+            $data['puskes_id'] = null;
         }
 
         return $data;

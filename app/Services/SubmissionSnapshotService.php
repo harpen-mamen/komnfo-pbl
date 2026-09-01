@@ -9,10 +9,59 @@ use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Log;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Cache;
 
+/**
+ * SubmissionSnapshotService — Payload snapshot building & integrity.
+ *
+ * SERVICE LAYER: Arsitektur §7.1
+ * Handles building, serializing, and validating batch payload snapshots.
+ *
+ * Responsibilities:
+ * - Build snapshot for a single module
+ * - Build snapshot for mixed modules
+ * - Serialize entity records with appropriate fields
+ * - Calculate snapshot integrity hash
+ * - Validate snapshot completeness before publish
+ */
 class SubmissionSnapshotService
 {
+    /**
+     * Fields to include in snapshot for each entity type.
+     * Excludes internal fields like id, created_by, timestamps.
+     */
+    private const SNAPSHOT_FIELDS = [
+        'Rumah' => [
+            'kode_rumah', 'alamat_lengkap', 'latitude', 'longitude',
+            'status_rumah', 'keterangan', 'publik', 'desa_id',
+        ],
+        'Keluarga' => [
+            'rumah_id', 'nomor_kk', 'nama_kepala_keluarga',
+            'jumlah_anggota', 'status_ekonomi',
+        ],
+        'Penduduk' => [
+            'keluarga_id', 'nik', 'nama_lengkap', 'jenis_kelamin',
+            'tempat_lahir', 'tanggal_lahir', 'agama', 'status_perkawinan',
+            'pendidikan', 'pekerjaan', 'penghasilan', 'status_dalam_keluarga',
+            'nomor_hp', 'status_penduduk',
+        ],
+        'DataKesehatanBulanan' => [
+            'puskesmas', 'kecamatan_id', 'periode_bulan', 'periode_tahun',
+            'jumlah_balita', 'jumlah_ibu_hamil', 'stunting', 'gizi_buruk',
+            'ibu_hamil', 'balita', 'bayi', 'imunisasi',
+            'ispa', 'dbd', 'malaria', 'tbc', 'hipertensi', 'diabetes',
+            'dokter', 'perawat', 'bidan', 'apoteker', 'ahli_gizi',
+            'kematian', 'kelahiran', 'bpjs_aktif', 'bpjs_tidak_aktif',
+        ],
+        'DataPendidikanBulanan' => [
+            'sekolah', 'kecamatan_id', 'tahun_ajaran', 'semester',
+            'npsn', 'status_sekolah', 'jenjang', 'rombel',
+            'jumlah_siswa', 'laki_laki', 'perempuan',
+            'putus_sekolah', 'lulus', 'naik_kelas', 'tidak_naik',
+        ],
+    ];
+
     public function assertCanSubmitToKecamatan(int $kecamatanId, ?User $actor): void
     {
         if (! $actor) {
@@ -24,6 +73,10 @@ class SubmissionSnapshotService
         }
     }
 
+    /**
+     * Build period context for a module.
+     * ARUSITEKTUR §2.3: Period semantics per module type.
+     */
     public function buildContext(string $module, ?int $periodeBulan, ?string $semester, ?int $periodeTahun): array
     {
         $periodeTahun ??= now()->year;
@@ -52,6 +105,10 @@ class SubmissionSnapshotService
         return now()->month <= 6 ? 'ganjil' : 'genap';
     }
 
+    /**
+     * Build a snapshot for a single module.
+     * READ MODEL PREP: Snapshot fields are filtered per entity type.
+     */
     public function buildSnapshot(
         SubmissionBatch $batch,
         string $module,
@@ -71,6 +128,9 @@ class SubmissionSnapshotService
         ];
     }
 
+    /**
+     * Build a snapshot for mixed (multi-module) batch.
+     */
     public function buildMixedSnapshot(
         SubmissionBatch $batch,
         array $moduleSnapshots,
@@ -84,6 +144,111 @@ class SubmissionSnapshotService
             'created_by' => $actor->id,
             'created_at' => now()->toDateTimeString(),
         ];
+    }
+
+    /**
+     * Serialize a collection of model records for snapshot.
+     * Only includes defined snapshot fields per entity type.
+     * Calculates integrity hash.
+     *
+     * @param  Collection|\Illuminate\Database\Eloquent\Collection  $records
+     * @param  array  $context  Periode context
+     * @return array
+     */
+    public function serializeRecords(Collection $records, string $entityType, array $context = []): array
+    {
+        $modelName = class_basename($entityType);
+        $allowedFields = self::SNAPSHOT_FIELDS[$modelName] ?? null;
+
+        return $records->map(function (Model $record) use ($allowedFields, $context): array {
+            $data = $allowedFields
+                ? collect($record->getAttributes())->only($allowedFields)->toArray()
+                : $record->getAttributes();
+
+            return [
+                'entity_id' => $record->getKey(),
+                'attributes' => $data,
+                'snapshot_at' => now()->toDateTimeString(),
+                'context' => $context,
+            ];
+        })->all();
+    }
+
+    /**
+     * Calculate SHA-256 integrity hash for a snapshot.
+     * Used to detect duplicate or tampered submissions.
+     */
+    public function calculateIntegrityHash(array $snapshot): string
+    {
+        $payload = json_encode($snapshot, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return hash('sha256', $payload);
+    }
+
+    /**
+     * Verify snapshot integrity before publishing.
+     * Checks that entity IDs still exist and counts match.
+     *
+     * @return array ['valid' => bool, 'errors' => string[]]
+     */
+    public function validateSnapshotIntegrity(SubmissionBatch $batch): array
+    {
+        $errors = [];
+        $snapshot = $batch->payload_snapshot ?? [];
+
+        if (empty($snapshot)) {
+            return ['valid' => false, 'errors' => ['Snapshot is empty']];
+        }
+
+        $modules = $snapshot['modules'] ?? [$snapshot];
+
+        foreach ($modules as $moduleSnapshot) {
+            $module = $moduleSnapshot['module'] ?? 'unknown';
+            $entityIds = $moduleSnapshot['entity_ids'] ?? [];
+            $records = $moduleSnapshot['records'] ?? [];
+            $entityType = $this->entityTypeForModule($module);
+
+            if (! $entityType) {
+                $errors[] = "Module [{$module}]: unknown entity type";
+                continue;
+            }
+
+            // Verify entity IDs exist
+            $model = new $entityType();
+            $existingCount = $model->query()->whereKey($entityIds)->count();
+            $expectedCount = count($entityIds);
+
+            if ($existingCount !== $expectedCount) {
+                $errors[] = "Module [{$module}]: entity count mismatch (expected {$expectedCount}, found {$existingCount})";
+            }
+
+            // Verify records match entity IDs
+            if (is_array($records) && count($records) !== $expectedCount) {
+                $errors[] = "Module [{$module}]: record count mismatch (expected {$expectedCount}, got " . count($records) . ")";
+            }
+        }
+
+        return [
+            'valid' => empty($errors),
+            'errors' => $errors,
+            'batch_id' => $batch->id,
+            'validated_at' => now()->toDateTimeString(),
+        ];
+    }
+
+    /**
+     * Map module key to fully-qualified entity class name.
+     */
+    public function entityTypeForModule(string $module): ?string
+    {
+        return match ($module) {
+            SubmissionBatchService::MODULE_RUMAH => \App\Models\Rumah::class,
+            SubmissionBatchService::MODULE_KELUARGA => \App\Models\Keluarga::class,
+            SubmissionBatchService::MODULE_PENDUDUK => \App\Models\Penduduk::class,
+            SubmissionBatchService::MODULE_KESEHATAN => \App\Models\DataKesehatanBulanan::class,
+            SubmissionBatchService::MODULE_PENDIDIKAN => \App\Models\DataPendidikanBulanan::class,
+            default => null,
+        };
     }
 
     public function logBatchSnapshot(SubmissionBatch $batch, User $actor): void
@@ -107,4 +272,3 @@ class SubmissionSnapshotService
         }
     }
 }
-

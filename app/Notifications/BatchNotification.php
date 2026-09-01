@@ -28,7 +28,12 @@ class BatchNotification extends Notification
     {
         return [
             'title' => $this->title,
+            'body' => $this->message,
             'message' => $this->message,
+            'icon' => 'heroicon-o-bell',
+            'icon_color' => 'primary',
+            'duration' => 'persistent',
+            'format' => 'filament',
             'entity_type' => $this->entityType,
             'entity_id' => $this->entityId,
             'actor_id' => $this->actorId,

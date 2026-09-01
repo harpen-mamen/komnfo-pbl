@@ -118,8 +118,7 @@ class DataPendidikanBulananResource extends Resource
                     Forms\Components\Select::make('desa_id')
                         ->label('Desa')
                         ->options(fn (callable $get) => Desa::query()
-                            ->when(PanelAccess::isOperatorSekolah(), fn (Builder $query) => $query->where('kecamatan_id', PanelAccess::user()?->kecamatan_id))
-                            ->when(! PanelAccess::isOperatorSekolah() && $get('kecamatan_id'), fn (Builder $query, $kecamatanId) => $query->where('kecamatan_id', $kecamatanId))
+                            ->when($get('kecamatan_id') ?? PanelAccess::user()?->kecamatan_id, fn (Builder $query, $kecamatanId) => $query->where('kecamatan_id', $kecamatanId))
                             ->orderBy('nama')
                             ->pluck('nama', 'id'))
                         ->searchable()
@@ -387,10 +386,10 @@ class DataPendidikanBulananResource extends Resource
                 ->schema([
                     Forms\Components\Placeholder::make('ringkasan')
                         ->label('Ringkasan Sekolah')
-                        ->content(fn (callable $get) =>
+                        ->content(fn (callable $get) => new \Illuminate\Support\HtmlString(
                             '<div class="ringkasan-container">'
-                            .'<div class="ringkasan-card"><strong>Sekolah</strong><div>' . ($get('sekolah') ?? '-') . '</div></div>'
-                            .'<div class="ringkasan-card"><strong>Semester</strong><div>' . ($get('semester') ?? '-') . '</div></div>'
+                            .'<div class="ringkasan-card"><strong>Sekolah</strong><div>' . e($get('sekolah') ?? '-') . '</div></div>'
+                            .'<div class="ringkasan-card"><strong>Semester</strong><div>' . e($get('semester') ?? '-') . '</div></div>'
                             .'<div class="ringkasan-card"><strong>Total Murid</strong><div>' . ((int) $get('laki_laki') + (int) $get('perempuan')) . '</div></div>'
                             .'<div class="ringkasan-card"><strong>Total Guru</strong><div>' . ((int) $get('guru_asn') + (int) $get('guru_pppk') + (int) $get('guru_honorer')) . '</div></div>'
                             .'<div class="ringkasan-card"><strong>Rasio Guru : Murid</strong><div>' . (((int) $get('laki_laki') + (int) $get('perempuan')) > 0 ? number_format(((int) $get('guru_asn') + (int) $get('guru_pppk') + (int) $get('guru_honorer')) / ((int) $get('laki_laki') + (int) $get('perempuan')), 2) : '-') . '</div></div>'
@@ -404,7 +403,7 @@ class DataPendidikanBulananResource extends Resource
                                 ])) ?: '-') . '</div></div>'
                             .'<div class="ringkasan-card"><strong>Jumlah Permasalahan</strong><div>' . count($get('permasalahan') ?? []) . '</div></div>'
                             .'</div>'
-                        )
+                        ))
                         ->columnSpanFull(),
                 ]),
         ]);
