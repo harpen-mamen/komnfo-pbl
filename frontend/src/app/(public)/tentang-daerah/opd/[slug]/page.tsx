@@ -24,8 +24,8 @@ export default async function OpdDetailPage({ params }: { params: { slug: string
   if (!data) return notFound();
 
   const opd = data.data;
-  const galleries = data.galleries ?? [];
-  const kepala = data.kepala;
+  const galleries = (data as any).galleries ?? [];
+  const kepala = (data as any).kepala;
 
   return (
     <main className="min-h-screen bg-slate-50">

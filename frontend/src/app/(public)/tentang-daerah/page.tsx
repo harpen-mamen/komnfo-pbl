@@ -21,7 +21,7 @@ export default async function TentangDaerahPage() {
     <main>
       {/* HERO */}
       <section className="relative overflow-hidden bg-gradient-to-br from-primary-700 via-primary-600 to-primary-800 text-white">
-        <div className="absolute inset-0 bg-[url('/pattern-batik.svg')] opacity-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent" />
         <div className="container-page relative py-16 md:py-24">
           <nav className="text-sm text-primary-100">
             <a href="/" className="hover:text-white">Beranda</a> <span className="mx-2">/</span>

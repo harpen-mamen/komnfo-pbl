@@ -9,6 +9,7 @@ use Carbon\Carbon;
 
 class AnalyticsService
 {
+    
     /**
      * Get demographic statistics
      * READ MODEL: Only reads from APPROVED batches (Arsitektur §4.3)
