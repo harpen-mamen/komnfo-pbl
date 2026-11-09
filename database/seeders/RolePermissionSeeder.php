@@ -17,10 +17,10 @@ class RolePermissionSeeder extends Seeder
         // Core modules
         $modules = [
             'users', 'roles', 'wilayah', 'opd', 'rumah', 'keluarga', 'penduduk',
-            'sekolah', 'puskesmas', 'infrastruktur', 'jalan', 'jembatan',
+            'sekolah', 'puskes', 'infrastruktur', 'jalan', 'jembatan',
             'pelabuhan', 'bandara', 'tempat_ibadah', 'pasar', 'umkm',
             'pertanian', 'perikanan', 'submission', 'workflow', 'publication',
-            'dashboard', 'reporting', 'audit', 'monitoring', 'api',
+            'dashboard', 'reporting', 'audit', 'monitoring', 'api', 'berita', 'portal_content',
         ];
 
         // OPD-specific modules for Sangihe
@@ -28,6 +28,10 @@ class RolePermissionSeeder extends Seeder
             'kesehatan', 'pendidikan', 'pu', 'sosial', 'perdagangan', 'kependudukan',
             'lingkungan', 'pertanian', 'hubungan', 'pariwisata', 'pemuda', 'kepegawaian',
             'perencanaan', 'keuangan', 'bencana', 'kominfo', 'investasi', 'perkebunan',
+            'pengendalian_penduduk', 'pemberdayaan_perempuan', 'pemberdayaan_masyarakat',
+            'ketenagakerjaan', 'ketahanan_pangan', 'perikanan', 'perpustakaan',
+            'perkim', 'koperasi', 'pengawasan', 'kesbangpol', 'perbatasan',
+            'satpolpp', 'setda', 'setwan',
         ];
 
         $actions = ['view', 'create', 'update', 'delete', 'submit', 'review', 'approve', 'publish', 'export'];
@@ -46,20 +50,26 @@ class RolePermissionSeeder extends Seeder
             }
         }
 
-        // SPEC-005: Use AppRole enum (single source of truth for role strings).
-        // Keep 'public' role in the collection but don't try to attach all permissions to it
-        // (it only has 'api.view' at the end of this seeder).
+        // Create roles from AppRole enum
         $roles = collect(AppRole::values())
             ->mapWithKeys(fn (string $name) => [$name => Role::firstOrCreate(['name' => $name, 'guard_name' => 'web'])]);
 
         // Get all permissions
         $all = Permission::query()->pluck('name')->all();
 
-        // Super Admin - full access
+        // ========================
+        // SUPER ADMIN - full access
+        // ========================
         $roles[AppRole::SUPER_ADMIN->value]->syncPermissions($all);
 
-        // Admin - full access (limited)
+        // ========================
+        // ADMIN - full access (limited)
+        // ========================
         $roles[AppRole::ADMIN->value]->syncPermissions($all);
+
+        // ========================
+        // KABUPATEN LEVEL ROLES
+        // ========================
 
         // Admin Kominfo - monitoring, validation, export
         $roles[AppRole::ADMIN_KOMINFO->value]->syncPermissions(Permission::query()->where(function ($query): void {
@@ -71,24 +81,31 @@ class RolePermissionSeeder extends Seeder
                 ->orWhere('name', 'like', 'audit.%')
                 ->orWhere('name', 'like', 'api.%')
                 ->orWhere('name', 'like', 'reporting.%')
-                ->orWhereIn('name', ['users.view', 'users.create', 'users.update', 'wilayah.view', 'opd.view']);
+                ->orWhereIn('name', ['users.view', 'users.create', 'users.update', 'wilayah.view', 'opd.view', 'berita.%']);
         })->pluck('name'));
 
-        // Admin Kecamatan
-        $roles[AppRole::ADMIN_KECAMATAN->value]->syncPermissions(Permission::query()->where(function ($query): void {
+        // Admin Portal manages editorial content only; dataset values remain owned by OPDs and Kominfo.
+        $roles[AppRole::ADMIN_PORTAL->value]->syncPermissions(
+            Permission::query()->where('name', 'like', 'portal_content.%')->pluck('name')
+        );
+
+        // Walidata is the operational name for the Kabupaten data steward.
+        $roles[AppRole::WALIDATA->value]->syncPermissions($roles[AppRole::ADMIN_KOMINFO->value]->permissions);
+
+        // Admin Bupati
+        $roles[AppRole::ADMIN_BUPATI->value]->syncPermissions(Permission::query()->where(function ($query): void {
             $query->where('name', 'like', 'dashboard.%')
                 ->orWhere('name', 'like', 'reporting.%')
-                ->orWhereIn('name', ['wilayah.view', 'submission.view', 'submission.review', 'workflow.view', 'workflow.review']);
+                ->orWhere('name', 'like', 'monitoring.%')
+                ->orWhereIn('name', ['opd.view', 'wilayah.view']);
         })->pluck('name'));
 
-        // Admin Desa
-        $desaModules = ['rumah', 'keluarga', 'penduduk', 'sekolah', 'puskesmas', 'infrastruktur', 'jalan', 'jembatan', 'pelabuhan', 'bandara', 'tempat_ibadah', 'pasar', 'umkm', 'pertanian', 'perikanan'];
-        $desaPermissions = collect($desaModules)
-            ->flatMap(fn (string $module) => [$module.'.view', $module.'.create', $module.'.update', $module.'.delete'])
-            ->merge(['wilayah.view', 'submission.view', 'submission.create', 'submission.submit', 'workflow.view', 'dashboard.view', 'reporting.view', 'reporting.export'])
-            ->unique()
-            ->values();
-        $roles[AppRole::ADMIN_DESA->value]->syncPermissions($desaPermissions);
+        // Admin Wakil Bupati
+        $roles[AppRole::ADMIN_WAKIL_BUPATI->value]->syncPermissions($roles[AppRole::ADMIN_BUPATI->value]->permissions);
+
+        // ========================
+        // OPD LEVEL ROLES
+        // ========================
 
         // Admin OPD (generic)
         $roles[AppRole::ADMIN_OPD->value]->syncPermissions(Permission::query()->where(function ($query): void {
@@ -98,39 +115,91 @@ class RolePermissionSeeder extends Seeder
                 ->orWhereIn('name', ['opd.view', 'submission.view']);
         })->pluck('name'));
 
-        // ========== OPD-SPECIFIC ROLES - KABUPATEN KEPULAUAN SANGIHE ==========
+        // Kepala Dinas - full access di OPD-nya
+        $roles[AppRole::KEPALA_DINAS->value]->syncPermissions(Permission::query()->where(function ($query): void {
+            $query->where('name', 'like', 'dashboard.%')
+                ->orWhere('name', 'like', 'monitoring.%')
+                ->orWhere('name', 'like', 'reporting.%')
+                ->orWhere('name', 'like', 'submission.%')
+                ->orWhere('name', 'like', 'workflow.%')
+                ->orWhereIn('name', ['opd.view', 'users.view']);
+        })->pluck('name'));
 
-        // Admin Dinkes - Full access to kesehatan module
+        // Operator OPD
+        $roles[AppRole::OPERATOR_OPD->value]->syncPermissions(Permission::query()->where(function ($query): void {
+            $query->where('name', 'like', 'dashboard.%')
+                ->orWhere('name', 'like', 'submission.%')
+                ->orWhereIn('name', ['opd.view']);
+        })->pluck('name'));
+
+        // Admin Berita - akses penuh untuk konten publik
+        $roles[AppRole::ADMIN_BERITA->value]->syncPermissions(Permission::query()->where(function ($query): void {
+            $query->where('name', 'like', 'berita.%')
+                ->orWhere('name', 'like', 'publication.%')
+                ->orWhere('name', 'like', 'dashboard.%')
+                ->orWhereIn('name', ['users.view', 'users.update']);
+        })->pluck('name'));
+
+        // ========================
+        // KECAMATAN LEVEL ROLES
+        // ========================
+
+        // Admin Kecamatan
+        $roles[AppRole::ADMIN_KECAMATAN->value]->syncPermissions(Permission::query()->where(function ($query): void {
+            $query->where('name', 'like', 'dashboard.%')
+                ->orWhere('name', 'like', 'reporting.%')
+                ->orWhereIn('name', ['wilayah.view', 'submission.view', 'submission.review', 'workflow.view', 'workflow.review']);
+        })->pluck('name'));
+
+        // Field staff can capture and submit spatial house records
+        $roles[AppRole::ADMIN_LAPANGAN->value]->syncPermissions([
+            'rumah.view', 'rumah.create', 'rumah.update',
+            'wilayah.view', 'submission.view', 'submission.create', 'submission.submit',
+            'workflow.view', 'dashboard.view',
+        ]);
+
+        // Admin Desa - hanya input data rumah
+        $roles[AppRole::ADMIN_DESA->value]->syncPermissions([
+            'rumah.view', 'rumah.create', 'rumah.update',
+            'wilayah.view', 'submission.view', 'submission.create', 'submission.submit',
+            'workflow.view', 'dashboard.view',
+        ]);
+
+        // ========================
+        // OPD-SPECIFIC ROLES
+        // ========================
+
+        // Admin Dinkes - Kesehatan
         $roles[AppRole::ADMIN_DINKES->value]->syncPermissions(
             Permission::query()->where(function ($query): void {
                 $query->where('name', 'like', 'kesehatan.%')
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
                     ->orWhere('name', 'like', 'submission.%')
-                    ->orWhereIn('name', ['puskesmas.view', 'puskesmas.create', 'puskesmas.update']);
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
         $roles[AppRole::OPERATOR_DINKES->value]->syncPermissions(
             Permission::query()->where(function ($query): void {
                 $query->where('name', 'like', 'kesehatan.%')
-                    ->orWhereIn('name', ['puskesmas.view', 'puskesmas.create', 'puskesmas.update']);
+                    ->orWhere('name', 'like', 'submission.%');
             })->pluck('name')
         );
 
-        // Admin Disdik - Pendidikan
+        // Admin Dispendik - Pendidikan
         $roles[AppRole::ADMIN_DISPEND->value]->syncPermissions(
             Permission::query()->where(function ($query): void {
                 $query->where('name', 'like', 'pendidikan.%')
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
                     ->orWhere('name', 'like', 'submission.%')
-                    ->orWhereIn('name', ['sekolah.view', 'sekolah.create', 'sekolah.update']);
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
         $roles[AppRole::OPERATOR_DISPEND->value]->syncPermissions(
             Permission::query()->where(function ($query): void {
                 $query->where('name', 'like', 'pendidikan.%')
-                    ->orWhereIn('name', ['sekolah.view', 'sekolah.create', 'sekolah.update']);
+                    ->orWhere('name', 'like', 'submission.%');
             })->pluck('name')
         );
 
@@ -141,17 +210,13 @@ class RolePermissionSeeder extends Seeder
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
                     ->orWhere('name', 'like', 'submission.%')
-                    ->orWhereIn('name', ['infrastruktur.view', 'infrastruktur.create', 'infrastruktur.update', 'infrastruktur.delete'])
-                    ->orWhereIn('name', ['jalan.view', 'jalan.create', 'jalan.update', 'jalan.delete'])
-                    ->orWhereIn('name', ['jembatan.view', 'jembatan.create', 'jembatan.update', 'jembatan.delete']);
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
         $roles[AppRole::OPERATOR_DPU->value]->syncPermissions(
             Permission::query()->where(function ($query): void {
                 $query->where('name', 'like', 'pu.%')
-                    ->orWhereIn('name', ['infrastruktur.view', 'infrastruktur.create', 'infrastruktur.update'])
-                    ->orWhereIn('name', ['jalan.view', 'jalan.create', 'jalan.update'])
-                    ->orWhereIn('name', ['jembatan.view', 'jembatan.create', 'jembatan.update']);
+                    ->orWhere('name', 'like', 'submission.%');
             })->pluck('name')
         );
 
@@ -161,11 +226,15 @@ class RolePermissionSeeder extends Seeder
                 $query->where('name', 'like', 'sosial.%')
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
-                    ->orWhere('name', 'like', 'submission.%');
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
         $roles[AppRole::OPERATOR_DINSOS->value]->syncPermissions(
-            Permission::query()->where('name', 'like', 'sosial.%')->pluck('name')
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'sosial.%')
+                    ->orWhere('name', 'like', 'submission.%');
+            })->pluck('name')
         );
 
         // Admin Disperindag - Perdagangan
@@ -175,15 +244,13 @@ class RolePermissionSeeder extends Seeder
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
                     ->orWhere('name', 'like', 'submission.%')
-                    ->orWhereIn('name', ['umkm.view', 'umkm.create', 'umkm.update', 'umkm.delete'])
-                    ->orWhereIn('name', ['pasar.view', 'pasar.create', 'pasar.update', 'pasar.delete']);
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
         $roles[AppRole::OPERATOR_DISPERINDAG->value]->syncPermissions(
             Permission::query()->where(function ($query): void {
                 $query->where('name', 'like', 'perdagangan.%')
-                    ->orWhereIn('name', ['umkm.view', 'umkm.create', 'umkm.update'])
-                    ->orWhereIn('name', ['pasar.view', 'pasar.create', 'pasar.update']);
+                    ->orWhere('name', 'like', 'submission.%');
             })->pluck('name')
         );
 
@@ -194,15 +261,13 @@ class RolePermissionSeeder extends Seeder
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
                     ->orWhere('name', 'like', 'submission.%')
-                    ->orWhereIn('name', ['penduduk.view', 'penduduk.create', 'penduduk.update', 'penduduk.delete'])
-                    ->orWhereIn('name', ['keluarga.view', 'keluarga.create', 'keluarga.update', 'keluarga.delete']);
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
         $roles[AppRole::OPERATOR_DUKCAPIL->value]->syncPermissions(
             Permission::query()->where(function ($query): void {
                 $query->where('name', 'like', 'kependudukan.%')
-                    ->orWhereIn('name', ['penduduk.view', 'penduduk.create', 'penduduk.update'])
-                    ->orWhereIn('name', ['keluarga.view', 'keluarga.create', 'keluarga.update']);
+                    ->orWhere('name', 'like', 'submission.%');
             })->pluck('name')
         );
 
@@ -212,50 +277,66 @@ class RolePermissionSeeder extends Seeder
                 $query->where('name', 'like', 'lingkungan.%')
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
-                    ->orWhere('name', 'like', 'submission.%');
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
         $roles[AppRole::OPERATOR_DLH->value]->syncPermissions(
-            Permission::query()->where('name', 'like', 'lingkungan.%')->pluck('name')
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'lingkungan.%')
+                    ->orWhere('name', 'like', 'submission.%');
+            })->pluck('name')
         );
 
-        // Admin DISTAN - Pertanian
+        // Admin Distan - Pertanian
         $roles[AppRole::ADMIN_DISTAN->value]->syncPermissions(
             Permission::query()->where(function ($query): void {
                 $query->where('name', 'like', 'pertanian.%')
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
-                    ->orWhere('name', 'like', 'submission.%');
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
         $roles[AppRole::OPERATOR_DISTAN->value]->syncPermissions(
-            Permission::query()->where('name', 'like', 'pertanian.%')->pluck('name')
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'pertanian.%')
+                    ->orWhere('name', 'like', 'submission.%');
+            })->pluck('name')
         );
 
-        // Admin Dishub - Hubungan
+        // Admin Dishub -Hubungan
         $roles[AppRole::ADMIN_DISHUB->value]->syncPermissions(
             Permission::query()->where(function ($query): void {
                 $query->where('name', 'like', 'hubungan.%')
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
-                    ->orWhere('name', 'like', 'submission.%');
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
         $roles[AppRole::OPERATOR_DISHUB->value]->syncPermissions(
-            Permission::query()->where('name', 'like', 'hubungan.%')->pluck('name')
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'hubungan.%')
+                    ->orWhere('name', 'like', 'submission.%');
+            })->pluck('name')
         );
 
-        // Admin Distpar - Pariwisata
+        // Admin Distparbud - Pariwisata
         $roles[AppRole::ADMIN_DISTPAR->value]->syncPermissions(
             Permission::query()->where(function ($query): void {
                 $query->where('name', 'like', 'pariwisata.%')
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
-                    ->orWhere('name', 'like', 'submission.%');
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
         $roles[AppRole::OPERATOR_DISTPAR->value]->syncPermissions(
-            Permission::query()->where('name', 'like', 'pariwisata.%')->pluck('name')
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'pariwisata.%')
+                    ->orWhere('name', 'like', 'submission.%');
+            })->pluck('name')
         );
 
         // Admin Dispora - Pemuda
@@ -264,11 +345,15 @@ class RolePermissionSeeder extends Seeder
                 $query->where('name', 'like', 'pemuda.%')
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
-                    ->orWhere('name', 'like', 'submission.%');
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
         $roles[AppRole::OPERATOR_DISPORA->value]->syncPermissions(
-            Permission::query()->where('name', 'like', 'pemuda.%')->pluck('name')
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'pemuda.%')
+                    ->orWhere('name', 'like', 'submission.%');
+            })->pluck('name')
         );
 
         // Admin BKPSDMD - Kepegawaian
@@ -277,11 +362,15 @@ class RolePermissionSeeder extends Seeder
                 $query->where('name', 'like', 'kepegawaian.%')
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
-                    ->orWhere('name', 'like', 'submission.%');
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
         $roles[AppRole::OPERATOR_BKPSDMD->value]->syncPermissions(
-            Permission::query()->where('name', 'like', 'kepegawaian.%')->pluck('name')
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'kepegawaian.%')
+                    ->orWhere('name', 'like', 'submission.%');
+            })->pluck('name')
         );
 
         // Admin Bappeda - Perencanaan
@@ -290,11 +379,15 @@ class RolePermissionSeeder extends Seeder
                 $query->where('name', 'like', 'perencanaan.%')
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
-                    ->orWhere('name', 'like', 'submission.%');
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
         $roles[AppRole::OPERATOR_BAPPEDA->value]->syncPermissions(
-            Permission::query()->where('name', 'like', 'perencanaan.%')->pluck('name')
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'perencanaan.%')
+                    ->orWhere('name', 'like', 'submission.%');
+            })->pluck('name')
         );
 
         // Admin Bapenda - Keuangan
@@ -303,11 +396,15 @@ class RolePermissionSeeder extends Seeder
                 $query->where('name', 'like', 'keuangan.%')
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
-                    ->orWhere('name', 'like', 'submission.%');
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
         $roles[AppRole::OPERATOR_BAPENDA->value]->syncPermissions(
-            Permission::query()->where('name', 'like', 'keuangan.%')->pluck('name')
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'keuangan.%')
+                    ->orWhere('name', 'like', 'submission.%');
+            })->pluck('name')
         );
 
         // Admin BPBD - Bencana
@@ -316,11 +413,15 @@ class RolePermissionSeeder extends Seeder
                 $query->where('name', 'like', 'bencana.%')
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
-                    ->orWhere('name', 'like', 'submission.%');
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
         $roles[AppRole::OPERATOR_BPBD->value]->syncPermissions(
-            Permission::query()->where('name', 'like', 'bencana.%')->pluck('name')
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'bencana.%')
+                    ->orWhere('name', 'like', 'submission.%');
+            })->pluck('name')
         );
 
         // Admin Diskominfo - Kominfo
@@ -330,8 +431,10 @@ class RolePermissionSeeder extends Seeder
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
                     ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%')
                     ->orWhere('name', 'like', 'api.%')
-                    ->orWhere('name', 'like', 'publication.%');
+                    ->orWhere('name', 'like', 'publication.%')
+                    ->orWhere('name', 'like', 'berita.%');
             })->pluck('name')
         );
         $roles[AppRole::OPERATOR_DISKOMINFO->value]->syncPermissions(
@@ -341,75 +444,212 @@ class RolePermissionSeeder extends Seeder
             })->pluck('name')
         );
 
-        // Admin Dpmptsp - Investasi
+        // Admin DPMTSP - Investasi
         $roles[AppRole::ADMIN_DPMTSP->value]->syncPermissions(
             Permission::query()->where(function ($query): void {
                 $query->where('name', 'like', 'investasi.%')
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
-                    ->orWhere('name', 'like', 'submission.%');
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
         $roles[AppRole::OPERATOR_DPMTSP->value]->syncPermissions(
-            Permission::query()->where('name', 'like', 'investasi.%')->pluck('name')
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'investasi.%')
+                    ->orWhere('name', 'like', 'submission.%');
+            })->pluck('name')
         );
 
-        // Admin Distaman - Perkebunan
+        // Admin Distanak - Perkebunan
         $roles[AppRole::ADMIN_DISTAMAN->value]->syncPermissions(
             Permission::query()->where(function ($query): void {
                 $query->where('name', 'like', 'perkebunan.%')
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
-                    ->orWhere('name', 'like', 'submission.%');
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
         $roles[AppRole::OPERATOR_DISTAMAN->value]->syncPermissions(
-            Permission::query()->where('name', 'like', 'perkebunan.%')->pluck('name')
-        );
-
-        // ========== PUSKES & SEKOLAH-SPECIFIC ROLES ==========
-
-        // Admin Puskesmas - full access to puskes facility management
-        $roles[AppRole::ADMIN_PUSKESMAS->value]->syncPermissions(
             Permission::query()->where(function ($query): void {
-                $query->where('name', 'like', 'puskes.%')
-                    ->orWhere('name', 'like', 'kesehatan.%')
-                    ->orWhere('name', 'like', 'dashboard.%')
-                    ->orWhere('name', 'like', 'reporting.%')
+                $query->where('name', 'like', 'perkebunan.%')
                     ->orWhere('name', 'like', 'submission.%');
             })->pluck('name')
         );
 
-        // Operator Puskesmas - CRUD on puskes data
-        $roles[AppRole::OPERATOR_PUSKESMAS->value]->syncPermissions(
-            Permission::query()->where(function ($query): void {
-                $query->where('name', 'like', 'puskes.%')
-                    ->orWhere('name', 'like', 'kesehatan.%')
-                    ->orWhere('name', 'like', 'submission.create');
-            })->pluck('name')
-        );
+        // ========================
+        // FASE 1: OPD BARU - 14 OPD Tambahan
+        // ========================
 
-        // Admin Sekolah Kecamatan - full access to sekolah management in their kecamatan
-        $roles[AppRole::ADMIN_SEKOLAH->value]->syncPermissions(
+        // Admin Setda
+        $roles[AppRole::ADMIN_SETDA->value]->syncPermissions(
             Permission::query()->where(function ($query): void {
-                $query->where('name', 'like', 'sekolah.%')
-                    ->orWhere('name', 'like', 'pendidikan.%')
+                $query->where('name', 'like', 'setda.%')
                     ->orWhere('name', 'like', 'dashboard.%')
                     ->orWhere('name', 'like', 'reporting.%')
-                    ->orWhere('name', 'like', 'submission.%');
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
+        $roles[AppRole::OPERATOR_SETDA->value]->syncPermissions(['setda.view', 'submission.view']);
 
-        // Operator Sekolah Kecamatan - CRUD on sekolah data
-        $roles[AppRole::OPERATOR_SEKOLAH->value]->syncPermissions(
+        // Admin Setwan
+        $roles[AppRole::ADMIN_SETWAN->value]->syncPermissions(
             Permission::query()->where(function ($query): void {
-                $query->where('name', 'like', 'sekolah.%')
-                    ->orWhere('name', 'like', 'pendidikan.%')
-                    ->orWhere('name', 'like', 'submission.create');
+                $query->where('name', 'like', 'setwan.%')
+                    ->orWhere('name', 'like', 'dashboard.%')
+                    ->orWhere('name', 'like', 'reporting.%')
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
             })->pluck('name')
         );
+        $roles[AppRole::OPERATOR_SETWAN->value]->syncPermissions(['setwan.view', 'submission.view']);
 
-        // Public
+        // Admin DPPKB
+        $roles[AppRole::ADMIN_DPPKB->value]->syncPermissions(
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'pengendalian_penduduk.%')
+                    ->orWhere('name', 'like', 'dashboard.%')
+                    ->orWhere('name', 'like', 'reporting.%');
+            })->pluck('name')
+        );
+        $roles[AppRole::OPERATOR_DPPKB->value]->syncPermissions(['pengendalian_penduduk.view', 'submission.view']);
+
+        // Admin DP3A
+        $roles[AppRole::ADMIN_DP3A->value]->syncPermissions(
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'pemberdayaan_perempuan.%')
+                    ->orWhere('name', 'like', 'dashboard.%')
+                    ->orWhere('name', 'like', 'reporting.%');
+            })->pluck('name')
+        );
+        $roles[AppRole::OPERATOR_DP3A->value]->syncPermissions(['pemberdayaan_perempuan.view', 'submission.view']);
+
+        // Admin DPMD
+        $roles[AppRole::ADMIN_DPMD->value]->syncPermissions(
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'pemberdayaan_masyarakat.%')
+                    ->orWhere('name', 'like', 'dashboard.%')
+                    ->orWhere('name', 'like', 'reporting.%');
+            })->pluck('name')
+        );
+        $roles[AppRole::OPERATOR_DPMD->value]->syncPermissions(['pemberdayaan_masyarakat.view', 'submission.view']);
+
+        // Admin Disnaker
+        $roles[AppRole::ADMIN_DISNAKER->value]->syncPermissions(
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'ketenagakerjaan.%')
+                    ->orWhere('name', 'like', 'dashboard.%')
+                    ->orWhere('name', 'like', 'reporting.%');
+            })->pluck('name')
+        );
+        $roles[AppRole::OPERATOR_DISNAKER->value]->syncPermissions(['ketenagakerjaan.view', 'submission.view']);
+
+        // Admin Ketapang
+        $roles[AppRole::ADMIN_KETAPANG->value]->syncPermissions(
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'ketahanan_pangan.%')
+                    ->orWhere('name', 'like', 'dashboard.%')
+                    ->orWhere('name', 'like', 'reporting.%');
+            })->pluck('name')
+        );
+        $roles[AppRole::OPERATOR_KETAPANG->value]->syncPermissions(['ketahanan_pangan.view', 'submission.view']);
+
+        // AdminPerikanan
+        $roles[AppRole::ADMIN_PERIKANAN->value]->syncPermissions(
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'perikanan.%')
+                    ->orWhere('name', 'like', 'dashboard.%')
+                    ->orWhere('name', 'like', 'reporting.%');
+            })->pluck('name')
+        );
+        $roles[AppRole::OPERATOR_PERIKANAN->value]->syncPermissions(['perikanan.view', 'submission.view']);
+
+        // Admin Perpus
+        $roles[AppRole::ADMIN_PERPUS->value]->syncPermissions(
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'perpustakaan.%')
+                    ->orWhere('name', 'like', 'dashboard.%')
+                    ->orWhere('name', 'like', 'reporting.%');
+            })->pluck('name')
+        );
+        $roles[AppRole::OPERATOR_PERPUS->value]->syncPermissions(['perpustakaan.view', 'submission.view']);
+
+        // Admin Perkim
+        $roles[AppRole::ADMIN_PERKIM->value]->syncPermissions(
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'perkim.%')
+                    ->orWhere('name', 'like', 'dashboard.%')
+                    ->orWhere('name', 'like', 'reporting.%')
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
+            })->pluck('name')
+        );
+        $roles[AppRole::OPERATOR_PERKIM->value]->syncPermissions(['perkim.view', 'submission.view']);
+
+        // Admin Koprasi
+        $roles[AppRole::ADMIN_KOPERASI->value]->syncPermissions(
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'koperasi.%')
+                    ->orWhere('name', 'like', 'dashboard.%')
+                    ->orWhere('name', 'like', 'reporting.%')
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
+            })->pluck('name')
+        );
+        $roles[AppRole::OPERATOR_KOPERASI->value]->syncPermissions(['koperasi.view', 'submission.view']);
+
+        // Admin Inspektorat
+        $roles[AppRole::ADMIN_INSPEKTORAT->value]->syncPermissions(
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'pengawasan.%')
+                    ->orWhere('name', 'like', 'dashboard.%')
+                    ->orWhere('name', 'like', 'reporting.%')
+                    ->orWhere('name', 'like', 'audit.%')
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
+            })->pluck('name')
+        );
+        $roles[AppRole::OPERATOR_INSPEKTORAT->value]->syncPermissions(['pengawasan.view', 'submission.view']);
+
+        // Admin Kesbangpol
+        $roles[AppRole::ADMIN_KESBANGPOL->value]->syncPermissions(
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'kesbangpol.%')
+                    ->orWhere('name', 'like', 'dashboard.%')
+                    ->orWhere('name', 'like', 'reporting.%')
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
+            })->pluck('name')
+        );
+        $roles[AppRole::OPERATOR_KESBANGPOL->value]->syncPermissions(['kesbangpol.view', 'submission.view']);
+
+        // Admin Batas
+        $roles[AppRole::ADMIN_BATAS->value]->syncPermissions(
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'perbatasan.%')
+                    ->orWhere('name', 'like', 'dashboard.%')
+                    ->orWhere('name', 'like', 'reporting.%')
+                    ->orWhere('name', 'like', 'submission.%')
+                    ->orWhere('name', 'like', 'workflow.%');
+            })->pluck('name')
+        );
+        $roles[AppRole::OPERATOR_BATAS->value]->syncPermissions(['perbatasan.view', 'submission.view']);
+
+        // Admin Satpol PP
+        $roles[AppRole::ADMIN_SATPOLPP->value]->syncPermissions(
+            Permission::query()->where(function ($query): void {
+                $query->where('name', 'like', 'satpolpp.%')
+                    ->orWhere('name', 'like', 'dashboard.%')
+                    ->orWhere('name', 'like', 'reporting.%');
+            })->pluck('name')
+        );
+        $roles[AppRole::OPERATOR_SATPOLPP->value]->syncPermissions(['satpolpp.view', 'submission.view']);
+
+        // ========================
+        // PUBLIC - Guest access
+        // ========================
         $roles[AppRole::PUBLIC->value]->syncPermissions(['api.view']);
 
         app(PermissionRegistrar::class)->forgetCachedPermissions();

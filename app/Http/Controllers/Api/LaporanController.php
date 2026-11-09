@@ -2,12 +2,16 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exports\RumahExport;
+use App\Exports\KeluargaExport;
+use App\Exports\PendudukExport;
+use App\Exports\EmptyExport;
 use App\Http\Controllers\Controller;
-use App\Models\DataKesehatanBulanan;
-use App\Models\DataPendidikanBulanan;
 use App\Models\Keluarga;
 use App\Models\Penduduk;
 use App\Models\Rumah;
+use App\Support\PanelAccess;
+use Illuminate\Database\Eloquent\Builder;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -16,6 +20,32 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class LaporanController extends Controller
 {
+    private function rumahQuery(): Builder
+    {
+        abort_unless(
+            PanelAccess::canAccessKabupatenPanel()
+                || PanelAccess::canAccessKecamatanPanel()
+                || PanelAccess::canAccessLapanganPanel(),
+            403
+        );
+
+        abort(410, 'Laporan rumah tangga dinonaktifkan. Gunakan Katalog Dataset dan Verifikasi Data OPD.');
+    }
+
+    private function keluargaQuery(): Builder
+    {
+        abort_unless(PanelAccess::isSuperAdmin() || PanelAccess::isKependudukanDataOwner(), 403);
+
+        abort(410, 'Laporan keluarga lama dinonaktifkan. Gunakan dataset agregat yang telah diterbitkan.');
+    }
+
+    private function pendudukQuery(): Builder
+    {
+        abort_unless(PanelAccess::isSuperAdmin() || PanelAccess::isKependudukanDataOwner(), 403);
+
+        abort(410, 'Laporan penduduk lama dinonaktifkan. Gunakan dataset agregat yang telah diterbitkan.');
+    }
+
     private function wrapHtml(string $title, string $body): string
     {
         return "<!DOCTYPE html><html><head><meta charset=\"utf-8\"><title>$title</title>"
@@ -28,95 +58,60 @@ class LaporanController extends Controller
 
     public function rumahPdf(Request $request): Response
     {
-        $rumah = Rumah::with(['desa.kecamatan', 'keluarga'])->get();
-        $rows = '';
-        foreach ($rumah as $r) {
-            $rows .= '<tr><td>'.$r->id.'</td><td>'.($r->desa?->kecamatan?->nama ?? '-').'</td><td>'
-                .($r->desa?->nama ?? '-').'</td><td>'.($r->alamat ?? '-').'</td><td>'
-                .($r->keluarga->first()?->nama_kepala_keluarga ?? '-').'</td></tr>';
-        }
-        $html = $this->wrapHtml('Laporan Rumah', '<table><thead><tr><th>ID</th><th>Kecamatan</th><th>Desa</th><th>Alamat</th><th>Kepala Keluarga</th></tr></thead><tbody>'.$rows.'</tbody></table>');
-        return Pdf::loadHTML($html)->download('laporan-rumah-'.date('Y-m-d').'.pdf');
+        $this->rumahQuery();
     }
 
     public function rumahExcel(Request $request): BinaryFileResponse
     {
-        $rumah = Rumah::with(['desa.kecamatan', 'keluarga'])->get();
-        return Excel::download(new \App\Exports\RumahExport($rumah), 'laporan-rumah-'.date('Y-m-d').'.xlsx');
+        $this->rumahQuery();
     }
 
     public function keluargaPdf(Request $request): Response
     {
-        $keluarga = Keluarga::with(['rumah.desa.kecamatan', 'penduduk'])->get();
-        $rows = '';
-        foreach ($keluarga as $k) {
-            $rows .= '<tr><td>'.$k->id.'</td><td>'.($k->no_kk ?? '-').'</td><td>'
-                .($k->nama_kepala_keluarga ?? '-').'</td><td>'.($k->rumah?->alamat ?? '-').'</td><td>'
-                .($k->rumah?->desa?->nama ?? '-').'</td><td>'.$k->penduduk->count().'</td></tr>';
-        }
-        $html = $this->wrapHtml('Laporan Keluarga', '<table><thead><tr><th>ID</th><th>No KK</th><th>Kepala Keluarga</th><th>Alamat</th><th>Desa</th><th>Jumlah Anggota</th></tr></thead><tbody>'.$rows.'</tbody></table>');
-        return Pdf::loadHTML($html)->download('laporan-keluarga-'.date('Y-m-d').'.pdf');
+        $this->keluargaQuery();
     }
 
     public function keluargaExcel(Request $request): BinaryFileResponse
     {
-        $keluarga = Keluarga::with(['rumah.desa.kecamatan', 'penduduk'])->get();
-        return Excel::download(new \App\Exports\KeluargaExport($keluarga), 'laporan-keluarga-'.date('Y-m-d').'.xlsx');
+        $this->keluargaQuery();
     }
 
     public function pendudukPdf(Request $request): Response
     {
-        $penduduk = Penduduk::with(['keluarga.rumah.desa.kecamatan'])->get();
-        $rows = '';
-        foreach ($penduduk as $p) {
-            $rows .= '<tr><td>'.$p->id.'</td><td>'.($p->nik ?? '-').'</td><td>'
-                .($p->nama ?? '-').'</td><td>'.($p->jenis_kelamin ?? '-').'</td><td>'
-                .($p->tempat_lahir ?? '-').'</td><td>'.($p->tanggal_lahir ?? '-').'</td></tr>';
-        }
-        $html = $this->wrapHtml('Laporan Penduduk', '<table><thead><tr><th>ID</th><th>NIK</th><th>Nama</th><th>JK</th><th>Tempat Lahir</th><th>Tanggal Lahir</th></tr></thead><tbody>'.$rows.'</tbody></table>');
-        return Pdf::loadHTML($html)->download('laporan-penduduk-'.date('Y-m-d').'.pdf');
+        $this->pendudukQuery();
     }
 
     public function pendudukExcel(Request $request): BinaryFileResponse
     {
-        $penduduk = Penduduk::with(['keluarga.rumah.desa.kecamatan'])->get();
-        return Excel::download(new \App\Exports\PendudukExport($penduduk), 'laporan-penduduk-'.date('Y-m-d').'.xlsx');
+        $this->pendudukQuery();
     }
 
     public function pendidikanBulananPdf(Request $request): Response
     {
-        $data = DataPendidikanBulanan::with('kecamatan')->get();
-        $rows = '';
-        foreach ($data as $d) {
-            $rows .= '<tr><td>'.$d->id.'</td><td>'.($d->kecamatan?->nama ?? '-').'</td><td>'
-                .($d->periode ?? '-').'</td><td>'.($d->jumlah_siswa ?? 0).'</td><td>'.($d->jumlah_guru ?? 0).'</td></tr>';
-        }
-        $html = $this->wrapHtml('Laporan Pendidikan Bulanan', '<table><thead><tr><th>ID</th><th>Kecamatan</th><th>Periode</th><th>Siswa</th><th>Guru</th></tr></thead><tbody>'.$rows.'</tbody></table>');
+        abort_unless(PanelAccess::canAccessKabupatenPanel() || PanelAccess::canAccessKecamatanPanel() || PanelAccess::canAccessOpdPanel() || PanelAccess::canAccessOperatorPanel(), 403);
+        $html = $this->wrapHtml('Laporan Pendidikan Bulanan', '<p>Belum ada laporan pendidikan bulanan yang bersumber dari dataset terbit.</p>');
         return Pdf::loadHTML($html)->download('laporan-pendidikan-bulanan-'.date('Y-m-d').'.pdf');
     }
 
     public function pendidikanBulananExcel(Request $request): BinaryFileResponse
     {
-        $data = DataPendidikanBulanan::with('kecamatan')->get();
-        return Excel::download(new \App\Exports\PendidikanBulananExport($data), 'laporan-pendidikan-bulanan-'.date('Y-m-d').'.xlsx');
+        abort_unless(PanelAccess::canAccessKabupatenPanel() || PanelAccess::canAccessKecamatanPanel() || PanelAccess::canAccessOpdPanel() || PanelAccess::canAccessOperatorPanel(), 403);
+        // DataPendidikanBulanan table removed - return empty data
+        return Excel::download(new EmptyExport(), 'laporan-pendidikan-bulanan-'.date('Y-m-d').'.xlsx');
     }
 
     public function kesehatanBulananPdf(Request $request): Response
     {
-        $data = DataKesehatanBulanan::with('kecamatan')->get();
-        $rows = '';
-        foreach ($data as $d) {
-            $rows .= '<tr><td>'.$d->id.'</td><td>'.($d->kecamatan?->nama ?? '-').'</td><td>'
-                .($d->periode ?? '-').'</td><td>'.($d->ispa ?? 0).'</td><td>'.($d->dbd ?? 0).'</td><td>'
-                .($d->malaria ?? 0).'</td><td>'.($d->tbc ?? 0).'</td><td>'.($d->hipertensi ?? 0).'</td><td>'.($d->diabetes ?? 0).'</td></tr>';
-        }
-        $html = $this->wrapHtml('Laporan Kesehatan Bulanan', '<table><thead><tr><th>ID</th><th>Kecamatan</th><th>Periode</th><th>ISPA</th><th>DBD</th><th>Malaria</th><th>TBC</th><th>Hipertensi</th><th>Diabetes</th></tr></thead><tbody>'.$rows.'</tbody></table>');
+        abort_unless(PanelAccess::canAccessKabupatenPanel() || PanelAccess::canAccessKecamatanPanel() || PanelAccess::canAccessOpdPanel() || PanelAccess::canAccessOperatorPanel(), 403);
+        // DataKesehatanBulanan table removed - return empty report
+        $html = $this->wrapHtml('Laporan Kesehatan Bulanan', '<p>Modul kesehatan bulanan sedang dalam pengembangan.</p>');
         return Pdf::loadHTML($html)->download('laporan-kesehatan-bulanan-'.date('Y-m-d').'.pdf');
     }
 
     public function kesehatanBulananExcel(Request $request): BinaryFileResponse
     {
-        $data = DataKesehatanBulanan::with('kecamatan')->get();
-        return Excel::download(new \App\Exports\KesehatanBulananExport($data), 'laporan-kesehatan-bulanan-'.date('Y-m-d').'.xlsx');
+        abort_unless(PanelAccess::canAccessKabupatenPanel() || PanelAccess::canAccessKecamatanPanel() || PanelAccess::canAccessOpdPanel() || PanelAccess::canAccessOperatorPanel(), 403);
+        // DataKesehatanBulanan table removed - return empty data
+        return Excel::download(new EmptyExport(), 'laporan-kesehatan-bulanan-'.date('Y-m-d').'.xlsx');
     }
 }

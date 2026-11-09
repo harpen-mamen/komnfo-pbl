@@ -2,16 +2,13 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Desa;
-use App\Models\Kabupaten;
-use App\Models\Kecamatan;
-use App\Models\Keluarga;
-use App\Models\Penduduk;
-use App\Models\Rumah;
-use App\Models\SubmissionBatch;
+use Filament\Widgets\StatsOverviewWidget\Stat;
+use App\Models\Dataset;
+use App\Models\DatasetValue;
+use App\Models\Opd;
+use App\Models\Wilayah;
 use App\Support\PanelAccess;
 use Filament\Widgets\StatsOverviewWidget;
-use Filament\Widgets\StatsOverviewWidget\Card;
 
 class KominfoStatsOverview extends StatsOverviewWidget
 {
@@ -19,19 +16,27 @@ class KominfoStatsOverview extends StatsOverviewWidget
 
     public static function canView(): bool
     {
-        return PanelAccess::isSuperAdmin();
+        return PanelAccess::canAccessKabupatenPanel() || PanelAccess::isOperatorOpd();
     }
 
     protected function getCards(): array
     {
         return [
-            Card::make('Kabupaten', Kabupaten::query()->count())->icon('heroicon-o-office-building')->color('primary'),
-            Card::make('Kecamatan', Kecamatan::query()->count())->icon('heroicon-o-location-marker')->color('success'),
-            Card::make('Desa', Desa::query()->count())->icon('heroicon-o-map')->color('warning'),
-            Card::make('Total Batch Disetujui', SubmissionBatch::query()->where('status', SubmissionBatch::STATUS_APPROVED)->count())->icon('heroicon-o-check-circle'),
-            Card::make('Total Rumah', Rumah::query()->inApprovedBatch()->count())->icon('heroicon-o-home'),
-            Card::make('Total KK', Keluarga::query()->inApprovedBatch()->count())->icon('heroicon-o-user-group'),
-            Card::make('Total Penduduk', Penduduk::query()->inApprovedBatch()->count())->icon('heroicon-o-identification'),
+            Stat::make('Total OPD', Opd::query()->where('aktif', true)->count())
+                ->icon('heroicon-o-building-office')
+                ->color('primary'),
+            Stat::make('Total Dataset', Dataset::query()->count())
+                ->icon('heroicon-o-circle-stack')
+                ->color('success'),
+            Stat::make('Total Nilai Data', DatasetValue::query()->count())
+                ->icon('heroicon-o-table-cells')
+                ->color('warning'),
+            Stat::make('Kecamatan', Wilayah::query()->where('tipe', Wilayah::TIPE_KECAMATAN)->count())
+                ->icon('heroicon-o-map-pin')
+                ->color('info'),
+            Stat::make('Desa', Wilayah::query()->where('tipe', Wilayah::TIPE_DESA)->count())
+                ->icon('heroicon-o-map')
+                ->color('gray'),
         ];
     }
 }

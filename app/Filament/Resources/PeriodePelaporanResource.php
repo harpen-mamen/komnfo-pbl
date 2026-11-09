@@ -2,44 +2,84 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\DatePicker;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Actions\ViewAction;
+use Filament\Actions\EditAction;
+use App\Filament\Resources\PeriodePelaporanResource\Pages\ListPeriodePelaporans;
+use App\Filament\Resources\PeriodePelaporanResource\Pages\CreatePeriodePelaporan;
+use App\Filament\Resources\PeriodePelaporanResource\Pages\ViewPeriodePelaporan;
+use App\Filament\Resources\PeriodePelaporanResource\Pages\EditPeriodePelaporan;
 use App\Filament\Resources\PeriodePelaporanResource\Pages;
 use App\Models\PeriodePelaporan;
 use App\Support\PanelAccess;
 use Filament\Forms;
-use Filament\Resources\Form;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 use Illuminate\Database\Eloquent\Model;
 
 class PeriodePelaporanResource extends Resource
 {
     protected static ?string $model = PeriodePelaporan::class;
-    protected static ?string $navigationIcon = 'heroicon-o-calendar';
-    protected static ?string $navigationLabel = 'Periode Pelaporan';
-    protected static ?string $pluralModelLabel = 'Periode Pelaporan';
-    protected static ?string $modelLabel = 'Periode Pelaporan';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-calendar';
+    protected static ?string $navigationLabel = 'Konfigurasi Sistem';
+    protected static ?string $pluralModelLabel = 'Konfigurasi Sistem';
+    protected static ?string $modelLabel = 'Konfigurasi';
     protected static ?string $recordTitleAttribute = 'nama_periode';
-    protected static ?int $navigationSort = 14;
+    protected static ?int $navigationSort = 99;
 
-    protected static function shouldRegisterNavigation(): bool
+    /**
+     * Month options for dropdown
+     */
+    public static function monthOptions(): array
     {
-        return PanelAccess::canAccessKabupatenPanel() || PanelAccess::canAccessKecamatanPanel() || PanelAccess::canAccessOperatorPanel();
+        return [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Maret', 4 => 'April',
+            5 => 'Mei', 6 => 'Juni', 7 => 'Juli', 8 => 'Agustus',
+            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'Desember',
+        ];
+    }
+
+    /**
+     * Year options for dropdown
+     */
+    public static function yearOptions(): array
+    {
+        $years = [];
+        $currentYear = (int) date('Y');
+        for ($year = $currentYear - 5; $year <= $currentYear + 2; $year++) {
+            $years[$year] = (string) $year;
+        }
+        return $years;
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return PanelAccess::isSuperAdmin();
     }
 
     public static function canViewAny(): bool
     {
-        return PanelAccess::canAccessKabupatenPanel() || PanelAccess::canAccessKecamatanPanel() || PanelAccess::canAccessOperatorPanel();
+        return PanelAccess::isSuperAdmin();
     }
 
+    // Periode pelaporan adalah OTOMATIS oleh sistem, BUKAN manual
+    // Super Admin bisa melihat daftar periode
+    // Periode baru dibuat oleh sistem berdasarkan scheduler/job
     public static function canCreate(): bool
     {
-        return PanelAccess::canAccessKabupatenPanel();
+        return false; // Tidak ada yang bisa membuat periode manual
     }
 
     public static function canEdit(Model $record): bool
     {
-        return PanelAccess::canAccessKabupatenPanel();
+        return false; // Tidak ada yang bisa edit periode manual
     }
 
     public static function canDelete(Model $record): bool
@@ -52,32 +92,32 @@ class PeriodePelaporanResource extends Resource
         return false;
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\TextInput::make('nama_periode')
+        return $schema->components([
+            TextInput::make('nama_periode')
                 ->label('Nama Periode')
                 ->required()
                 ->maxLength(255),
-            Forms\Components\Select::make('bulan')
+            Select::make('bulan')
                 ->label('Bulan')
-                ->options(DataPendidikanBulananResource::monthOptions())
+                ->options(self::monthOptions())
                 ->required(),
-            Forms\Components\TextInput::make('tahun')
+            TextInput::make('tahun')
                 ->label('Tahun')
                 ->numeric()
                 ->minValue(2020)
                 ->maxValue(2100)
                 ->default((int) now()->year)
                 ->required(),
-            Forms\Components\DatePicker::make('tanggal_mulai')
+            DatePicker::make('tanggal_mulai')
                 ->label('Tanggal Mulai')
                 ->required(),
-            Forms\Components\DatePicker::make('tanggal_selesai')
+            DatePicker::make('tanggal_selesai')
                 ->label('Tanggal Selesai')
                 ->required()
                 ->afterOrEqual('tanggal_mulai'),
-            Forms\Components\Select::make('status')
+            Select::make('status')
                 ->label('Status')
                 ->options(PeriodePelaporan::STATUS)
                 ->default('Draft')
@@ -89,23 +129,23 @@ class PeriodePelaporanResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('nama_periode')->label('Nama Periode')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('bulan')->label('Bulan')->formatStateUsing(fn ($state) => DataPendidikanBulananResource::monthOptions()[(int) $state] ?? $state)->sortable(),
-                Tables\Columns\TextColumn::make('tahun')->label('Tahun')->sortable(),
-                Tables\Columns\TextColumn::make('tanggal_mulai')->label('Mulai')->date('d M Y')->sortable(),
-                Tables\Columns\TextColumn::make('tanggal_selesai')->label('Selesai')->date('d M Y')->sortable(),
-                Tables\Columns\BadgeColumn::make('status')->label('Status'),
-                Tables\Columns\TextColumn::make('created_at')->label('Created At')->dateTime('d M Y H:i')->toggleable(),
-                Tables\Columns\TextColumn::make('updated_at')->label('Updated At')->dateTime('d M Y H:i')->toggleable(),
+                TextColumn::make('nama_periode')->label('Nama Periode')->searchable()->sortable(),
+                TextColumn::make('bulan')->label('Bulan')->formatStateUsing(fn ($state) => self::monthOptions()[(int) $state] ?? $state)->sortable(),
+                TextColumn::make('tahun')->label('Tahun')->sortable(),
+                TextColumn::make('tanggal_mulai')->label('Mulai')->date('d M Y')->sortable(),
+                TextColumn::make('tanggal_selesai')->label('Selesai')->date('d M Y')->sortable(),
+                BadgeColumn::make('status')->label('Status'),
+                TextColumn::make('created_at')->label('Created At')->dateTime('d M Y H:i')->toggleable(),
+                TextColumn::make('updated_at')->label('Updated At')->dateTime('d M Y H:i')->toggleable(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')->options(PeriodePelaporan::STATUS),
-                Tables\Filters\SelectFilter::make('bulan')->options(DataPendidikanBulananResource::monthOptions()),
-                Tables\Filters\SelectFilter::make('tahun')->options(DataPendidikanBulananResource::yearOptions()),
+                SelectFilter::make('status')->options(PeriodePelaporan::STATUS),
+                SelectFilter::make('bulan')->options(self::monthOptions()),
+                SelectFilter::make('tahun')->options(self::yearOptions()),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
+            ->recordActions([
+                ViewAction::make(),
+                EditAction::make(),
             ])
             ->defaultSort('tahun', 'desc');
     }
@@ -113,10 +153,10 @@ class PeriodePelaporanResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListPeriodePelaporans::route('/'),
-            'create' => Pages\CreatePeriodePelaporan::route('/create'),
-            'view' => Pages\ViewPeriodePelaporan::route('/{record}'),
-            'edit' => Pages\EditPeriodePelaporan::route('/{record}/edit'),
+            'index' => ListPeriodePelaporans::route('/'),
+            'create' => CreatePeriodePelaporan::route('/create'),
+            'view' => ViewPeriodePelaporan::route('/{record}'),
+            'edit' => EditPeriodePelaporan::route('/{record}/edit'),
         ];
     }
 }

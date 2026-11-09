@@ -27,11 +27,9 @@ export interface PejabatProfile {
   nama_lengkap: string;
   gelar_depan: string | null;
   gelar_belakang: string | null;
-  nip: string | null;
   jabatan: string;
   foto: string | null;
   biodata_singkat: string | null;
-  tanda_tangan: string | null;
   riwayat_pendidikan: Array<{ jenjang: string; institusi: string; tahun: string }> | null;
   riwayat_jabatan: Array<{ jabatan: string; periode: string }> | null;
   tanggal_mulai: string | null;
@@ -72,10 +70,21 @@ export interface TentangSejarah {
 
 export interface VisiMisi {
   visi: string | null;
+  tagline?: string | null;
   misi: string[];
+  cita_cita?: string[];
   tujuan: string[];
   sasaran: string[];
   periode: string | null;
+  sumber?: string;
+}
+
+export interface LambangDaerah {
+  judul: string;
+  subjudul: string | null;
+  konten: string;
+  unsur?: Array<{ nama: string; makna: string }>;
+  warna?: Array<{ nama: string; makna: string }>;
 }
 
 // ==================== API FUNCTIONS ====================
@@ -84,7 +93,7 @@ export const fetchTentangDaerah = () =>
   api.get<{ page: AboutPageSetting; sections: AboutSection[] }>('/public/tentang-daerah').then((r) => r.data);
 
 export const fetchSambutanBupati = () =>
-  api.get<{ section: any; pejabat: PejabatProfile[] }>('/public/tentang-daerah/sambutan-bupati').then((r) => r.data);
+  api.get<{ section: { judul: string | null; subjudul: string | null; konten: string | null } | null; pejabat: PejabatProfile[] }>('/public/tentang-daerah/sambutan-bupati').then((r) => r.data);
 
 export const fetchPejabat = (tipe?: string) =>
   api.get<{ data: PejabatProfile[] }>('/public/tentang-daerah/pejabat', { params: tipe ? { tipe } : {} }).then((r) => r.data);
@@ -108,4 +117,4 @@ export const fetchGeografi = () =>
   api.get('/public/tentang-daerah/geografi').then((r) => r.data);
 
 export const fetchLambang = () =>
-  api.get('/public/tentang-daerah/lambang').then((r) => r.data);
+  api.get<{ data: LambangDaerah }>('/public/tentang-daerah/lambang').then((r) => r.data);

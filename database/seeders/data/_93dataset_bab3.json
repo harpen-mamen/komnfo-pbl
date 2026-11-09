@@ -1,0 +1,686 @@
+{
+    "DUKCAPIL": [
+        "2.06",
+        {
+            "3.12": [
+                "Jumlah KK Per Kecamatan",
+                "tahunan",
+                {
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "lk": [
+                        "KK Laki-laki",
+                        "integer",
+                        false,
+                        "KK"
+                    ],
+                    "pr": [
+                        "KK Perempuan",
+                        "integer",
+                        false,
+                        "KK"
+                    ],
+                    "total": [
+                        "Total",
+                        "integer",
+                        false,
+                        "KK"
+                    ]
+                }
+            ],
+            "3.13": [
+                "Jumlah Penduduk Per Kecamatan",
+                "tahunan",
+                {
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "lk": [
+                        "Laki-laki",
+                        "integer",
+                        false,
+                        "Jiwa"
+                    ],
+                    "pr": [
+                        "Perempuan",
+                        "integer",
+                        false,
+                        "Jiwa"
+                    ],
+                    "total": [
+                        "Total",
+                        "integer",
+                        false,
+                        "Jiwa"
+                    ]
+                }
+            ],
+            "3.14": [
+                "Penduduk Berdasarkan Usia",
+                "tahunan",
+                {
+                    "kelompok_umur": [
+                        "Kelompok Umur",
+                        "enum",
+                        true,
+                        [
+                            "0-4",
+                            "5-9",
+                            "10-14",
+                            "15-19",
+                            "20-24",
+                            "25-29",
+                            "30-34",
+                            "35-39",
+                            "40-44",
+                            "45-49",
+                            "50-54",
+                            "55-59",
+                            "60-64",
+                            "65-69",
+                            "70-74",
+                            "75+"
+                        ]
+                    ],
+                    "lk": [
+                        "Laki-laki",
+                        "integer",
+                        false,
+                        "Jiwa"
+                    ],
+                    "pr": [
+                        "Perempuan",
+                        "integer",
+                        false,
+                        "Jiwa"
+                    ]
+                }
+            ],
+            "3.15": [
+                "Kepemilikan Akta Kelahiran",
+                "tahunan",
+                {
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "punya": [
+                        "Memiliki",
+                        "integer",
+                        false,
+                        "Jiwa"
+                    ],
+                    "belum": [
+                        "Belum",
+                        "integer",
+                        false,
+                        "Jiwa"
+                    ]
+                }
+            ]
+        }
+    ],
+    "DISDIK": [
+        "1.01",
+        {
+            "3.16": [
+                "APM dan APS",
+                "tahunan",
+                {
+                    "jenjang": [
+                        "Jenjang",
+                        "enum",
+                        true,
+                        [
+                            "SD",
+                            "SMP",
+                            "SMA"
+                        ]
+                    ],
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "apm": [
+                        "APM",
+                        "decimal",
+                        false,
+                        "Persen"
+                    ],
+                    "aps": [
+                        "APS",
+                        "decimal",
+                        false,
+                        "Persen"
+                    ]
+                }
+            ],
+            "3.17": [
+                "Guru dan Murid",
+                "tahunan",
+                {
+                    "jenjang": [
+                        "Jenjang",
+                        "enum",
+                        true,
+                        [
+                            "SD",
+                            "SMP",
+                            "SMA"
+                        ]
+                    ],
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "guru": [
+                        "Guru",
+                        "integer",
+                        false,
+                        "Orang"
+                    ],
+                    "murid": [
+                        "Murid",
+                        "integer",
+                        false,
+                        "Orang"
+                    ]
+                }
+            ],
+            "3.18": [
+                "Sarana Seni Budaya",
+                "tahunan",
+                {
+                    "jenis": [
+                        "Jenis Seni",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Unit"
+                    ]
+                }
+            ],
+            "3.19": [
+                "AMH dan Lama Sekolah",
+                "tahunan",
+                {
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "jk": [
+                        "JK",
+                        "enum",
+                        true,
+                        [
+                            "L",
+                            "P"
+                        ]
+                    ],
+                    "amh": [
+                        "AMH",
+                        "decimal",
+                        false,
+                        "Persen"
+                    ],
+                    "rls": [
+                        "RLS",
+                        "decimal",
+                        false,
+                        "Tahun"
+                    ]
+                }
+            ]
+        }
+    ],
+    "DINKES": [
+        "1.02",
+        {
+            "3.20": [
+                "e-PPGBM Status Gizi Balita",
+                "bulanan",
+                {
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "status": [
+                        "Status Gizi",
+                        "enum",
+                        true,
+                        [
+                            "Buruk",
+                            "Kurang",
+                            "Baik",
+                            "Risiko Lebih"
+                        ]
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Balita"
+                    ]
+                }
+            ],
+            "3.21": [
+                "AKI AKB AHH",
+                "tahunan",
+                {
+                    "indikator": [
+                        "Indikator",
+                        "enum",
+                        true,
+                        [
+                            "AKI",
+                            "AKB",
+                            "AHH"
+                        ]
+                    ],
+                    "tahun": [
+                        "Tahun",
+                        "integer",
+                        true,
+                        null
+                    ],
+                    "nilai": [
+                        "Nilai",
+                        "decimal",
+                        false,
+                        "Nilai"
+                    ]
+                }
+            ],
+            "3.27": [
+                "Wanita Usia Subur",
+                "tahunan",
+                {
+                    "kelompok_umur": [
+                        "Kelompok Umur",
+                        "enum",
+                        true,
+                        [
+                            "15-19",
+                            "20-24",
+                            "25-29",
+                            "30-34",
+                            "35-39",
+                            "40-44",
+                            "45-49"
+                        ]
+                    ],
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Orang"
+                    ]
+                }
+            ]
+        }
+    ],
+    "DINSOS": [
+        "1.06",
+        {
+            "3.22": [
+                "Kesejahteraan Sosial",
+                "tahunan",
+                {
+                    "jenis_pmks": [
+                        "Jenis PMKS",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Orang"
+                    ]
+                }
+            ]
+        }
+    ],
+    "DPPKB": [
+        "2.08",
+        {
+            "3.25": [
+                "Klinik KB dan PPKBD",
+                "tahunan",
+                {
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "kkb": [
+                        "KKB",
+                        "integer",
+                        false,
+                        "Unit"
+                    ],
+                    "ppkbd": [
+                        "PPKBD",
+                        "integer",
+                        false,
+                        "Unit"
+                    ]
+                }
+            ],
+            "3.26": [
+                "PUS dan Peserta KB Aktif",
+                "tahunan",
+                {
+                    "kecamatan": [
+                        "Kecamatan",
+                        "reference",
+                        true,
+                        "wilayah"
+                    ],
+                    "tahun": [
+                        "Tahun",
+                        "integer",
+                        true,
+                        null
+                    ],
+                    "kategori": [
+                        "Indikator",
+                        "enum",
+                        true,
+                        [
+                            "PUS",
+                            "Peserta Aktif"
+                        ]
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        true,
+                        "Pasangan"
+                    ]
+                }
+            ]
+        }
+    ],
+    "DP3A": [
+        "2.02",
+        {
+            "3.29": [
+                "Indeks Pemberdayaan Gender",
+                "tahunan",
+                {
+                    "komponen": [
+                        "Komponen",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "tahun": [
+                        "Tahun",
+                        "integer",
+                        true,
+                        null
+                    ],
+                    "nilai": [
+                        "Nilai",
+                        "decimal",
+                        false,
+                        "Indeks"
+                    ]
+                }
+            ],
+            "3.30": [
+                "Indeks Pembangunan Gender",
+                "tahunan",
+                {
+                    "komponen": [
+                        "Komponen",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "tahun": [
+                        "Tahun",
+                        "integer",
+                        true,
+                        null
+                    ],
+                    "nilai": [
+                        "Nilai",
+                        "decimal",
+                        false,
+                        "Indeks"
+                    ]
+                }
+            ],
+            "3.31": [
+                "Kekerasan Perempuan dan Anak",
+                "tahunan",
+                {
+                    "jenis_kasus": [
+                        "Jenis Kasus",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "jk": [
+                        "JK",
+                        "enum",
+                        true,
+                        [
+                            "L",
+                            "P"
+                        ]
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Kasus"
+                    ]
+                }
+            ]
+        }
+    ],
+    "DPMD": [
+        "2.07",
+        {
+            "3.32": [
+                "Pemberdayaan Masyarakat Desa",
+                "tahunan",
+                {
+                    "kampung": [
+                        "Kampung",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "status_idm": [
+                        "Status IDM",
+                        "enum",
+                        true,
+                        [
+                            "Merah",
+                            "Kuning",
+                            "Hijau"
+                        ]
+                    ],
+                    "skor_idm": [
+                        "Skor IDM",
+                        "decimal",
+                        false,
+                        "Skor"
+                    ]
+                }
+            ]
+        }
+    ],
+    "DISPORA": [
+        "2.13",
+        {
+            "3.33": [
+                "Pemuda dan Olahraga",
+                "tahunan",
+                {
+                    "indikator": [
+                        "Indikator",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Unit"
+                    ]
+                }
+            ]
+        }
+    ],
+    "DISNAKER": [
+        "2.01",
+        {
+            "3.34": [
+                "Perkembangan Tenaga Kerja",
+                "tahunan",
+                {
+                    "jenis_tk": [
+                        "Jenis",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "tahun": [
+                        "Tahun",
+                        "integer",
+                        true,
+                        null
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Orang"
+                    ]
+                }
+            ],
+            "3.35": [
+                "Tingkat Pengangguran Terbuka",
+                "semesteran",
+                {
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "jk": [
+                        "JK",
+                        "enum",
+                        true,
+                        [
+                            "L",
+                            "P",
+                            "Total"
+                        ]
+                    ],
+                    "usia_kerja": [
+                        "Penduduk usia kerja 15-60 tahun",
+                        "integer",
+                        true,
+                        "Orang"
+                    ],
+                    "jumlah_pengangguran": [
+                        "Jumlah pengangguran",
+                        "integer",
+                        true,
+                        "Orang"
+                    ],
+                    "tpt": [
+                        "TPT",
+                        "decimal",
+                        false,
+                        "Persen"
+                    ]
+                }
+            ],
+            "3.36": [
+                "Tingkat Partisipasi Angkatan Kerja",
+                "semesteran",
+                {
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "jk": [
+                        "JK",
+                        "enum",
+                        true,
+                        [
+                            "L",
+                            "P",
+                            "Total"
+                        ]
+                    ],
+                    "usia_kerja": [
+                        "Penduduk usia kerja 15-60 tahun",
+                        "integer",
+                        true,
+                        "Orang"
+                    ],
+                    "angkatan_kerja": [
+                        "Penduduk yang bekerja/angkatan kerja",
+                        "integer",
+                        true,
+                        "Orang"
+                    ],
+                    "tpak": [
+                        "TPAK",
+                        "decimal",
+                        false,
+                        "Persen"
+                    ]
+                }
+            ]
+        }
+    ]
+}

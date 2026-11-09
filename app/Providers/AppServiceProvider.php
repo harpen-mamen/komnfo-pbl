@@ -2,15 +2,15 @@
 
 namespace App\Providers;
 
-use App\Filament\Pages\EditProfile;
-use App\Filament\Pages\StatistikKesehatanOtomatis;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use App\Models\Wilayah;
 use App\Models\SubmissionBatch;
 use App\Observers\SubmissionBatchObserver;
 use App\Services\Authorization\WewenangService;
 use App\Services\DataInput\DataInputService;
 use App\Services\Notification\NotificationService;
 use Illuminate\Support\ServiceProvider;
-use Filament\Facades\Filament;
+use Illuminate\Foundation\Console\ServeCommand;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -40,17 +40,17 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Register custom Filament pages
-        Filament::registerPages([
-            EditProfile::class,
-            StatistikKesehatanOtomatis::class,
-        ]);
+        if ($this->app->runningInConsole()) {
+            ServeCommand::$passthroughVariables = array_values(array_unique([
+                ...ServeCommand::$passthroughVariables,
+                'PHPRC', 'SIPANDU_PHP_DIR', 'SIPANDU_STORAGE_DIR', 'PHP_INI_SCAN_DIR',
+            ]));
+        }
 
-        // Load the public stylesheet directly. Filament v2 treats a numeric
-        // array entry as a named asset (for example, `0.css`), so using a
-        // complete link ensures the browser receives the current theme.
-        Filament::registerStyles([
-            '<link rel="stylesheet" href="/css/filament-custom.css?v=20260811b" />',
+        Relation::morphMap([
+            'kabupaten' => Wilayah::class,
+            'kecamatan' => Wilayah::class,
+            'desa' => Wilayah::class,
         ]);
 
         // Observe SubmissionBatch → sync status to MobileSyncOperation

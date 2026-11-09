@@ -1,1 +1,0 @@
-<?php namespace App\Filament\Resources\PublicHeroSettingResource\Pages; use App\Filament\Resources\PublicHeroSettingResource; use Filament\Resources\Pages\CreateRecord; class CreatePublicHeroSetting extends CreateRecord {protected static string $resource=PublicHeroSettingResource::class;}

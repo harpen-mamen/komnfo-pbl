@@ -2,27 +2,44 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\Placeholder;
+use Filament\Forms\Components\Select;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\DatePicker;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Actions\Action;
+use Filament\Actions\ViewAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\PendudukResource\Pages\ListPenduduks;
+use App\Filament\Resources\PendudukResource\Pages\CreatePenduduk;
+use App\Filament\Resources\PendudukResource\Pages\ViewPenduduk;
+use App\Filament\Resources\PendudukResource\Pages\EditPenduduk;
 use App\Filament\Resources\PendudukResource\Pages;
 use App\Models\Keluarga;
-use App\Models\Kecamatan;
 use App\Models\Penduduk;
 use App\Models\Rumah;
 use App\Models\SubmissionBatch;
+use App\Models\Wilayah;
 use App\Services\Authorization\WewenangService;
 use App\Support\AdminKecamatan;
 use App\Support\PanelAccess;
 use Filament\Forms;
-use Filament\Resources\Form;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
-class PendudukResource extends Resource
+abstract class PendudukResource extends Resource
 {
     protected static ?string $model = Penduduk::class;
-    protected static ?string $navigationIcon = 'heroicon-o-identification';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-identification';
     protected static ?string $navigationLabel = 'Penduduk';
     protected static ?string $pluralModelLabel = 'Data Penduduk';
     protected static ?string $modelLabel = 'Penduduk';
@@ -34,41 +51,27 @@ class PendudukResource extends Resource
         return parent::getEloquentQuery()->visibleToCurrentUser()->with(['keluarga.rumah', 'latestSubmissionBatchItem.submissionBatch']);
     }
 
-    protected static function shouldRegisterNavigation(): bool
+    public static function shouldRegisterNavigation(): bool
     {
-        return PanelAccess::canAccessKabupatenPanel() || PanelAccess::canAccessKecamatanPanel();
+        return PanelAccess::isSuperAdmin() || PanelAccess::isKependudukanDataOwner();
     }
 
     public static function canCreate(): bool
     {
-        $user = auth()->user();
-        if (!$user) return false;
-
-        // SPRINT 6: Admin Kecamatan BISA membuat data master
-        if ($user->isAdminKecamatan()) {
-            return true;
-        }
-
-        // Admin Desa
-        if ($user->isAdminDesa()) {
-            return true;
-        }
-
-        // Kabupaten level
-        if (PanelAccess::canAccessKabupatenPanel()) {
-            return true;
-        }
-
-        return false;
+        return PanelAccess::isSuperAdmin() || PanelAccess::isKependudukanDataOwner();
     }
 
     public static function canViewAny(): bool
     {
-        return PanelAccess::canAccessKabupatenPanel() || PanelAccess::canAccessKecamatanPanel();
+        return PanelAccess::isSuperAdmin() || PanelAccess::isKependudukanDataOwner();
     }
 
     public static function canEdit(Model $record): bool
     {
+        if (! PanelAccess::isSuperAdmin() && ! PanelAccess::isKependudukanDataOwner()) {
+            return false;
+        }
+
         return app(WewenangService::class)
             ->setUser(auth()->user())
             ->canEditRecord(Penduduk::class, $record->id);
@@ -76,6 +79,10 @@ class PendudukResource extends Resource
 
     public static function canDelete(Model $record): bool
     {
+        if (! PanelAccess::isSuperAdmin() && ! PanelAccess::isKependudukanDataOwner()) {
+            return false;
+        }
+
         return app(WewenangService::class)
             ->setUser(auth()->user())
             ->canDeleteRecord(Penduduk::class, $record->id);
@@ -83,16 +90,16 @@ class PendudukResource extends Resource
 
     public static function canDeleteAny(): bool
     {
-        return AdminKecamatan::isAdminKecamatan();
+        return PanelAccess::isSuperAdmin() || PanelAccess::isKependudukanDataOwner();
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\Placeholder::make('kecamatan_readonly')
+        return $schema->components([
+            Placeholder::make('kecamatan_readonly')
                 ->label('Kecamatan')
                 ->content(fn (): string => AdminKecamatan::kecamatan()?->nama ?? 'Admin Kominfo Kabupaten'),
-            Forms\Components\Select::make('desa_id')
+            Select::make('desa_id')
                 ->label('STEP 1 - Desa')
                 ->dehydrated(false)
                 ->options(fn () => AdminKecamatan::desaOptions())
@@ -109,7 +116,7 @@ class PendudukResource extends Resource
                     $set('rumah_id', null);
                     $set('keluarga_id', null);
                 }),
-            Forms\Components\Select::make('rumah_id')
+            Select::make('rumah_id')
                 ->label('STEP 2 - Rumah')
                 ->dehydrated(false)
                 ->options(fn (callable $get) => Rumah::query()
@@ -126,7 +133,7 @@ class PendudukResource extends Resource
                     }
                 })
                 ->afterStateUpdated(fn (callable $set) => $set('keluarga_id', null)),
-            Forms\Components\Select::make('keluarga_id')
+            Select::make('keluarga_id')
                 ->label('STEP 3 - KK')
                 ->options(function (callable $get) {
                     return Keluarga::query()
@@ -137,20 +144,20 @@ class PendudukResource extends Resource
                 })
                 ->searchable()
                 ->required(),
-            Forms\Components\Section::make('STEP 4 - Input Penduduk')->schema([
-                Forms\Components\TextInput::make('nik')->required()->unique(ignoreRecord: true)->maxLength(32),
-                Forms\Components\TextInput::make('nama_lengkap')->label('Nama Lengkap')->required()->maxLength(255),
-                Forms\Components\Select::make('jenis_kelamin')->options(Penduduk::JENIS_KELAMIN)->required(),
-                Forms\Components\TextInput::make('tempat_lahir')->required()->maxLength(255),
-                Forms\Components\DatePicker::make('tanggal_lahir')->required(),
-                Forms\Components\Select::make('agama')->options(Penduduk::AGAMA)->required(),
-                Forms\Components\Select::make('status_perkawinan')->options(Penduduk::STATUS_PERKAWINAN)->required(),
-                Forms\Components\Select::make('pendidikan')->options(Penduduk::PENDIDIKAN)->required(),
-                Forms\Components\TextInput::make('pekerjaan')->maxLength(255),
-                Forms\Components\TextInput::make('penghasilan')->numeric()->minValue(0),
-                Forms\Components\Select::make('status_dalam_keluarga')->options(Penduduk::STATUS_DALAM_KELUARGA)->required(),
-                Forms\Components\TextInput::make('nomor_hp')->tel()->maxLength(32),
-                Forms\Components\Select::make('status_penduduk')->options(Penduduk::STATUS_PENDUDUK)->required(),
+            Section::make('STEP 4 - Input Penduduk')->schema([
+                TextInput::make('nik')->required()->unique(ignoreRecord: true)->maxLength(32),
+                TextInput::make('nama_lengkap')->label('Nama Lengkap')->required()->maxLength(255),
+                Select::make('jenis_kelamin')->options(Penduduk::JENIS_KELAMIN)->required(),
+                TextInput::make('tempat_lahir')->required()->maxLength(255),
+                DatePicker::make('tanggal_lahir')->required(),
+                Select::make('agama')->options(Penduduk::AGAMA)->required(),
+                Select::make('status_perkawinan')->options(Penduduk::STATUS_PERKAWINAN)->required(),
+                Select::make('pendidikan')->options(Penduduk::PENDIDIKAN)->required(),
+                TextInput::make('pekerjaan')->maxLength(255),
+                TextInput::make('penghasilan')->numeric()->minValue(0),
+                Select::make('status_dalam_keluarga')->options(Penduduk::STATUS_DALAM_KELUARGA)->required(),
+                TextInput::make('nomor_hp')->tel()->maxLength(32),
+                Select::make('status_penduduk')->options(Penduduk::STATUS_PENDUDUK)->required(),
             ])->columns(2)->columnSpanFull(),
         ]);
     }
@@ -159,42 +166,44 @@ class PendudukResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('nik')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('nama_lengkap')->label('Nama')->searchable()->sortable(),
-                Tables\Columns\BadgeColumn::make('latestSubmissionBatchItem.submissionBatch.status')->label('Batch')->formatStateUsing(fn ($state) => SubmissionBatch::statusLabel($state))->colors([
+                TextColumn::make('nik')->searchable()->sortable(),
+                TextColumn::make('nama_lengkap')->label('Nama')->searchable()->sortable(),
+                BadgeColumn::make('latestSubmissionBatchItem.submissionBatch.status')->label('Batch')->formatStateUsing(fn ($state) => SubmissionBatch::statusLabel($state))->colors([
                     'gray' => SubmissionBatch::STATUS_DRAFT,
                     'warning' => SubmissionBatch::STATUS_PENDING,
                     'primary' => SubmissionBatch::STATUS_IN_REVIEW,
                     'success' => SubmissionBatch::STATUS_APPROVED,
                     'danger' => SubmissionBatch::STATUS_REJECTED,
                 ]),
-                Tables\Columns\BadgeColumn::make('jenis_kelamin')->label('JK'),
-                Tables\Columns\TextColumn::make('keluarga.nomor_kk')->label('Nomor KK')->searchable(),
-                Tables\Columns\TextColumn::make('keluarga.nama_kepala_keluarga')->label('Kepala Keluarga')->searchable(),
-                Tables\Columns\TextColumn::make('keluarga.rumah.desa.nama')->label('Desa')->searchable(),
-                Tables\Columns\TextColumn::make('keluarga.rumah.kode_rumah')->label('Kode Rumah')->searchable(),
-                Tables\Columns\TextColumn::make('agama')->sortable(),
-                Tables\Columns\TextColumn::make('pendidikan')->sortable(),
-                Tables\Columns\TextColumn::make('umur')->label('Umur'),
+                BadgeColumn::make('jenis_kelamin')->label('JK'),
+                TextColumn::make('keluarga.nomor_kk')->label('Nomor KK')->searchable(),
+                TextColumn::make('keluarga.nama_kepala_keluarga')->label('Kepala Keluarga')->searchable(),
+                TextColumn::make('keluarga.rumah.desa.nama')->label('Desa')->searchable(),
+                TextColumn::make('keluarga.rumah.kode_rumah')->label('Kode Rumah')->searchable(),
+                TextColumn::make('agama')->sortable(),
+                TextColumn::make('pendidikan')->sortable(),
+                TextColumn::make('umur')->label('Umur'),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('kecamatan_id')
+                SelectFilter::make('kecamatan_id')
                     ->label('Kecamatan')
-                    ->options(fn () => Kecamatan::query()->orderBy('nama')->pluck('nama', 'id'))
+                    ->options(fn () => Wilayah::query()->where('tipe', Wilayah::TIPE_KECAMATAN)->orderBy('nama')->pluck('nama', 'id'))
                     ->query(fn (Builder $query, array $data) => $query
                         ->when($data['value'] ?? null, fn (Builder $query, $kecamatanId) => $query
-                            ->whereHas('keluarga.rumah.desa', fn (Builder $desa) => $desa->where('kecamatan_id', $kecamatanId)))),
-                Tables\Filters\SelectFilter::make('desa_id')
+                            ->whereHas('keluarga.rumah.desa', fn (Builder $desa) => $desa->where('parent_id', $kecamatanId)))),
+                SelectFilter::make('desa_id')
                     ->label('Desa')
                     ->options(fn () => AdminKecamatan::desaOptions())
                     ->query(fn (Builder $query, array $data) => $query
-                        ->when($data['value'] ?? null, fn (Builder $query, $desaId) => $query
+                        ->when(
+                            $data['value'] ?? null,
+                            fn (Builder $query, $desaId) => $query
                             ->whereHas('keluarga.rumah', fn (Builder $rumah) => $rumah->where('desa_id', $desaId))
                         )),
-                Tables\Filters\SelectFilter::make('jenis_kelamin')->options(Penduduk::JENIS_KELAMIN),
-                Tables\Filters\SelectFilter::make('agama')->options(Penduduk::AGAMA),
-                Tables\Filters\SelectFilter::make('pendidikan')->options(Penduduk::PENDIDIKAN),
-                Tables\Filters\SelectFilter::make('batch_status')
+                SelectFilter::make('jenis_kelamin')->options(Penduduk::JENIS_KELAMIN),
+                SelectFilter::make('agama')->options(Penduduk::AGAMA),
+                SelectFilter::make('pendidikan')->options(Penduduk::PENDIDIKAN),
+                SelectFilter::make('batch_status')
                     ->label('Status Batch')
                     ->options(fn () => collect([
                         SubmissionBatch::STATUS_DRAFT => SubmissionBatch::statusLabel(SubmissionBatch::STATUS_DRAFT),
@@ -209,11 +218,11 @@ class PendudukResource extends Resource
                             ->withLatestSubmissionBatchStatus($value))),
             ])
             ->headerActions([
-                Tables\Actions\Action::make('export_pdf')->label('Export PDF')->icon('heroicon-o-document-download')->url(route('laporan.penduduk.pdf'))->openUrlInNewTab(),
-                Tables\Actions\Action::make('export_excel')->label('Export Excel')->icon('heroicon-o-table')->url(route('laporan.penduduk.excel'))->openUrlInNewTab(),
+                Action::make('export_pdf')->label('Export PDF')->icon('heroicon-o-document-arrow-down')->url(route('laporan.penduduk.pdf'))->openUrlInNewTab(),
+                Action::make('export_excel')->label('Export Excel')->icon('heroicon-o-table-cells')->url(route('laporan.penduduk.excel'))->openUrlInNewTab(),
             ])
-            ->actions([Tables\Actions\ViewAction::make(), Tables\Actions\EditAction::make(), Tables\Actions\DeleteAction::make()])
-            ->bulkActions([Tables\Actions\DeleteBulkAction::make()]);
+            ->recordActions([ViewAction::make(), EditAction::make(), DeleteAction::make()])
+            ->toolbarActions([DeleteBulkAction::make()]);
     }
 
     public static function getGloballySearchableAttributes(): array
@@ -248,10 +257,10 @@ class PendudukResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListPenduduks::route('/'),
-            'create' => Pages\CreatePenduduk::route('/create'),
-            'view' => Pages\ViewPenduduk::route('/{record}'),
-            'edit' => Pages\EditPenduduk::route('/{record}/edit'),
+            'index' => ListPenduduks::route('/'),
+            'create' => CreatePenduduk::route('/create'),
+            'view' => ViewPenduduk::route('/{record}'),
+            'edit' => EditPenduduk::route('/{record}/edit'),
         ];
     }
 }

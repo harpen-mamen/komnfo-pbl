@@ -23,13 +23,13 @@ export default async function SambutanSection() {
       <div className="mt-12 grid items-start gap-12 lg:grid-cols-3">
         {bupati && (
           <div className="lg:col-span-1">
-            <div className="sticky top-8 overflow-hidden rounded-2xl bg-gradient-to-br from-primary-50 to-white p-6 shadow-lg ring-1 ring-primary-100">
+            <div className="sticky top-8 overflow-hidden rounded-2xl bg-linear-to-br from-primary-50 to-white p-6 shadow-lg ring-1 ring-primary-100">
               {bupati.foto ? (
                 <div className="relative mx-auto h-56 w-44 overflow-hidden rounded-xl bg-slate-200">
                   <Image src={`${API_BASE}/storage/${bupati.foto}`} alt={bupati.nama_lengkap} fill className="object-cover" />
                 </div>
               ) : (
-                <div className="mx-auto flex h-56 w-44 items-center justify-center rounded-xl bg-gradient-to-br from-primary-200 to-primary-300 text-6xl text-white">U</div>
+                <div className="mx-auto flex h-56 w-44 items-center justify-center rounded-xl bg-linear-to-br from-primary-200 to-primary-300 text-6xl text-white">U</div>
               )}
               <div className="mt-4 text-center">
                 <h3 className="font-semibold text-lg text-slate-900">
@@ -42,10 +42,9 @@ export default async function SambutanSection() {
         )}
 
         <div className={bupati ? 'lg:col-span-2' : 'lg:col-span-3'}>
-          <article
-            className="prose prose-slate max-w-none prose-headings:font-heading prose-p:leading-relaxed prose-p:text-slate-700"
-            dangerouslySetInnerHTML={{ __html: section?.konten ?? '<p>Konten sambutan akan diperbarui oleh administrator.</p>' }}
-          />
+          <article className="max-w-none whitespace-pre-line leading-8 text-slate-700">
+            {section?.konten ?? 'Konten sambutan akan diperbarui oleh administrator.'}
+          </article>
 
           {wakil && (
             <div className="mt-10 flex items-center gap-4 rounded-xl bg-slate-50 p-5 ring-1 ring-slate-200">

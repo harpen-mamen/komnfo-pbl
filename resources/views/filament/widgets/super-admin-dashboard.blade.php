@@ -1,4 +1,4 @@
-<x-filament::widgets::widget>
+<x-filament-widgets::widget>
     <div class="sipandu-super-dashboard p-6 space-y-6">
         <div class="rounded-2xl p-6 text-white" style="background:linear-gradient(120deg,#0b1f35,#145b78 65%,#008c95);">
             <div class="text-xs font-bold uppercase tracking-widest text-cyan-200">SIPANDU · Pusat Kendali Data</div>
@@ -66,7 +66,7 @@
             </div>
         </div>
     </div>
-</x-filament::widgets::widget>
+</x-filament-widgets::widget>
 
 <script>
     document.addEventListener('alpine:init', () => {
@@ -203,4 +203,5 @@
         }
     });
 </script>
-</x-filament::widgets::widget>
+</x-filament-widgets::widget>
+

@@ -2,8 +2,9 @@
 
 namespace App\Filament\Resources\OpdResource\Pages;
 
+use Filament\Actions\EditAction;
 use App\Filament\Resources\OpdResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewOpd extends ViewRecord
@@ -13,7 +14,7 @@ class ViewOpd extends ViewRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\EditAction::make(),
+            EditAction::make(),
         ];
     }
 }

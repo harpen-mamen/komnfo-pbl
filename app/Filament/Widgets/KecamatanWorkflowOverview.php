@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Schema;
 
 class KecamatanWorkflowOverview extends ChartWidget
 {
-    protected static ?string $heading = 'Status Pendataan Kecamatan';
+    protected ?string $heading = 'Status Pendataan Kecamatan';
 
     public static function canView(): bool
     {
@@ -35,8 +35,8 @@ class KecamatanWorkflowOverview extends ChartWidget
             ];
         }
 
-        $query = \App\Models\SubmissionBatch::query()
-            ->where('kecamatan_id', PanelAccess::user()?->kecamatan_id);
+        $query = SubmissionBatch::query()
+            ->where('kecamatan_id', PanelAccess::user()?->kecamatan_id ?: PanelAccess::user()?->desa?->parent_id);
 
         $labels = [
             SubmissionBatch::STATUS_DRAFT => 'Draft',

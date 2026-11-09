@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Auth;
 
 class RegistrationVerificationWidget extends Widget
 {
-    protected static string $view = 'filament.widgets.registration-verification-widget';
+    protected string $view = 'filament.widgets.registration-verification-widget';
     protected static ?string $cluster = 'Verifikasi';
     protected static ?int $sort = 2;
 

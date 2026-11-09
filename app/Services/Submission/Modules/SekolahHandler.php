@@ -18,11 +18,26 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class SekolahHandler extends BaseModuleHandler
 {
-    public function key(): string { return 'sekolah'; }
-    public function label(): string { return 'Pendidikan Sekolah'; }
-    public function periodType(): string { return self::SEMESTER; }
-    public function entityType(): string { return Sekolah::class; }
-    public function table(): string { return 'sekolahs'; }
+    public function key(): string
+    {
+        return 'sekolah';
+    }
+    public function label(): string
+    {
+        return 'Pendidikan Sekolah';
+    }
+    public function periodType(): string
+    {
+        return self::SEMESTER;
+    }
+    public function entityType(): string
+    {
+        return Sekolah::class;
+    }
+    public function table(): string
+    {
+        return 'sekolahs';
+    }
 
     public function context(?int $periodeBulan, ?string $semester, ?int $periodeTahun): array
     {

@@ -23,6 +23,7 @@ class SubmissionBatch extends Model
     public const MODULE_MIXED = 'mixed';
     public const MODULE_PUSKES = 'puskes';
     public const MODULE_SEKOLAH = 'sekolah';
+    public const MODULE_LAPANGAN = 'lapangan';
 
     public const STATUS_DRAFT = 'draft';
     public const STATUS_PENDING = 'menunggu_verifikasi';
@@ -72,7 +73,7 @@ class SubmissionBatch extends Model
 
     public function kecamatan(): BelongsTo
     {
-        return $this->belongsTo(Kecamatan::class);
+        return $this->belongsTo(Wilayah::class, 'kecamatan_id');
     }
 
     public function createdBy(): BelongsTo
@@ -83,11 +84,6 @@ class SubmissionBatch extends Model
     public function verifiedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'verified_by');
-    }
-
-    public function forwardedBy(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'forwarded_by');
     }
 
     public function items(): HasMany
@@ -138,6 +134,7 @@ class SubmissionBatch extends Model
             self::MODULE_PENDUDUK => 'Penduduk',
             self::MODULE_KESEHATAN => 'Kesehatan',
             self::MODULE_PENDIDIKAN => 'Pendidikan',
+            self::MODULE_LAPANGAN => 'Pendataan Lapangan',
             self::MODULE_MIXED => 'Mixed Submission',
             default => $module ?? '-',
         };
@@ -163,14 +160,18 @@ class SubmissionBatch extends Model
         return ($this->payload_snapshot['source'] ?? null) === 'mobile';
     }
 
-    /** True for Rumah/Keluarga/Penduduk — requires Kominfo approval before publish. */
-    public function isMasterData(): bool
+    /**
+     * Spatial field collection must pass through Kecamatan before Walidata.
+     * OPD-owned sectoral and population datasets go directly to Walidata.
+     */
+    public function requiresKecamatanGate(): bool
     {
-        return in_array($this->module, [
+        $modules = array_unique(array_merge([$this->module], $this->package_keys ?? []));
+
+        return count(array_intersect($modules, [
             self::MODULE_RUMAH,
-            self::MODULE_KELUARGA,
-            self::MODULE_PENDUDUK,
-        ], true);
+            self::MODULE_LAPANGAN,
+        ])) > 0;
     }
 
     /** True if this batch has been forwarded to Kominfo. */

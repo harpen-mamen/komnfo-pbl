@@ -3,13 +3,12 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Rumah;
-use App\Models\Keluarga;
 use App\Support\PanelAccess;
 use Filament\Widgets\ChartWidget;
 
 class HousingDensityWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Kepadatan Rumah per Desa';
+    protected ?string $heading = 'Kepadatan Rumah per Desa';
     protected static ?int $sort = 8;
 
     public static function canView(): bool

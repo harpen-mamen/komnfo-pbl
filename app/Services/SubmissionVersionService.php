@@ -3,10 +3,7 @@
 namespace App\Services;
 
 use App\Models\SubmissionBatch;
-use App\Models\User;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\DB;
 
 /**
  * SubmissionVersionService — Versioning & Revision tracking.

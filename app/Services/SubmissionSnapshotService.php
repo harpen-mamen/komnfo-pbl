@@ -2,15 +2,18 @@
 
 namespace App\Services;
 
+use RuntimeException;
+use Illuminate\Auth\Access\AuthorizationException;
+use App\Models\Rumah;
+use App\Models\Keluarga;
+use App\Models\Penduduk;
+use Throwable;
 use App\Models\AuditTrail;
-use App\Models\Kecamatan;
 use App\Models\SubmissionBatch;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Cache;
 
 /**
  * SubmissionSnapshotService — Payload snapshot building & integrity.
@@ -46,30 +49,17 @@ class SubmissionSnapshotService
             'pendidikan', 'pekerjaan', 'penghasilan', 'status_dalam_keluarga',
             'nomor_hp', 'status_penduduk',
         ],
-        'DataKesehatanBulanan' => [
-            'puskesmas', 'kecamatan_id', 'periode_bulan', 'periode_tahun',
-            'jumlah_balita', 'jumlah_ibu_hamil', 'stunting', 'gizi_buruk',
-            'ibu_hamil', 'balita', 'bayi', 'imunisasi',
-            'ispa', 'dbd', 'malaria', 'tbc', 'hipertensi', 'diabetes',
-            'dokter', 'perawat', 'bidan', 'apoteker', 'ahli_gizi',
-            'kematian', 'kelahiran', 'bpjs_aktif', 'bpjs_tidak_aktif',
-        ],
-        'DataPendidikanBulanan' => [
-            'sekolah', 'kecamatan_id', 'tahun_ajaran', 'semester',
-            'npsn', 'status_sekolah', 'jenjang', 'rombel',
-            'jumlah_siswa', 'laki_laki', 'perempuan',
-            'putus_sekolah', 'lulus', 'naik_kelas', 'tidak_naik',
-        ],
+        // DataKesehatanBulanan and DataPendidikanBulanan tables removed
     ];
 
     public function assertCanSubmitToKecamatan(int $kecamatanId, ?User $actor): void
     {
         if (! $actor) {
-            throw new \RuntimeException('Pengguna harus terautentikasi untuk mengirim batch.');
+            throw new RuntimeException('Pengguna harus terautentikasi untuk mengirim batch.');
         }
 
         if ($actor->hasRole('admin_kecamatan') && (int) $actor->kecamatan_id !== $kecamatanId) {
-            throw new \Illuminate\Auth\Access\AuthorizationException('Admin Kecamatan tidak dapat mengirim data kecamatan lain.');
+            throw new AuthorizationException('Admin Kecamatan tidak dapat mengirim data kecamatan lain.');
         }
     }
 
@@ -242,11 +232,12 @@ class SubmissionSnapshotService
     public function entityTypeForModule(string $module): ?string
     {
         return match ($module) {
-            SubmissionBatchService::MODULE_RUMAH => \App\Models\Rumah::class,
-            SubmissionBatchService::MODULE_KELUARGA => \App\Models\Keluarga::class,
-            SubmissionBatchService::MODULE_PENDUDUK => \App\Models\Penduduk::class,
-            SubmissionBatchService::MODULE_KESEHATAN => \App\Models\DataKesehatanBulanan::class,
-            SubmissionBatchService::MODULE_PENDIDIKAN => \App\Models\DataPendidikanBulanan::class,
+            SubmissionBatchService::MODULE_RUMAH => Rumah::class,
+            SubmissionBatchService::MODULE_KELUARGA => Keluarga::class,
+            SubmissionBatchService::MODULE_PENDUDUK => Penduduk::class,
+            // DataKesehatanBulanan and DataPendidikanBulanan tables removed
+            SubmissionBatchService::MODULE_KESEHATAN => null,
+            SubmissionBatchService::MODULE_PENDIDIKAN => null,
             default => null,
         };
     }
@@ -267,7 +258,7 @@ class SubmissionSnapshotService
                 'ip' => null,
                 'browser' => null,
             ]);
-        } catch (\Throwable $e) {
+        } catch (Throwable $e) {
             Log::warning('Failed to write submission snapshot audit', ['error' => $e->getMessage()]);
         }
     }

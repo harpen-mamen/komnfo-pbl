@@ -1,0 +1,75 @@
+@import '../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../app/Filament';
+@source '../../../app/Livewire';
+@source '../../views/filament';
+@source '../../views/components';
+
+@theme {
+    --color-brand-50: #eefaf8;
+    --color-brand-100: #d5f2ed;
+    --color-brand-200: #afe4dc;
+    --color-brand-300: #7ed0c6;
+    --color-brand-400: #4bb5aa;
+    --color-brand-500: #2f978f;
+    --color-brand-600: #267a75;
+    --color-brand-700: #23625f;
+    --color-brand-800: #204f4d;
+    --color-brand-900: #1e4241;
+    --color-navy: #10243a;
+    --shadow-panel: 0 1px 2px rgb(15 35 60 / 4%), 0 8px 24px rgb(15 35 60 / 6%);
+}
+
+@layer base {
+    [x-cloak] { display: none !important; }
+}
+
+@layer components {
+    .sipandu-brand {
+        display: inline-flex;
+        align-items: center;
+        gap: .7rem;
+        white-space: nowrap;
+    }
+    .sipandu-brand img {
+        display: block;
+        width: 2.65rem;
+        height: 2.65rem;
+        flex: none;
+        object-fit: contain;
+    }
+    .sipandu-brand__name {
+        color: #23625f;
+        font-family: "Brush Script MT", "Segoe Script", "Lucida Handwriting", cursive;
+        font-size: 2.35rem;
+        font-style: italic;
+        font-weight: 700;
+        line-height: 1;
+        letter-spacing: .01em;
+        text-shadow: 0 1px 0 rgb(198 155 73 / 45%);
+    }
+    .fi-sidebar .sipandu-brand__name { color: #fff; }
+    .fi-simple-header .sipandu-brand { justify-content: center; }
+    .fi-simple-header .sipandu-brand img { width: 3.25rem; height: 3.25rem; }
+    .fi-simple-header .sipandu-brand__name { font-size: 2.8rem; }
+
+    .fi-sidebar { @apply border-r border-white/10 bg-navy shadow-xl; }
+    .fi-sidebar-header { @apply border-b border-white/10 bg-navy; }
+    .fi-sidebar-nav { scrollbar-color: var(--color-slate-600) transparent; scrollbar-width: thin; }
+    .fi-sidebar .fi-logo { @apply text-white; }
+    .fi-sidebar .fi-sidebar-group-label { @apply text-slate-400; }
+    .fi-sidebar .fi-sidebar-item-btn { @apply rounded-lg border border-transparent text-slate-300 transition-colors duration-150; }
+    .fi-sidebar .fi-sidebar-item-label,
+    .fi-sidebar .fi-sidebar-item-icon { @apply text-slate-300; }
+    .fi-sidebar .fi-sidebar-item-btn:hover { @apply border-white/5 bg-white/[0.07] text-white; }
+    .fi-sidebar .fi-sidebar-item.fi-active > .fi-sidebar-item-btn {
+        @apply border-brand-400/20 bg-brand-400/10 text-white shadow-none;
+        box-shadow: inset 3px 0 0 var(--color-brand-400);
+    }
+    .fi-sidebar .fi-sidebar-item.fi-active .fi-sidebar-item-label,
+    .fi-sidebar .fi-sidebar-item.fi-active .fi-sidebar-item-icon { @apply text-white; }
+    .fi-topbar { @apply border-slate-200 shadow-sm; }
+    .fi-page { @apply mx-auto w-full; }
+    .fi-section, .fi-ta-ctn { @apply rounded-xl shadow-panel; }
+    .fi-btn { @apply rounded-lg font-semibold; }
+}

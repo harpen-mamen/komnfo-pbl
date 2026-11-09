@@ -1,0 +1,179 @@
+{
+    "BPBD": [
+        "1.05",
+        {
+            "8.80": [
+                "Kawasan Rawan Bencana",
+                "master",
+                {
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "jenis": [
+                        "Jenis",
+                        "enum",
+                        true,
+                        [
+                            "Gempa",
+                            "Tsunami",
+                            "Gunung Api",
+                            "Banjir",
+                            "Longsor"
+                        ]
+                    ],
+                    "skor": [
+                        "Skor",
+                        "decimal",
+                        false,
+                        "Skor"
+                    ]
+                }
+            ],
+            "8.81": [
+                "Penanganan Korban Bencana",
+                "tahunan",
+                {
+                    "jenis": [
+                        "Jenis",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "tahun": [
+                        "Tahun",
+                        "integer",
+                        true,
+                        null
+                    ],
+                    "korban": [
+                        "Korban",
+                        "integer",
+                        false,
+                        "Orang"
+                    ]
+                }
+            ]
+        }
+    ],
+    "SATPOLPP": [
+        "1.05",
+        {
+            "8.82": [
+                "SDM Satpol PP",
+                "tahunan",
+                {
+                    "jabatan": [
+                        "Jabatan",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Orang"
+                    ]
+                }
+            ],
+            "8.83": [
+                "Penegakan Perda",
+                "tahunan",
+                {
+                    "jenis": [
+                        "Jenis Perda",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "pelanggaran": [
+                        "Pelanggaran",
+                        "integer",
+                        false,
+                        "Kasus"
+                    ]
+                }
+            ],
+            "8.84": [
+                "Pelayanan Kebakaran",
+                "tahunan",
+                {
+                    "bulan": [
+                        "Bulan",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "kejadian": [
+                        "Kejadian",
+                        "integer",
+                        false,
+                        "Kasus"
+                    ]
+                }
+            ]
+        }
+    ],
+    "DLH": [
+        "2.05",
+        {
+            "8.85": [
+                "Pengelolaan SDA dan LH",
+                "tahunan",
+                {
+                    "indikator": [
+                        "Indikator",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "nilai": [
+                        "Nilai",
+                        "decimal",
+                        false,
+                        "Nilai"
+                    ]
+                }
+            ],
+            "8.86": [
+                "Pengelolaan Persampahan",
+                "tahunan",
+                {
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "volume": [
+                        "Volume",
+                        "decimal",
+                        false,
+                        "Ton"
+                    ]
+                }
+            ],
+            "8.87": [
+                "Ruang Terbuka Hijau",
+                "tahunan",
+                {
+                    "lokasi": [
+                        "Lokasi",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "luas": [
+                        "Luas",
+                        "decimal",
+                        false,
+                        "Ha"
+                    ]
+                }
+            ]
+        }
+    ]
+}

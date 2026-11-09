@@ -9,7 +9,7 @@ class FilamentCheck extends Command
 {
     protected $signature = 'filament:check';
 
-    protected $description = 'Validate application Filament resources, pages, and widgets can be autoloaded.';
+    protected $description = 'Validate application Filament classes, traits, and interfaces can be autoloaded.';
 
     public function handle(): int
     {
@@ -34,7 +34,7 @@ class FilamentCheck extends Command
                 $relative = str_replace(['/', '.php'], ['\\', ''], $file->getRelativePathname());
                 $class = $namespace.'\\'.$relative;
 
-                if (! class_exists($class)) {
+                if (! class_exists($class) && ! trait_exists($class) && ! interface_exists($class)) {
                     $this->error("Filament class cannot be loaded: {$class}");
 
                     return self::FAILURE;
@@ -44,7 +44,7 @@ class FilamentCheck extends Command
             }
         }
 
-        $this->info("Filament check passed. {$checked} classes loaded.");
+        $this->info("Filament check passed. {$checked} classes, traits, and interfaces loaded.");
 
         return self::SUCCESS;
     }

@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Models\SubmissionBatch;
 use App\Models\User;
-use Illuminate\Support\Collection;
 
 class SubmissionWorkflowService
 {
@@ -13,4 +12,3 @@ class SubmissionWorkflowService
         return app(BatchApprovalService::class)->submit($batch, $actor, $notes, true);
     }
 }
-

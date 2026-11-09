@@ -2,19 +2,21 @@
 
 namespace App\Filament\Pages;
 
-use App\Models\User;
 use Filament\Pages\Page;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Livewire\WithFileUploads;
 
 class EditProfile extends Page
 {
+    use WithFileUploads;
+
     protected static ?string $title = 'Pengaturan Profil';
-    protected static string $view = 'filament.pages.edit-profile';
-    protected static ?string $navigationIcon = 'heroicon-o-user-circle';
+    protected string $view = 'filament.pages.edit-profile';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-user-circle';
     protected static ?int $navigationSort = 999;
 
     public string $name = '';
@@ -27,7 +29,9 @@ class EditProfile extends Page
     public function mount(): void
     {
         $user = Auth::user();
-        if (! $user) { abort(403); }
+        if (! $user) {
+            abort(403);
+        }
         $this->name = $user->name;
         $this->email = $user->email;
         $this->foto = $user->foto;
@@ -82,12 +86,17 @@ class EditProfile extends Page
         // Refresh foto after save for avatar display
         $this->foto = $user->foto;
 
-        $this->notify('success', 'Profil berhasil diperbarui.');
+        \Filament\Notifications\Notification::make()->success()->title('Profil berhasil diperbarui.')->send();
     }
 
     public static function shouldRegisterNavigation(): bool
     {
-        return true;
+        return ! Auth::user()?->hasRole('admin_bupati');
+    }
+
+    public static function canAccess(): bool
+    {
+        return ! Auth::user()?->hasRole('admin_bupati');
     }
 
     public static function getNavigationLabel(): string

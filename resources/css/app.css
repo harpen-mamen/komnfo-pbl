@@ -1,8 +1,8 @@
-/* Import theme files for professional Filament styling */
-@import './dashboard.css';
-@import './kominfo-theme.css';
+/* SIPANDU - Tailwind + Design System */
+@import 'tailwindcss' source(none);
 
-/* Tailwind CSS */
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+/* Unified Design System (SIPANDU) */
+@import './design-system.css';
+
+@source '../views/welcome.blade.php';
+@source '../views/components';

@@ -2,16 +2,32 @@
 
 namespace App\Services\Submission\Modules;
 
-use App\Models\DataPendidikanBulanan;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Eloquent\Builder;
+use App\Models\DataSiswa;
+use App\Models\DataGuru;
 
 class PendidikanHandler extends BaseModuleHandler
 {
-    public function key(): string { return 'pendidikan'; }
-    public function label(): string { return 'Pendidikan'; }
-    public function periodType(): string { return self::SEMESTER; }
-    public function entityType(): string { return DataPendidikanBulanan::class; }
-    public function table(): string { return 'data_pendidikan_bulanans'; }
+    public function key(): string
+    {
+        return 'pendidikan';
+    }
+    public function label(): string
+    {
+        return 'Pendidikan';
+    }
+    public function periodType(): string
+    {
+        return self::SEMESTER;
+    }
+    public function entityType(): string
+    {
+        return 'pendidikan'; // Using string identifier since DataPendidikanBulanan table removed
+    }
+    public function table(): string
+    {
+        return 'data_pendidikan_modular';
+    }
 
     public function context(?int $periodeBulan, ?string $semester, ?int $periodeTahun): array
     {
@@ -22,31 +38,10 @@ class PendidikanHandler extends BaseModuleHandler
         ];
     }
 
-    public function query(int $kecamatanId, array $context, ?int $desaId): \Illuminate\Database\Eloquent\Builder
+    public function query(int $kecamatanId, array $context, ?int $desaId): Builder
     {
-        $query = DataPendidikanBulanan::query()->where('kecamatan_id', $kecamatanId);
-        $this->applySemesterFilter($query, $context['semester'] ?? null);
-        if (($context['periode_tahun'] ?? null) !== null) {
-            $query->where('periode_tahun', $context['periode_tahun']);
-        }
-        return $query;
-    }
-
-    private function applySemesterFilter($query, ?string $semester): void
-    {
-        if (empty($semester)) {
-            return;
-        }
-
-        if (Schema::hasColumn($this->table(), 'semester')) {
-            $query->where('semester', $semester);
-            return;
-        }
-
-        if ($semester === 'ganjil') {
-            $query->whereBetween('periode_bulan', [1, 6]);
-        } elseif ($semester === 'genap') {
-            $query->whereBetween('periode_bulan', [7, 12]);
-        }
+        // Return query for modular education tables
+        return DataSiswa::query()
+            ->whereHas('sekolah.desa', fn ($q) => $q->where('kecamatan_id', $kecamatanId));
     }
 }

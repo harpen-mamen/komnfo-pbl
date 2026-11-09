@@ -8,7 +8,7 @@ use Filament\Widgets\ChartWidget;
 
 class GenderCompositionWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Komposisi Gender Penduduk';
+    protected ?string $heading = 'Komposisi Gender Penduduk';
     protected static ?int $sort = 9;
 
     public static function canView(): bool

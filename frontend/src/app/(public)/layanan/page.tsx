@@ -1,46 +1,22 @@
-import Link from "next/link";
-import { FileText, Megaphone, Database, MessageCircle, ChevronRight } from "lucide-react";
+import Link from 'next/link';
+import { ChevronRight, Database, FileText, Megaphone, MessageCircle } from 'lucide-react';
+import { api } from '@/lib/api/client';
 
-export const metadata = { title: "Layanan Publik", description: "Daftar layanan publik Pemerintah Kabupaten Kepulauan Sangihe." };
+export const revalidate = 60;
 
-const layanan = [
-  { icon: FileText, title: "Penerbitan Surat Keterangan", desc: "Surat keterangan domisili, usaha, dan keperluan administratif lainnya.", color: "bg-blue-50 text-blue-600" },
-  { icon: Megaphone, title: "Pengaduan Masyarakat", desc: "Sampaikan keluhan dan aspirasi masyarakat secara online.", color: "bg-amber-50 text-amber-600" },
-  { icon: Database, title: "Permohonan Data", desc: "Akses data terbuka pemerintah daerah sesuai regulasi.", color: "bg-emerald-50 text-emerald-600" },
-  { icon: MessageCircle, title: "Konsultasi Publik", desc: "Tanya jawab dan konsultasi dengan OPD terkait.", color: "bg-violet-50 text-violet-600" },
+const icons = { document: FileText, megaphone: Megaphone, database: Database, chat: MessageCircle } as const;
+const links = [
+  { href: '/statistik', label: 'Data Statistik', desc: 'Ringkasan data daerah' },
+  { href: '/peta', label: 'Peta Sebaran', desc: 'Jelajahi peta interaktif' },
+  { href: '/berita', label: 'Berita', desc: 'Informasi dan pengumuman' },
+  { href: '/tentang-daerah/opd', label: 'Daftar OPD', desc: 'Kontak perangkat daerah' },
 ];
 
-const link = [
-  { href: "/statistik", label: "Data Statistik", desc: "Lihat data demografi dan kesehatan" },
-  { href: "/peta", label: "Peta Sebaran", desc: "Jelajahi peta interaktif" },
-  { href: "/berita", label: "Berita", desc: "Informasi dan pengumuman" },
-  { href: "/tentang-daerah/opd", label: "Daftar OPD", desc: "Kontak perangkat daerah" },
-];
-
-export default function LayananPage() {
-  return (
-    <div className="section-padding">
-      <div className="container-page">
-        <div className="mb-10"><h1 className="heading-xl">Layanan Publik</h1><p className="mt-2 text-slate-600">Daftar layanan publik yang tersedia di lingkungan Pemerintah Kabupaten Kepulauan Sangihe.</p></div>
-        <div className="mb-12 grid gap-6 md:grid-cols-2">
-          {layanan.map((l) => (
-            <div key={l.title} className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:shadow-md">
-              <div className={"flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl " + l.color}><l.icon className="h-6 w-6" /></div>
-              <div><h3 className="font-semibold text-slate-900">{l.title}</h3><p className="mt-1 text-sm text-slate-600">{l.desc}</p></div>
-            </div>
-          ))}
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-          <h2 className="mb-4 text-lg font-semibold text-slate-900">Tautan Cepat</h2>
-          <div className="grid gap-3 md:grid-cols-2">
-            {link.map((l) => (
-              <Link key={l.href} href={l.href} className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 transition hover:border-primary-300 hover:bg-primary-50 hover:text-primary-700">
-                <span>{l.label}</span><span className="text-xs text-slate-400">{l.desc}</span><ChevronRight className="h-4 w-4 flex-shrink-0" />
-              </Link>
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+export default async function LayananPage() {
+  const result = await api.get<{ data: { judul: string; deskripsi: string; layanan: Array<{ id: number; nama: string; deskripsi: string | null; icon: string }> } }>('/public/layanan').then((response) => response.data.data).catch(() => null);
+  return <main className="section-padding"><div className="container-page">
+    <div className="mb-10"><h1 className="heading-xl">{result?.judul || 'Layanan Publik'}</h1><p className="mt-2 text-slate-600">{result?.deskripsi || 'Informasi layanan publik Pemerintah Kabupaten Kepulauan Sangihe.'}</p></div>
+    {result?.layanan?.length ? <div className="mb-12 grid gap-6 md:grid-cols-2">{result.layanan.map((service) => { const Icon = icons[service.icon as keyof typeof icons] || FileText; return <article key={service.id} className="flex gap-4 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-700"><Icon className="h-6 w-6" /></div><div><h2 className="font-semibold text-slate-900">{service.nama}</h2><p className="mt-1 text-sm text-slate-600">{service.deskripsi}</p></div></article>; })}</div> : <div className="mb-12 rounded-2xl border border-slate-200 bg-slate-50 p-10 text-center text-slate-600">Informasi layanan sedang disiapkan oleh administrator.</div>}
+    <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm"><h2 className="mb-4 text-lg font-semibold text-slate-900">Tautan Cepat</h2><div className="grid gap-3 md:grid-cols-2">{links.map((item) => <Link key={item.href} href={item.href} className="flex items-center justify-between rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-700 transition hover:border-teal-300 hover:bg-teal-50"><span><strong>{item.label}</strong><span className="ml-3 text-xs text-slate-500">{item.desc}</span></span><ChevronRight className="h-4 w-4 flex-shrink-0" /></Link>)}</div></section>
+  </div></main>;
 }

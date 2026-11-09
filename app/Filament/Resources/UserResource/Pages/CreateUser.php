@@ -22,22 +22,17 @@ class CreateUser extends CreateRecord
         }
 
         // Reset wilayah for non-wilayah roles
-        if (! in_array($this->role, ['admin_kecamatan', 'admin_desa'], true)) {
+        if (! in_array($this->role, ['admin_kecamatan', 'admin_desa', 'admin_lapangan'], true)) {
             $data['kecamatan_id'] = null;
         }
 
-        if ($this->role !== 'admin_desa') {
+        if (! in_array($this->role, ['admin_desa', 'admin_lapangan'], true)) {
             $data['desa_id'] = null;
         }
 
         // Reset OPD for non-OPD roles
         if (! UserResource::isOpdRole($this->role)) {
             $data['opd_id'] = null;
-        }
-
-        // Reset puskes_id for non-puskes roles
-        if (! in_array($this->role, ['admin_puskes', 'operator_puskes'], true)) {
-            $data['puskes_id'] = null;
         }
 
         return $data;

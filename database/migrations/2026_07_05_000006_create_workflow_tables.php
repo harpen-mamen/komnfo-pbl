@@ -5,8 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     public function up(): void
     {
         Schema::create('workflow_status', function (Blueprint $table) {
@@ -35,8 +34,10 @@ return new class extends Migration
             $table->string('entity_type');
             $table->unsignedBigInteger('entity_id');
             $table->foreignId('status_id')->constrained('workflow_status')->restrictOnDelete();
-            $table->foreignId('kecamatan_id')->nullable()->constrained('kecamatans')->nullOnDelete();
-            $table->foreignId('desa_id')->nullable()->constrained('desas')->nullOnDelete();
+            // Legacy regional tables are archived; current regional records live in `wilayahs`.
+            // Keep these IDs nullable here so fresh installs do not create dangling legacy FKs.
+            $table->foreignId('kecamatan_id')->nullable();
+            $table->foreignId('desa_id')->nullable();
             $table->foreignId('dibuat_oleh')->nullable()->constrained('users')->nullOnDelete();
             $table->foreignId('diverifikasi_oleh')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('tanggal_submit')->nullable();

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 import { MapPin, Phone, Mail, Globe } from 'lucide-react';
 
 const QUICK_LINKS = [
@@ -28,11 +29,9 @@ export default function Footer() {
         <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
           <div>
             <div className="flex items-center gap-3">
-              <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-700 text-white font-bold text-xl shadow-md">
-                S
-              </div>
+              <div className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-white p-1 ring-1 ring-[#9a8038]/50"><Image src="/logo.png" alt="Lambang Kabupaten Kepulauan Sangihe" width={44} height={44} unoptimized className="h-full w-full object-contain" /></div>
               <div>
-                <div className="font-heading text-lg font-bold text-white">Kab. Kepulauan Sangihe</div>
+                <div className="font-[cursive] text-3xl font-bold italic leading-none text-white">Sangihe</div>
                 <div className="text-xs text-slate-400">Tanah Tona&apos;a, Tubuh Adat</div>
               </div>
             </div>

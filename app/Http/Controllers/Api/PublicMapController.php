@@ -3,77 +3,70 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\DataKesehatanBulanan;
-use App\Models\Desa;
-use App\Models\Kecamatan;
-use App\Models\Penduduk;
-use App\Models\Rumah;
+use App\Models\Wilayah;
+use App\Services\DatasetSpatialDataService;
+use App\Services\ThematicMapDataService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
 
 class PublicMapController extends Controller
 {
-    public function index(Request $request): JsonResponse
+    public function index(Request $request, ThematicMapDataService $thematic, DatasetSpatialDataService $spatial): JsonResponse
     {
-        $payload = Cache::remember('public.map.payload', now()->addMinutes(5), function (): array {
-            $areaStats = Kecamatan::query()
-                ->withCount(['desas as rumah_terdata' => fn ($q) => $q->whereHas('rumah', fn ($r) => $r->inApprovedBatch())])
-                ->withCount(['desas as penduduk_terdata' => fn ($q) => $q->whereHas('rumah.keluarga.penduduk', fn ($p) => $p->inApprovedBatch())])
-                ->get(['id', 'nama'])
-                ->mapWithKeys(fn ($k) => [
-                    mb_strtolower($k->nama) => [
-                        'rumah' => (int) $k->rumah_terdata,
-                        'penduduk' => (int) $k->penduduk_terdata,
-                    ]
-                ]);
-
-            $fields = ['ispa', 'dbd', 'malaria', 'tbc', 'hipertensi', 'diabetes', 'covid', 'lainnya', 'stunting', 'gizi_buruk'];
-            $diseaseData = DataKesehatanBulanan::query()->inApprovedBatch()
-                ->with('kecamatan')
-                ->get()
-                ->groupBy(fn ($row) => mb_strtolower($row->kecamatan?->nama ?? ''))
-                ->map(fn ($rows) => collect($fields)->mapWithKeys(fn ($field) => [$field => (int) $rows->sum($field)])->all());
-
+        $payload = Cache::remember('public.map.payload.v3', now()->addMinute(), function () use ($thematic, $spatial): array {
+            $thematicData = $thematic->forAdminMap();
             return [
-                'area_stats' => $areaStats,
-                'disease_data' => $diseaseData,
+                'area_stats' => $thematicData['profiles'],
+                'indicators' => $thematicData['indicators'],
+                'kecamatans' => $thematicData['kecamatans'],
+                'features' => $spatial->publishedFeatureCollection(),
                 'summary' => [
-                    'penduduk'  => Penduduk::query()->inApprovedBatch()->count(),
-                    'rumah'     => Rumah::query()->inApprovedBatch()->count(),
-                    'kecamatan' => Kecamatan::query()->count(),
+                    'penduduk' => $this->publishedAggregate('3.13', ['penduduk_laki', 'penduduk_perempuan', 'total']),
+                    'keluarga' => $this->publishedAggregate('3.12', ['kk_laki', 'kk_perempuan', 'total']),
+                    'tahun' => $this->publishedYear('3.13'),
+                    'kecamatan' => Wilayah::query()->where('tipe', Wilayah::TIPE_KECAMATAN)->where('aktif', true)->count(),
+                    'desa' => Wilayah::query()->whereIn('tipe', [Wilayah::TIPE_DESA, Wilayah::TIPE_KAMPUNG])->where('aktif', true)->count(),
                 ],
             ];
         });
-
         return response()->json($payload);
     }
 
-    public function search(Request $request): JsonResponse
+    public function search(Request $request, DatasetSpatialDataService $spatial): JsonResponse
     {
         $term = trim((string) $request->query('q'));
         abort_if(mb_strlen($term) < 3, 422, 'Minimal 3 karakter.');
+        $features = collect($spatial->publishedFeatureCollection()['features'] ?? [])
+            ->filter(fn (array $feature) => str_contains(mb_strtolower((string) data_get($feature, 'properties.name')), mb_strtolower($term)))
+            ->take(10)->values();
+        return response()->json(['data' => $features]);
+    }
 
-        $results = Rumah::query()
-            ->where('publik', true)
-            ->inApprovedBatch()
-            ->whereNotNull('latitude')
-            ->whereNotNull('longitude')
-            ->where('latitude', '!=', 0)
-            ->where('longitude', '!=', 0)
-            ->whereHas('keluarga', fn ($q) => $q->where('nama_kepala_keluarga', 'like', '%' . $term . '%'))
-            ->with(['desa.kecamatan', 'keluarga' => fn ($q) => $q->select('id', 'rumah_id', 'nama_kepala_keluarga')])
-            ->limit(10)
-            ->get()
-            ->map(fn ($r) => [
-                'nama' => $r->keluarga->pluck('nama_kepala_keluarga')->filter()->first(),
-                'desa' => $r->desa?->nama,
-                'kecamatan' => $r->desa?->kecamatan?->nama,
-                'lat' => (float) $r->latitude,
-                'lng' => (float) $r->longitude,
-            ])
-            ->values();
+    private function publishedAggregate(string $code, array $fields): int|float
+    {
+        $dataset = \App\Models\Dataset::query()->where('kode', $code)->where('is_active', true)
+            ->whereIn('lisensi', [\App\Models\Dataset::LISENSI_CCBY, \App\Models\Dataset::LISENSI_OPEN])
+            ->whereHas('opd', fn ($query) => $query->where('kode', 'DUKCAPIL'))->first();
+        if (! $dataset) return 0;
+        $values = $dataset->values()->where('status', \App\Models\DatasetValue::STATUS_PUBLISHED)
+            ->whereNotNull('published_at')->whereNull('deleted_at')
+            ->where('wilayah_type', 'kecamatan')
+            ->where(fn ($notes) => $notes->whereNull('notes')->orWhere('notes', 'not like', '[DEMO-%'))->get();
+        $year = $values->max('tahun');
+        return $values->where('tahun', $year)->sum(function ($record) use ($fields) {
+            foreach ($fields as $field) if (is_numeric(data_get($record->values, $field))) return (float) data_get($record->values, $field);
+            return 0;
+        });
+    }
 
-        return response()->json(['data' => $results]);
+    private function publishedYear(string $code): ?int
+    {
+        return \App\Models\DatasetValue::query()->where('status', \App\Models\DatasetValue::STATUS_PUBLISHED)
+            ->whereNotNull('published_at')->whereNull('deleted_at')
+            ->where(fn ($notes) => $notes->whereNull('notes')->orWhere('notes', 'not like', '[DEMO-%'))
+            ->whereHas('dataset', fn ($query) => $query->where('kode', $code)->where('is_active', true)
+                ->whereIn('lisensi', [\App\Models\Dataset::LISENSI_CCBY, \App\Models\Dataset::LISENSI_OPEN])
+                ->whereHas('opd', fn ($opd) => $opd->where('kode', 'DUKCAPIL')))->max('tahun');
     }
 }

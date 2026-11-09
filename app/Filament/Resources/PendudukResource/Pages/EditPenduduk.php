@@ -2,18 +2,20 @@
 
 namespace App\Filament\Resources\PendudukResource\Pages;
 
+use Filament\Actions\ViewAction;
+use Filament\Actions\DeleteAction;
 use App\Filament\Resources\PendudukResource;
 use App\Models\Keluarga;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
 class EditPenduduk extends EditRecord
 {
     protected static string $resource = PendudukResource::class;
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
-        return [Actions\ViewAction::make(), Actions\DeleteAction::make()];
+        return [ViewAction::make(), DeleteAction::make()];
     }
 
     protected function mutateFormDataBeforeSave(array $data): array

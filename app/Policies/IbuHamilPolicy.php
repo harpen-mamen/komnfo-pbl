@@ -76,10 +76,10 @@ class IbuHamilPolicy
         return $user->hasAnyRole([
             AppRole::ADMIN_DINKES->value,
             AppRole::OPERATOR_DINKES->value,
-            AppRole::ADMIN_KESEHATAN->value,
-            AppRole::OPERATOR_KESEHATAN->value,
-            AppRole::ADMIN_PUSKESMAS->value,
-            AppRole::OPERATOR_PUSKESMAS->value,
+            
+            
+            
+            
         ]);
     }
 }

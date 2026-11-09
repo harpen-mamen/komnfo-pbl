@@ -23,14 +23,16 @@ class ApiClient {
 
   // ============ AUTH ============
 
-  Future<MobileUser> login({required String email, required String password}) async {
+  /// Auto-login TANPA PASSWORD untuk admin_lapangan/admin_desa.
+  /// Server cek device_id di tabel device_assignments.
+  /// Return 404 jika device belum diaktivasi admin OPD.
+  Future<MobileUser> autoLogin({String platform = 'android'}) async {
     final response = await _request(
       'POST',
-      '/mobile/login',
+      '/mobile/auto-login',
       body: {
-        'email': email,
-        'password': password,
         'device_id': await store.deviceId(),
+        'platform': platform,
       },
       authenticated: false,
     );
@@ -58,26 +60,50 @@ class ApiClient {
     return MobileBootstrap.fromJson(response);
   }
 
+  Future<List<Map<String, dynamic>>> fieldPoints() async {
+    final response = await _request('GET', '/mobile/field-points');
+    return (response['data'] as List<dynamic>? ?? const [])
+        .map((item) => Map<String, dynamic>.from(item as Map))
+        .toList(growable: false);
+  }
+
+  Future<List<MobileFamilyOption>> families({required int desaId, String query = ''}) async {
+    final params = <String, String>{'desa_id': '$desaId'};
+    if (query.trim().isNotEmpty) params['q'] = query.trim();
+    final suffix = Uri(queryParameters: params).query;
+    final response = await _request('GET', '/mobile/master/keluarga?$suffix');
+    return (response['data'] as List<dynamic>? ?? const [])
+        .map((item) => MobileFamilyOption.fromJson(Map<String, dynamic>.from(item as Map)))
+        .toList(growable: false);
+  }
+
   // ============ DRAFT OPERATIONS ============
 
   Future<List<Map<String, dynamic>>> pushDrafts(List<DraftRecord> drafts) async {
-    final response = await _request(
-      'POST',
-      '/mobile/sync/push',
-      body: {
-        'device_id': await store.deviceId(),
+    if (drafts.isEmpty) return const [];
+    if (drafts.any((draft) => draft.type != DraftType.rumah && draft.type != DraftType.infrastruktur)) {
+      throw const ApiException('Mobile hanya dapat mengirim data Rumah dan Infrastruktur. Data KK/Penduduk dipilih dari sumber OPD.');
+    }
+    if (drafts.any((draft) => draft.type == DraftType.rumah || draft.type == DraftType.infrastruktur)) {
+      final response = await _request('POST', '/mobile/field-points', body: {
         'operations': drafts.map((draft) => {
           'operation_id': draft.operationId ?? draft.localId,
-          'dataset': draft.type.key,
-          'local_id': draft.localId,
-          'base_version': 0,
-          'payload': draft.payload,
+          'desa_id': draft.payload['desa_id'],
+          'jenis': draft.type == DraftType.rumah ? 'rumah' : (draft.payload['jenis'] ?? 'lainnya'),
+          'nama': draft.payload['nama'] ?? draft.title,
+          'kode': draft.payload['kode_rumah'] ?? draft.payload['kode'],
+          'alamat': draft.payload['alamat_lengkap'] ?? draft.payload['alamat'],
+          'latitude': draft.payload['latitude'],
+          'longitude': draft.payload['longitude'],
+          'attributes': draft.payload,
+          'keluarga_ids': draft.payload['keluarga_ids'] ?? const <int>[],
         }).toList(),
-      },
-    );
-    return (response['results'] as List<dynamic>? ?? response['accepted'] as List<dynamic>? ?? const [])
-        .map((item) => Map<String, dynamic>.from(item as Map))
-        .toList();
+      });
+      return (response['results'] as List<dynamic>? ?? const [])
+          .map((item) => Map<String, dynamic>.from(item as Map)..['local_id'] = drafts.firstWhere((draft) => draft.operationId == item['operation_id'] || draft.localId == item['operation_id']).localId)
+          .toList(growable: false);
+    }
+    return const [];
   }
 
   // ============ BATCH STATUS ============
@@ -87,15 +113,13 @@ class ApiClient {
   Future<Map<int, Map<String, dynamic>>> fetchBatchStatuses(Set<int> batchIds) async {
     if (batchIds.isEmpty) return {};
     final ids = batchIds.join(',');
-    final response = await _request('GET', '/mobile/sync/batch-statuses?ids=$ids');
+    final response = await _request('GET', '/mobile/field-point-batch-statuses?ids=$ids');
     final batches = (response['batches'] as List<dynamic>? ?? const []);
     return {
       for (final b in batches)
         (b['id'] as num).toInt(): Map<String, dynamic>.from(b as Map)
     };
   }
-
-  Future<Map<String, dynamic>> pull({required int cursor}) => _request('GET', '/mobile/sync/pull?cursor=$cursor');
 
   Future<Map<String, dynamic>> _request(
     String method,
@@ -111,19 +135,33 @@ class ApiClient {
       headers['Authorization'] = 'Bearer ${store.token}';
     }
 
-    final uri = Uri.parse('${AppConfig.apiBaseUrl}$path');
+    final baseUrl = AppConfig.apiBaseUrl.replaceFirst(RegExp(r'/+$'), '');
+    final normalizedPath = path.startsWith('/') ? path : '/$path';
+    final uri = Uri.parse('$baseUrl$normalizedPath');
     final request = http.Request(method, uri)..headers.addAll(headers);
     if (body != null) request.body = jsonEncode(body);
 
     final streamed = await request.send().timeout(AppConfig.apiTimeout);
     final response = await http.Response.fromStream(streamed);
-    final decoded = response.body.isEmpty
-        ? <String, dynamic>{}
-        : jsonDecode(response.body) as Map<String, dynamic>;
+    Map<String, dynamic> decoded;
+    try {
+      final value = response.body.isEmpty ? <String, dynamic>{} : jsonDecode(response.body);
+      decoded = value is Map<String, dynamic>
+          ? value
+          : <String, dynamic>{'data': value};
+    } on FormatException {
+      decoded = <String, dynamic>{};
+    }
 
     if (response.statusCode < 200 || response.statusCode >= 300) {
-      final message = decoded['message'] as String? ??
-          'Request gagal (${response.statusCode}).';
+      final errors = decoded['errors'];
+      final validationMessage = errors is Map
+          ? errors.values.expand((value) => value is List ? value : [value]).firstOrNull?.toString()
+          : null;
+      final message = decoded['message'] as String? ?? validationMessage ??
+          (response.statusCode >= 500
+              ? 'Server Laravel mengalami gangguan (${response.statusCode}).'
+              : 'Request gagal (${response.statusCode}).');
       throw ApiException(message, statusCode: response.statusCode);
     }
     return decoded;

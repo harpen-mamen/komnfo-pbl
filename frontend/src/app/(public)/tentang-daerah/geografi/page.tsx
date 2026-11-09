@@ -1,12 +1,12 @@
 import { fetchGeografi } from "@/lib/api/tentang-daerah";
 import { MapPin, Mountain, Waves, Globe } from "lucide-react";
 
-export const revalidate = 600;
+export const revalidate = 60;
 export const metadata = { title: "Geografi", description: "Kondisi geografis dan demografi Kabupaten Kepulauan Sangihe." };
 
 export default async function GeografiPage() {
   let data = null;
-  try { data = await fetchGeografi(); } catch (e) {}
+  try { data = await fetchGeografi(); } catch {}
 
   const section = data?.section;
   const kab = data?.kabupaten;
@@ -31,7 +31,12 @@ export default async function GeografiPage() {
           ))}
         </div>
         {section?.konten ? (
-          <div className="prose prose-slate max-w-none rounded-2xl border border-slate-200 bg-white p-8 shadow-sm" dangerouslySetInnerHTML={{ __html: section.konten }} />
+          <div className="rounded-2xl border border-slate-200 bg-white p-8 leading-8 text-slate-700 shadow-sm">
+            <h2 className="text-xl font-semibold text-slate-900">{section.judul}</h2>
+            {section.subjudul && <p className="mt-2 text-sm text-slate-500">{section.subjudul}</p>}
+            <p className="mt-5 whitespace-pre-line">{section.konten}</p>
+            <p className="mt-6 border-t border-slate-100 pt-4 text-xs text-slate-500">Sumber: <a className="underline hover:text-primary-700" href="https://sangihekab.go.id/tentang-daerah/" target="_blank" rel="noreferrer">sangihekab.go.id</a></p>
+          </div>
         ) : (
           <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
             <p className="text-slate-600">Informasi geografi sedang dalam pengembangan oleh administrator.</p>

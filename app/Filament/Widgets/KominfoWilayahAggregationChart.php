@@ -3,12 +3,13 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Desa;
+use App\Models\SubmissionBatch;
 use App\Support\PanelAccess;
 use Filament\Widgets\ChartWidget;
 
 class KominfoWilayahAggregationChart extends ChartWidget
 {
-    protected static ?string $heading = 'Agregasi Data per Desa';
+    protected ?string $heading = 'Agregasi Data per Desa';
     protected static ?int $sort = 2;
 
     public static function canView(): bool
@@ -19,19 +20,19 @@ class KominfoWilayahAggregationChart extends ChartWidget
     protected function getData(): array
     {
         // READ MODEL: Only approved data via submission batch joins (Arsitektur §4.3)
-        $desas = \App\Models\Desa::query()
+        $desas = Desa::query()
             ->withCount([
                 // Rumah: join through latest submission batch item → approved batch
                 'rumah as rumah_count' => fn ($query) => $query
-                    ->whereHas('latestSubmissionBatchItem.submissionBatch', fn ($sb) => $sb->where('status', \App\Models\SubmissionBatch::STATUS_APPROVED)),
+                    ->whereHas('latestSubmissionBatchItem.submissionBatch', fn ($sb) => $sb->where('status', SubmissionBatch::STATUS_APPROVED)),
 
                 // Keluarga: join through rumah → approved batch
                 'rumah.keluarga as keluarga_count' => fn ($query) => $query
-                    ->whereHas('rumah.latestSubmissionBatchItem.submissionBatch', fn ($sb) => $sb->where('status', \App\Models\SubmissionBatch::STATUS_APPROVED)),
+                    ->whereHas('rumah.latestSubmissionBatchItem.submissionBatch', fn ($sb) => $sb->where('status', SubmissionBatch::STATUS_APPROVED)),
 
                 // Penduduk: join through keluarga → rumah → approved batch
                 'rumah.keluarga.penduduk as penduduk_count' => fn ($query) => $query
-                    ->whereHas('rumah.keluarga.latestSubmissionBatchItem.submissionBatch', fn ($sb) => $sb->where('status', \App\Models\SubmissionBatch::STATUS_APPROVED)),
+                    ->whereHas('rumah.keluarga.latestSubmissionBatchItem.submissionBatch', fn ($sb) => $sb->where('status', SubmissionBatch::STATUS_APPROVED)),
             ])
             ->orderBy('nama')
             ->get();

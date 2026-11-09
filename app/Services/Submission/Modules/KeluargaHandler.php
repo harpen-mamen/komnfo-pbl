@@ -2,17 +2,33 @@
 
 namespace App\Services\Submission\Modules;
 
+use Illuminate\Database\Eloquent\Builder;
 use App\Models\Keluarga;
 
 class KeluargaHandler extends BaseModuleHandler
 {
-    public function key(): string { return 'keluarga'; }
-    public function label(): string { return 'Keluarga'; }
-    public function periodType(): string { return self::MASTER; }
-    public function entityType(): string { return Keluarga::class; }
-    public function table(): string { return 'keluargas'; }
+    public function key(): string
+    {
+        return 'keluarga';
+    }
+    public function label(): string
+    {
+        return 'Keluarga';
+    }
+    public function periodType(): string
+    {
+        return self::MASTER;
+    }
+    public function entityType(): string
+    {
+        return Keluarga::class;
+    }
+    public function table(): string
+    {
+        return 'keluargas';
+    }
 
-    public function query(int $kecamatanId, array $context, ?int $desaId): \Illuminate\Database\Eloquent\Builder
+    public function query(int $kecamatanId, array $context, ?int $desaId): Builder
     {
         return Keluarga::query()->whereHas(
             'rumah.desa',

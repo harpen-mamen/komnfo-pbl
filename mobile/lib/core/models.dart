@@ -33,7 +33,7 @@ class MobileUser {
         desa: json['desa'] as String?,
       );
 
-  bool get isAdminDesa => roles.contains('admin_desa');
+  bool get isAdminDesa => roles.contains('admin_desa') || roles.contains('admin_lapangan');
 }
 
 class ReferenceOption {
@@ -78,8 +78,23 @@ class MobileDataset {
   Map<String, dynamic> toJson() => {'key': key, 'label': label, 'offline_enabled': offlineEnabled};
 }
 
+class MobileFamilyOption {
+  const MobileFamilyOption({required this.id, required this.nomorKk, required this.namaKepala, this.jumlahAnggota});
+  final int id;
+  final String nomorKk;
+  final String namaKepala;
+  final int? jumlahAnggota;
+
+  factory MobileFamilyOption.fromJson(Map<String, dynamic> json) => MobileFamilyOption(
+        id: (json['id'] as num).toInt(),
+        nomorKk: json['nomor_kk'] as String? ?? '',
+        namaKepala: json['nama_kepala_keluarga'] as String? ?? '',
+        jumlahAnggota: (json['jumlah_anggota'] as num?)?.toInt(),
+      );
+}
+
 class RumahRecord {
-  const RumahRecord({required this.id, required this.desaId, this.dusunId, required this.kodeRumah, required this.alamat, required this.latitude, required this.longitude, required this.status, this.keluargaCount = 0});
+  const RumahRecord({required this.id, required this.desaId, this.dusunId, required this.kodeRumah, required this.alamat, required this.latitude, required this.longitude, required this.status, this.keluargaCount = 0, this.isLocal = false, this.isVerified = false, this.operationId});
 
   final int id;
   final int desaId;
@@ -90,6 +105,9 @@ class RumahRecord {
   final double longitude;
   final String status;
   final int keluargaCount;
+  final bool isLocal;
+  final bool isVerified;
+  final String? operationId;
 
   factory RumahRecord.fromJson(Map<String, dynamic> json) => RumahRecord(
         id: (json['id'] as num?)?.toInt() ?? 0,
@@ -101,9 +119,44 @@ class RumahRecord {
         longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
         status: json['status_rumah'] as String? ?? '-',
         keluargaCount: (json['keluarga_count'] as num?)?.toInt() ?? 0,
+        isLocal: json['is_local'] as bool? ?? false,
+        isVerified: json['is_verified'] as bool? ?? false,
+        operationId: json['operation_id'] as String?,
       );
 
-  Map<String, dynamic> toJson() => {'id': id, 'desa_id': desaId, 'dusun_id': dusunId, 'kode_rumah': kodeRumah, 'alamat_lengkap': alamat, 'latitude': latitude, 'longitude': longitude, 'status_rumah': status, 'keluarga_count': keluargaCount};
+  Map<String, dynamic> toJson() => {'id': id, 'desa_id': desaId, 'dusun_id': dusunId, 'kode_rumah': kodeRumah, 'alamat_lengkap': alamat, 'latitude': latitude, 'longitude': longitude, 'status_rumah': status, 'keluarga_count': keluargaCount, 'is_local': isLocal, 'is_verified': isVerified, 'operation_id': operationId};
+}
+
+class InfrastructureRecord {
+  const InfrastructureRecord({required this.id, required this.desaId, required this.jenis, required this.nama, required this.latitude, required this.longitude, this.kode = '', this.alamat = '', this.isLocal = false, this.isVerified = false, this.operationId});
+
+  final int id;
+  final int desaId;
+  final String jenis;
+  final String nama;
+  final String kode;
+  final String alamat;
+  final double latitude;
+  final double longitude;
+  final bool isLocal;
+  final bool isVerified;
+  final String? operationId;
+
+  factory InfrastructureRecord.fromJson(Map<String, dynamic> json) => InfrastructureRecord(
+        id: (json['id'] as num?)?.toInt() ?? 0,
+        desaId: (json['desa_id'] as num?)?.toInt() ?? 0,
+        jenis: json['jenis'] as String? ?? 'lainnya',
+        nama: json['nama'] as String? ?? '-',
+        kode: json['kode'] as String? ?? '',
+        alamat: json['alamat'] as String? ?? '',
+        latitude: (json['latitude'] as num?)?.toDouble() ?? 0,
+        longitude: (json['longitude'] as num?)?.toDouble() ?? 0,
+        isLocal: json['is_local'] as bool? ?? false,
+        isVerified: json['is_verified'] as bool? ?? false,
+        operationId: json['operation_id'] as String?,
+      );
+
+  Map<String, dynamic> toJson() => {'id': id, 'desa_id': desaId, 'jenis': jenis, 'nama': nama, 'kode': kode, 'alamat': alamat, 'latitude': latitude, 'longitude': longitude, 'is_local': isLocal, 'is_verified': isVerified, 'operation_id': operationId};
 }
 
 class KeluargaRecord {
@@ -149,7 +202,7 @@ class PendudukRecord {
 }
 
 class MobileBootstrap {
-  const MobileBootstrap({required this.version, required this.datasets, required this.kecamatan, required this.desa, required this.dusun, required this.rumah, required this.keluarga, required this.penduduk, this.userDesaId});
+  const MobileBootstrap({required this.version, required this.datasets, required this.kecamatan, required this.desa, required this.dusun, required this.rumah, required this.keluarga, required this.penduduk, this.infrastruktur = const [], this.userDesaId, this.kecamatanId});
 
   final String version;
   final List<MobileDataset> datasets;
@@ -159,7 +212,9 @@ class MobileBootstrap {
   final List<RumahRecord> rumah;
   final List<KeluargaRecord> keluarga;
   final List<PendudukRecord> penduduk;
+  final List<InfrastructureRecord> infrastruktur;
   final int? userDesaId;
+  final int? kecamatanId;
 
   factory MobileBootstrap.fromJson(Map<String, dynamic> json) {
     final reference = Map<String, dynamic>.from(json['reference'] as Map? ?? {});
@@ -174,7 +229,9 @@ class MobileBootstrap {
       rumah: (records['rumah'] as List<dynamic>? ?? const []).map((item) => RumahRecord.fromJson(Map<String, dynamic>.from(item as Map))).toList(growable: false),
       keluarga: (records['keluarga'] as List<dynamic>? ?? const []).map((item) => KeluargaRecord.fromJson(Map<String, dynamic>.from(item as Map))).toList(growable: false),
       penduduk: (records['penduduk'] as List<dynamic>? ?? const []).map((item) => PendudukRecord.fromJson(Map<String, dynamic>.from(item as Map))).toList(growable: false),
+      infrastruktur: (records['infrastruktur'] as List<dynamic>? ?? const []).map((item) => InfrastructureRecord.fromJson(Map<String, dynamic>.from(item as Map))).toList(growable: false),
       userDesaId: (user['desa_id'] as num?)?.toInt(),
+      kecamatanId: (user['kecamatan_id'] as num?)?.toInt(),
     );
   }
 
@@ -182,17 +239,18 @@ class MobileBootstrap {
 
   Map<String, dynamic> toJson() => {
         'version': version,
-        'user': {'desa_id': userDesaId},
+        'user': {'desa_id': userDesaId, 'kecamatan_id': kecamatanId},
         'datasets': datasets.map((item) => item.toJson()).toList(),
         'reference': {'kecamatan': kecamatan.map((item) => item.toJson()).toList(), 'desa': desa.map((item) => item.toJson()).toList(), 'dusun': dusun.map((item) => item.toJson()).toList()},
-        'records': {'rumah': rumah.map((item) => item.toJson()).toList(), 'keluarga': keluarga.map((item) => item.toJson()).toList(), 'penduduk': penduduk.map((item) => item.toJson()).toList()},
+        'records': {'rumah': rumah.map((item) => item.toJson()).toList(), 'keluarga': keluarga.map((item) => item.toJson()).toList(), 'penduduk': penduduk.map((item) => item.toJson()).toList(), 'infrastruktur': infrastruktur.map((item) => item.toJson()).toList()},
       };
 }
 
 enum DraftType {
   rumah('rumah', 'Rumah'),
   keluarga('keluarga', 'Kartu Keluarga'),
-  penduduk('penduduk', 'Penduduk');
+  penduduk('penduduk', 'Penduduk'),
+  infrastruktur('infrastruktur', 'Infrastruktur');
 
   const DraftType(this.key, this.label);
   final String key;

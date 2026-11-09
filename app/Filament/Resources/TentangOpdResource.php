@@ -2,36 +2,75 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\RichEditor;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use App\Filament\Resources\TentangOpdResource\Pages\ListTentangOpds;
+use App\Filament\Resources\TentangOpdResource\Pages\CreateTentangOpd;
+use App\Filament\Resources\TentangOpdResource\Pages\EditTentangOpd;
 use App\Filament\Resources\TentangOpdResource\Pages;
 use App\Models\TentangOpd;
+use App\Support\PanelAccess;
 use Filament\Forms;
-use Filament\Resources\Form;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 
-class TentangOpdResource extends Resource
+abstract class TentangOpdResource extends Resource
 {
     protected static ?string $model = TentangOpd::class;
-    protected static ?string $navigationIcon = 'heroicon-o-building-office-2';
-    protected static ?string $navigationGroup = 'Tentang Daerah';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-building-office';
+    protected static string | \UnitEnum | null $navigationGroup = 'Tentang Daerah';
     protected static ?string $navigationLabel = 'Dinas / OPD';
     protected static ?string $pluralModelLabel = 'Dinas / OPD';
     protected static ?int $navigationSort = 70;
 
-    public static function form(Form $form): Form
+    public static function shouldRegisterNavigation(): bool
     {
-        return $form->schema([
-            Forms\Components\Section::make('Identitas Instansi')
+        return PanelAccess::isSuperAdmin();
+    }
+    public static function canViewAny(): bool
+    {
+        return PanelAccess::isSuperAdmin();
+    }
+    public static function canCreate(): bool
+    {
+        return PanelAccess::isSuperAdmin();
+    }
+    public static function canEdit($record): bool
+    {
+        return PanelAccess::isSuperAdmin();
+    }
+    public static function canDelete($record): bool
+    {
+        return PanelAccess::isSuperAdmin();
+    }
+
+    public static function form(Schema $schema): Schema
+    {
+        return $schema->components([
+            Section::make('Identitas Instansi')
                 ->schema([
-                    Forms\Components\TextInput::make('nama_instansi')->required()->maxLength(200),
-                    Forms\Components\TextInput::make('singkatan')->maxLength(50),
-                    Forms\Components\TextInput::make('slug')
+                    TextInput::make('nama_instansi')->required()->maxLength(200),
+                    TextInput::make('singkatan')->maxLength(50),
+                    TextInput::make('slug')
                         ->required()
                         ->maxLength(200)
                         ->unique(ignoreRecord: true)
                         ->helperText('Akan jadi URL: /tentang-daerah/opd/[slug]'),
-                    Forms\Components\Select::make('kategori')
+                    Select::make('kategori')
                         ->options([
                             'dinas' => 'Dinas',
                             'badan' => 'Badan',
@@ -40,34 +79,34 @@ class TentangOpdResource extends Resource
                             'rsud' => 'RSUD',
                             'lainnya' => 'Lainnya',
                         ])->default('dinas'),
-                    Forms\Components\FileUpload::make('logo')
+                    FileUpload::make('logo')
                         ->image()->directory('tentang-daerah/opd/logo')->imageEditor(),
                 ])->columns(2),
 
-            Forms\Components\Section::make('Kontak')
+            Section::make('Kontak')
                 ->schema([
-                    Forms\Components\Textarea::make('alamat')->rows(2)->columnSpanFull(),
-                    Forms\Components\TextInput::make('telepon')->maxLength(20),
-                    Forms\Components\TextInput::make('email')->email(),
-                    Forms\Components\TextInput::make('website')->url()->maxLength(255),
+                    Textarea::make('alamat')->rows(2)->columnSpanFull(),
+                    TextInput::make('telepon')->maxLength(20),
+                    TextInput::make('email')->email(),
+                    TextInput::make('website')->url()->maxLength(255),
                 ])->columns(3),
 
-            Forms\Components\Section::make('Profil & Tupoksi')
+            Section::make('Profil & Tupoksi')
                 ->schema([
-                    Forms\Components\RichEditor::make('profil_singkat')->label('Profil Singkat'),
-                    Forms\Components\RichEditor::make('tupoksi')->label('Tugas Pokok & Fungsi'),
+                    RichEditor::make('profil_singkat')->label('Profil Singkat'),
+                    RichEditor::make('tupoksi')->label('Tugas Pokok & Fungsi'),
                 ]),
 
-            Forms\Components\Section::make('Kepala Instansi')
+            Section::make('Kepala Instansi')
                 ->schema([
-                    Forms\Components\Select::make('kepala_instansi_id')
+                    Select::make('kepala_instansi_id')
                         ->relationship('kepala', 'nama_lengkap')
                         ->searchable()
                         ->preload()
                         ->label('Kepala Saat Ini')
                         ->helperText('Pilih dari Pejabat Profile yang aktif.'),
-                    Forms\Components\TextInput::make('urutan')->numeric()->default(0),
-                    Forms\Components\Toggle::make('tampilkan')->default(true),
+                    TextInput::make('urutan')->numeric()->default(0),
+                    Toggle::make('tampilkan')->default(true),
                 ])->columns(3),
         ]);
     }
@@ -76,29 +115,29 @@ class TentangOpdResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('logo')->square()->size(40),
-                Tables\Columns\TextColumn::make('nama_instansi')->searchable()->wrap()->label('Nama'),
-                Tables\Columns\TextColumn::make('singkatan')->badge(),
-                Tables\Columns\BadgeColumn::make('kategori'),
-                Tables\Columns\TextColumn::make('kepala.nama_lengkap')->label('Kepala')->default('-'),
-                Tables\Columns\IconColumn::make('tampilkan')->boolean()->label('Aktif'),
-                Tables\Columns\TextColumn::make('urutan')->label('#')->sortable(),
+                ImageColumn::make('logo')->square()->size(40),
+                TextColumn::make('nama_instansi')->searchable()->wrap()->label('Nama'),
+                TextColumn::make('singkatan')->badge(),
+                BadgeColumn::make('kategori'),
+                TextColumn::make('kepala.nama_lengkap')->label('Kepala')->default('-'),
+                IconColumn::make('tampilkan')->boolean()->label('Aktif'),
+                TextColumn::make('urutan')->label('#')->sortable(),
             ])
             ->defaultSort('urutan')
             ->reorderable('urutan')
-            ->filters([Tables\Filters\SelectFilter::make('kategori')->options([
+            ->filters([SelectFilter::make('kategori')->options([
                 'dinas' => 'Dinas', 'badan' => 'Badan', 'kantor' => 'Kantor',
                 'sekretariat' => 'Sekretariat', 'rsud' => 'RSUD', 'lainnya' => 'Lainnya',
             ])])
-            ->actions([Tables\Actions\EditAction::make(), Tables\Actions\DeleteAction::make()]);
+            ->recordActions([EditAction::make(), DeleteAction::make()]);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListTentangOpds::route('/'),
-            'create' => Pages\CreateTentangOpd::route('/create'),
-            'edit'   => Pages\EditTentangOpd::route('/{record}/edit'),
+            'index' => ListTentangOpds::route('/'),
+            'create' => CreateTentangOpd::route('/create'),
+            'edit'   => EditTentangOpd::route('/{record}/edit'),
         ];
     }
 

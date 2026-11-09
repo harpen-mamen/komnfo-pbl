@@ -1,3 +1,4 @@
+import Link from 'next/link';
 import type { Metadata } from 'next';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
@@ -5,11 +6,12 @@ import { fetchOpdDetail } from '@/lib/api/tentang-daerah';
 
 const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000').replace(/\/$/, '');
 
-export const revalidate = 600;
+export const revalidate = 60;
 
-export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   try {
-    const data = await fetchOpdDetail(params.slug);
+    const { slug } = await params;
+    const data = await fetchOpdDetail(slug);
     return {
       title: data.data.nama_instansi,
       description: data.data.profil_singkat ?? 'Profil ' + data.data.nama_instansi,
@@ -19,22 +21,22 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   }
 }
 
-export default async function OpdDetailPage({ params }: { params: { slug: string } }) {
-  const data = await fetchOpdDetail(params.slug).catch(() => null);
+export default async function OpdDetailPage({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const data = await fetchOpdDetail(slug).catch(() => null);
   if (!data) return notFound();
 
   const opd = data.data;
-  const galleries = (data as any).galleries ?? [];
-  const kepala = (data as any).kepala;
+  const kepala = opd.kepala;
 
   return (
     <main className="min-h-screen bg-slate-50">
-      <section className="bg-gradient-to-br from-primary-700 to-primary-800 text-white">
+      <section className="bg-linear-to-br from-primary-700 to-primary-800 text-white">
         <div className="container-page py-12 md:py-16">
           <nav className="text-sm text-primary-100">
-            <a href="/" className="hover:text-white">Beranda</a> <span className="mx-2">/</span>
-            <a href="/tentang-daerah" className="hover:text-white">Tentang Daerah</a> <span className="mx-2">/</span>
-            <a href="/tentang-daerah/opd" className="hover:text-white">OPD</a> <span className="mx-2">/</span>
+            <Link href="/" className="hover:text-white">Beranda</Link> <span className="mx-2">/</span>
+            <Link href="/tentang-daerah" className="hover:text-white">Tentang Daerah</Link> <span className="mx-2">/</span>
+            <Link href="/tentang-daerah/opd" className="hover:text-white">OPD</Link> <span className="mx-2">/</span>
             <span className="text-white">{opd.nama_instansi}</span>
           </nav>
           <div className="mt-6 flex items-center gap-6">
@@ -57,13 +59,13 @@ export default async function OpdDetailPage({ params }: { params: { slug: string
             {opd.profil_singkat && (
               <div className="rounded-2xl bg-white p-8 shadow-sm">
                 <h2 className="heading-md text-slate-900">Profil Singkat</h2>
-                <div className="prose prose-slate mt-4 max-w-none" dangerouslySetInnerHTML={{ __html: opd.profil_singkat }} />
+                <div className="mt-4 whitespace-pre-line leading-7 text-slate-600">{opd.profil_singkat}</div>
               </div>
             )}
             {opd.tupoksi && (
               <div className="rounded-2xl bg-white p-8 shadow-sm">
                 <h2 className="heading-md text-slate-900">Tugas Pokok & Fungsi</h2>
-                <div className="prose prose-slate mt-4 max-w-none" dangerouslySetInnerHTML={{ __html: opd.tupoksi }} />
+                <div className="mt-4 whitespace-pre-line leading-7 text-slate-600">{opd.tupoksi}</div>
               </div>
             )}
           </div>

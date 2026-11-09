@@ -2,6 +2,11 @@
 
 namespace App\Filament\Widgets;
 
+use Filament\Widgets\StatsOverviewWidget\Stat;
+use App\Models\Desa;
+use Spatie\Permission\Models\Role;
+use Spatie\Permission\Models\Permission;
+use App\Models\ImportPendudukLog;
 use App\Models\AuditTrail;
 use App\Models\Kabupaten;
 use App\Models\Kecamatan;
@@ -12,7 +17,6 @@ use App\Models\SubmissionBatch;
 use App\Models\User;
 use App\Support\PanelAccess;
 use Filament\Widgets\StatsOverviewWidget;
-use Filament\Widgets\StatsOverviewWidget\Card;
 use Illuminate\Support\Facades\Schema;
 
 class SuperAdminStatsOverview extends StatsOverviewWidget
@@ -35,20 +39,20 @@ class SuperAdminStatsOverview extends StatsOverviewWidget
         }
 
         return [
-            Card::make('Total Kabupaten', Kabupaten::query()->count())->icon('heroicon-o-office-building')->color('primary'),
-            Card::make('Total Kecamatan', Kecamatan::query()->count())->icon('heroicon-o-location-marker')->color('success'),
-            Card::make('Total Desa', \App\Models\Desa::query()->count())->icon('heroicon-o-map')->color('warning'),
-            Card::make('Total User', User::query()->count())->icon('heroicon-o-users')->color('primary'),
-            Card::make('Total Role', \Spatie\Permission\Models\Role::query()->count())->icon('heroicon-o-shield-check')->color('success'),
-            Card::make('Total Permission', \Spatie\Permission\Models\Permission::query()->count())->icon('heroicon-o-key')->color('warning'),
-            Card::make('Total Audit', AuditTrail::query()->count())->icon('heroicon-o-clipboard-list')->color('danger'),
-            Card::make('Total Import', \App\Models\ImportPendudukLog::query()->count())->icon('heroicon-o-upload')->color('gray'),
-            Card::make('Batch Draft', $batchDraft)->icon('heroicon-o-pencil')->color('gray'),
-            Card::make('Batch Menunggu Verifikasi', $batchWaiting)->icon('heroicon-o-clock')->color('warning'),
-            Card::make('Batch Disetujui', $batchApproved)->icon('heroicon-o-check-circle')->color('success'),
-            Card::make('Total Penduduk', Penduduk::query()->inApprovedBatch()->count())->icon('heroicon-o-identification')->color('primary'),
-            Card::make('Total Rumah', Rumah::query()->inApprovedBatch()->count())->icon('heroicon-o-home')->color('success'),
-            Card::make('Total KK', Keluarga::query()->inApprovedBatch()->count())->icon('heroicon-o-user-group')->color('warning'),
+            Stat::make('Total Kabupaten', Kabupaten::query()->count())->icon('heroicon-o-building-office')->color('primary'),
+            Stat::make('Total Kecamatan', Kecamatan::query()->count())->icon('heroicon-o-map-pin')->color('success'),
+            Stat::make('Total Desa', Desa::query()->count())->icon('heroicon-o-map')->color('warning'),
+            Stat::make('Total User', User::query()->count())->icon('heroicon-o-users')->color('primary'),
+            Stat::make('Total Role', Role::query()->count())->icon('heroicon-o-shield-check')->color('success'),
+            Stat::make('Total Permission', Permission::query()->count())->icon('heroicon-o-key')->color('warning'),
+            Stat::make('Total Audit', AuditTrail::query()->count())->icon('heroicon-o-clipboard-document-list')->color('danger'),
+            Stat::make('Total Import', ImportPendudukLog::query()->count())->icon('heroicon-o-arrow-up-tray')->color('gray'),
+            Stat::make('Batch Draft', $batchDraft)->icon('heroicon-o-pencil')->color('gray'),
+            Stat::make('Batch Menunggu Verifikasi', $batchWaiting)->icon('heroicon-o-clock')->color('warning'),
+            Stat::make('Batch Disetujui', $batchApproved)->icon('heroicon-o-check-circle')->color('success'),
+            Stat::make('Total Penduduk', Penduduk::query()->inApprovedBatch()->count())->icon('heroicon-o-identification')->color('primary'),
+            Stat::make('Total Rumah', Rumah::query()->inApprovedBatch()->count())->icon('heroicon-o-home')->color('success'),
+            Stat::make('Total KK', Keluarga::query()->inApprovedBatch()->count())->icon('heroicon-o-user-group')->color('warning'),
         ];
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\TentangSejarahResource\Pages;
 
+use Filament\Actions\CreateAction;
 use App\Filament\Resources\TentangSejarahResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
@@ -13,7 +14,7 @@ class ListTentangSejarahs extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make()->label('Tambah Peristiwa'),
+            CreateAction::make()->label('Tambah Peristiwa'),
         ];
     }
 }

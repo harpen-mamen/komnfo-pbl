@@ -2,8 +2,9 @@
 
 namespace App\Filament\Resources\OpdResource\Pages;
 
+use Filament\Actions\CreateAction;
 use App\Filament\Resources\OpdResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 
 class ListOpds extends ListRecords
@@ -13,7 +14,7 @@ class ListOpds extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            Actions\CreateAction::make(),
+            CreateAction::make(),
         ];
     }
 }

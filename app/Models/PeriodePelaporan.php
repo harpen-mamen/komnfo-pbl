@@ -71,13 +71,6 @@ class PeriodePelaporan extends Model
         return max(0, Carbon::today()->diffInDays($this->tanggal_selesai, false));
     }
 
-    public function pendidikanBulanans(): HasMany
-    {
-        return $this->hasMany(DataPendidikanBulanan::class);
-    }
-
-    public function kesehatanBulanans(): HasMany
-    {
-        return $this->hasMany(DataKesehatanBulanan::class);
-    }
+    // Note: DataPendidikanBulanan and DataKesehatanBulanan tables removed
+    // Relationships to these tables have been removed
 }

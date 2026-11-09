@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Filament\Panel;
 use App\Enums\AppRole;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasAvatar;
@@ -16,7 +17,10 @@ use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable implements FilamentUser, HasAvatar
 {
-    use HasApiTokens, HasFactory, HasRoles, Notifiable;
+    use HasApiTokens;
+    use HasFactory;
+    use HasRoles;
+    use Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -27,10 +31,13 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         'name',
         'email',
         'password',
+        'device_code',
+        'device_code_last_used_at',
+        'email',
+        'password',
         'kecamatan_id',
         'desa_id',
         'opd_id',
-        'puskes_id',
         'nip',
         'jabatan',
         'no_hp',
@@ -61,12 +68,12 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     // Relations
     public function kecamatan(): BelongsTo
     {
-        return $this->belongsTo(Kecamatan::class);
+        return $this->belongsTo(Wilayah::class, 'kecamatan_id');
     }
 
     public function desa(): BelongsTo
     {
-        return $this->belongsTo(Desa::class);
+        return $this->belongsTo(Wilayah::class, 'desa_id');
     }
 
     public function opd(): BelongsTo
@@ -74,19 +81,30 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
         return $this->belongsTo(Opd::class);
     }
 
-    public function puskes(): BelongsTo
-    {
-        return $this->belongsTo(FasilitasKesehatan::class, 'puskes_id');
-    }
-
     public function aiConversations(): HasMany
     {
         return $this->hasMany(AIConversation::class);
     }
 
-    // Access Control — SPEC-005: delegate to AppRole enum.
+    // Access Control — delegate to AppRole enum.
+    public function canAccessPanel(Panel $panel): bool
+    {
+        // Admin Bupati enters the panel through a scoped, read-only dashboard route.
+        if ($this->hasRole(AppRole::ADMIN_BUPATI->value)) {
+            return true;
+        }
+
+        return $this->canAccessFilament();
+    }
+
+    // Existing policies and provisioning commands share this access decision.
     public function canAccessFilament(): bool
     {
+        // Do not grant Bupati the broad resource access implied by panel login.
+        if ($this->hasRole(AppRole::ADMIN_BUPATI->value)) {
+            return false;
+        }
+
         $roleName = $this->roles->first()?->name;
 
         if (! $roleName) {
@@ -99,100 +117,63 @@ class User extends Authenticatable implements FilamentUser, HasAvatar
     // Role Check Helpers
     public function isAdminKecamatan(): bool
     {
-        return $this->hasRole('admin_kecamatan');
+        return $this->hasRole(AppRole::ADMIN_KECAMATAN->value);
     }
 
     public function isAdminDesa(): bool
     {
-        return $this->hasRole('admin_desa');
+        return $this->hasRole(AppRole::ADMIN_DESA->value);
+    }
+
+    public function isAdminLapangan(): bool
+    {
+        return $this->hasRole(AppRole::ADMIN_LAPANGAN->value);
+    }
+
+    public function isWalidata(): bool
+    {
+        return $this->hasAnyRole([
+            AppRole::WALIDATA->value,
+            AppRole::ADMIN_KOMINFO->value,
+            AppRole::ADMIN->value,
+        ]);
     }
 
     public function isOpdAdmin(): bool
     {
-        return $this->hasAnyRole([
-            'admin_kesehatan',
-            'admin_pendidikan',
-            'admin_pu',
-            'admin_sosial',
-            'admin_ekonomi',
-            'admin_kependudukan',
-            'admin_lingkungan',
-            'admin_opd',
-            'admin_dinkes',
-            'admin_dispend',
-            'admin_dpu',
-            'admin_dinsos',
-            'admin_disperindag',
-            'admin_dukcapil',
-            'admin_dlh',
-            'admin_distan',
-            'admin_dishub',
-            'admin_distpar',
-            'admin_dispora',
-            'admin_bkpsdmd',
-            'admin_bappeda',
-            'admin_bapenda',
-            'admin_bpbd',
-            'admin_diskominfo',
-            'admin_dpmptsp',
-            'admin_distaman',
-        ]);
-    }
+        $roleName = $this->roles->first()?->name;
+        $enum = AppRole::tryFrom($roleName ?? '');
 
-    public function isOpdOperator(): bool
-    {
-        return $this->hasAnyRole([
-            'operator_kesehatan',
-            'operator_pendidikan',
-            'operator_pu',
-            'operator_sosial',
-            'operator_ekonomi',
-            'operator_kependudukan',
-            'operator_lingkungan',
-            'operator_dinkes',
-            'operator_dispend',
-            'operator_dpu',
-            'operator_dinsos',
-            'operator_disperindag',
-            'operator_dukcapil',
-            'operator_dlh',
-            'operator_distan',
-            'operator_dishub',
-            'operator_distpar',
-            'operator_dispora',
-            'operator_bkpsdmd',
-            'operator_bappeda',
-            'operator_bapenda',
-            'operator_bpbd',
-            'operator_diskominfo',
-            'operator_dpmptsp',
-            'operator_distaman',
-        ]);
+        return $enum?->isOpdLevel() ?? false;
     }
 
     public function isSuperAdmin(): bool
     {
-        return $this->hasAnyRole(['super_admin', 'admin']);
+        return $this->hasAnyRole([
+            AppRole::SUPER_ADMIN->value,
+            AppRole::ADMIN->value,
+        ]);
     }
 
-    public function isKominfoAdmin(): bool
+    public function isAdminBerita(): bool
     {
-        return $this->hasAnyRole(['admin_kominfo', 'admin']);
+        return $this->hasRole(AppRole::ADMIN_BERITA->value);
     }
 
-    // Get user's OPD module — SPEC-005: delegate to AppRole enum.
-    public function getOpdModule(): ?string
+    public function isKepalaDinas(): bool
     {
-        $roleName = $this->roles->first()?->name;
-
-        if (! $roleName) {
-            return null;
-        }
-
-        return AppRole::tryFrom($roleName)?->opdModule() ?? null;
+        return $this->hasRole(AppRole::KEPALA_DINAS->value);
     }
 
-    // Get role label — SPEC-005: delegate to AppRole enum.
+    public function isKepalaDaerah(): bool
+    {
+        return $this->hasAnyRole([
+            AppRole::ADMIN_BUPATI->value,
+            AppRole::ADMIN_WAKIL_BUPATI->value,
+        ]);
+    }
+
+    // Get role label — delegate to AppRole enum.
     public function getRoleLabelAttribute(): string
     {
         $role = $this->roles->first();

@@ -2,32 +2,36 @@
 
 namespace App\Filament\Resources\SubmissionBatchResource\Pages;
 
+use Filament\Actions\Action;
+use Exception;
+use Illuminate\Support\Carbon;
 use App\Filament\Resources\SubmissionBatchResource;
-use App\Models\DataKesehatanBulanan;
-use App\Models\DataPendidikanBulanan;
-use App\Models\Keluarga;
-use App\Models\Penduduk;
-use App\Models\Rumah;
+use App\Models\MobileFieldPoint;
 use App\Models\SubmissionBatch;
 use App\Models\SubmissionBatchItem;
 use App\Services\BatchApprovalService;
 use App\Support\PanelAccess;
 use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class ViewSubmissionBatch extends ViewRecord
 {
     protected static string $resource = SubmissionBatchResource::class;
-    protected static string $view = 'filament.pages.submission-batch-review';
+    protected string $view = 'filament.pages.submission-batch-review';
 
-    protected function getTitle(): string
+    public function getTitle(): string
     {
-        return PanelAccess::isAdminKecamatan()
-            ? 'Review Verifikasi Tingkat Kecamatan'
-            : 'Review Verifikasi Kominfo';
+        if ($this->record->module === SubmissionBatch::MODULE_LAPANGAN) {
+            return PanelAccess::isAdminLapangan()
+                ? 'Status Kiriman Titik Lapangan'
+                : (PanelAccess::isAdminKecamatan() ? 'Tinjau Titik Mobile Kecamatan' : 'Verifikasi Titik Mobile Kominfo');
+        }
+
+        return PanelAccess::isAdminKecamatan() ? 'Review Verifikasi Tingkat Kecamatan' : 'Review Verifikasi Kominfo';
     }
 
     public function getBreadcrumb(): string
@@ -56,20 +60,21 @@ class ViewSubmissionBatch extends ViewRecord
      *   - "Tolak" → REJECTED
      *   - "Minta Revisi" → REVISION
      */
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
         $actions = [];
 
         // 1. Mulai Review (Kecamatan/Kominfo) - only for PENDING batches
-        $actions[] = Actions\Action::make('startReview')
+        $actions[] = Action::make('startReview')
             ->label('Mulai Review')
             ->color('primary')
-            ->icon('heroicon-o-clipboard-check')
-            ->visible(fn (): bool =>
+            ->icon('heroicon-o-clipboard-document-check')
+            ->visible(
+                fn (): bool =>
                 $this->record->status === SubmissionBatch::STATUS_PENDING
                 && (
-                    (PanelAccess::isAdminKecamatan() && $this->isDesaSubmission())
-                    || PanelAccess::isKominfoKabupaten()
+                    (PanelAccess::isAdminKecamatan() && $this->record->requiresKecamatanGate() && $this->isCurrentKecamatanBatch())
+                    || (PanelAccess::isKominfoKabupaten() && ! $this->record->requiresKecamatanGate())
                 )
             )
             ->action(function (): void {
@@ -86,17 +91,18 @@ class ViewSubmissionBatch extends ViewRecord
             });
 
         // 2. Setujui (Kecamatan untuk batch wilayahnya, atau Kominfo)
-        $actions[] = Actions\Action::make('approve')
+        $actions[] = Action::make('approve')
             ->label('Setujui')
             ->color('success')
             ->icon('heroicon-o-check')
-            ->form([
+            ->schema([
                 Textarea::make('catatan')
                     ->label('Catatan Persetujuan')
                     ->placeholder('Catatan opsional...')
                     ->rows(2),
             ])
-            ->visible(fn (): bool =>
+            ->visible(
+                fn (): bool =>
                 $this->record->status === SubmissionBatch::STATUS_IN_REVIEW
                 && $this->canApproveCurrentBatch()
             )
@@ -113,7 +119,7 @@ class ViewSubmissionBatch extends ViewRecord
                         ->body('Batch telah disetujui dan dipublikasikan.')
                         ->success()
                         ->send();
-                } catch (\Exception $e) {
+                } catch (Exception $e) {
                     Notification::make()
                         ->title('Gagal')
                         ->body($e->getMessage())
@@ -123,18 +129,19 @@ class ViewSubmissionBatch extends ViewRecord
             });
 
         // 3. Tolak (Admin Kecamatan CAN reject; Kominfo can reject all)
-        $actions[] = Actions\Action::make('reject')
+        $actions[] = Action::make('reject')
             ->label('Tolak')
             ->color('danger')
-            ->icon('heroicon-o-x')
-            ->form([
+            ->icon('heroicon-o-x-mark')
+            ->schema([
                 Textarea::make('catatan')
                     ->label('Alasan Penolakan')
                     ->placeholder('Jelaskan alasan penolakan...')
                     ->required(),
             ])
             ->requiresConfirmation()
-            ->visible(fn (): bool =>
+            ->visible(
+                fn (): bool =>
                 $this->record->status === SubmissionBatch::STATUS_IN_REVIEW
                 && $this->canRejectOrRequestRevision()
             )
@@ -153,18 +160,19 @@ class ViewSubmissionBatch extends ViewRecord
             });
 
         // 4. Minta Revisi (Admin Kecamatan CAN request revision; Kominfo can request revision)
-        $actions[] = Actions\Action::make('requestRevision')
+        $actions[] = Action::make('requestRevision')
             ->label('Minta Revisi')
             ->color('warning')
             ->icon('heroicon-o-arrow-right')
-            ->form([
+            ->schema([
                 Textarea::make('catatan')
                     ->label('Catatan / Alasan Revisi')
                     ->placeholder('Jelaskan apa yang perlu direvisi...')
                     ->required(),
             ])
             ->requiresConfirmation()
-            ->visible(fn (): bool =>
+            ->visible(
+                fn (): bool =>
                 $this->record->status === SubmissionBatch::STATUS_IN_REVIEW
                 && $this->canRejectOrRequestRevision()
             )
@@ -184,20 +192,22 @@ class ViewSubmissionBatch extends ViewRecord
             });
 
         // 5. Teruskan ke Kominfo (Kecamatan only — must NOT already be forwarded)
-        $actions[] = Actions\Action::make('forwardToKominfo')
+        $actions[] = Action::make('forwardToKominfo')
             ->label('Teruskan ke Kominfo')
             ->color('info')
             ->icon('heroicon-o-paper-airplane')
-            ->form([
+            ->schema([
                 Textarea::make('catatan')
                     ->label('Catatan')
                     ->placeholder('Catatan opsional untuk Kominfo...')
                     ->rows(2),
             ])
             ->requiresConfirmation()
-            ->visible(fn (): bool =>
+            ->visible(
+                fn (): bool =>
                 PanelAccess::isAdminKecamatan()
-                && $this->isDesaSubmission()
+                && $this->isCurrentKecamatanBatch()
+                && $this->record->requiresKecamatanGate()
                 && $this->record->status === SubmissionBatch::STATUS_IN_REVIEW
                 && ! $this->record->isForwarded()
             )
@@ -216,13 +226,14 @@ class ViewSubmissionBatch extends ViewRecord
             });
 
         // 6. Kirim Ulang (untuk batch REVISION)
-        $actions[] = Actions\Action::make('resubmit')
+        $actions[] = Action::make('resubmit')
             ->label('Kirim Ulang')
             ->color('warning')
             ->icon('heroicon-o-arrow-up')
-            ->visible(fn (): bool =>
+            ->visible(
+                fn (): bool =>
                 $this->record->status === SubmissionBatch::STATUS_REVISION
-                && PanelAccess::isAdminDesa()
+                && (PanelAccess::isAdminDesa() || (PanelAccess::isAdminLapangan() && $this->record->module === SubmissionBatch::MODULE_LAPANGAN))
             )
             ->action(function (): void {
                 $this->record = app(BatchApprovalService::class)->submit(
@@ -238,12 +249,13 @@ class ViewSubmissionBatch extends ViewRecord
             });
 
         // 7. Arsipkan (Kominfo only - untuk batch yang sudah final)
-        $actions[] = Actions\Action::make('archive')
+        $actions[] = Action::make('archive')
             ->label('Arsipkan')
             ->color('gray')
-            ->icon('heroicon-o-archive')
+            ->icon('heroicon-o-archive-box')
             ->requiresConfirmation()
-            ->visible(fn (): bool =>
+            ->visible(
+                fn (): bool =>
                 PanelAccess::isKominfoKabupaten()
                 && in_array($this->record->status, [
                     SubmissionBatch::STATUS_APPROVED,
@@ -281,10 +293,9 @@ class ViewSubmissionBatch extends ViewRecord
             return false;
         }
 
-        // Admin Kominfo can approve all batches (after forward for master data)
+        // Kominfo is the final approver after Kecamatan forwards gated data.
         if (PanelAccess::isKominfoKabupaten()) {
-            // For master-data batches, require that they were forwarded by Kecamatan
-            if ($this->record->isMasterData() && ! $this->record->isForwarded()) {
+            if ($this->record->requiresKecamatanGate() && ! $this->record->isForwarded()) {
                 return false;
             }
 
@@ -313,12 +324,15 @@ class ViewSubmissionBatch extends ViewRecord
 
         // Admin Kominfo can reject/revision any batch in IN_REVIEW
         if (PanelAccess::isKominfoKabupaten()) {
-            return true;
+            return ! $this->record->requiresKecamatanGate() || $this->record->isForwarded();
         }
 
         // Admin Kecamatan can reject/revision batches from their wilayah
         if (PanelAccess::isAdminKecamatan()) {
-            $userKecamatanId = $user->kecamatan_id ?? $user->desa?->kecamatan_id;
+            if (! $this->record->requiresKecamatanGate()) {
+                return false;
+            }
+            $userKecamatanId = $user->kecamatan_id ?: $user->desa?->kecamatan_id;
             return (int) $userKecamatanId === (int) $this->record->kecamatan_id;
         }
 
@@ -330,6 +344,14 @@ class ViewSubmissionBatch extends ViewRecord
         $this->record->loadMissing('createdBy');
 
         return $this->record->createdBy?->hasRole('admin_desa') ?? false;
+    }
+
+    private function isCurrentKecamatanBatch(): bool
+    {
+        $user = PanelAccess::user();
+        $userKecamatanId = $user?->kecamatan_id ?: $user?->desa?->kecamatan_id;
+
+        return (int) $userKecamatanId === (int) $this->record->kecamatan_id;
     }
 
     public function getEntitySummary(): array
@@ -345,23 +367,12 @@ class ViewSubmissionBatch extends ViewRecord
             ['label' => 'Tahun', 'value' => $this->record->periode_tahun ?? '-'],
             ['label' => 'Status', 'value' => SubmissionBatch::statusLabel($this->record->status)],
             ['label' => 'Pengirim', 'value' => $this->record->createdBy?->name],
-            ['label' => 'Role Pengirim', 'value' => $this->isDesaSubmission() ? 'Admin Desa' : 'Admin Kecamatan'],
+            ['label' => 'Role Pengirim', 'value' => $this->record->isFromMobile()
+                ? 'Petugas Lapangan (Mobile)'
+                : ($this->isDesaSubmission() ? 'Admin Desa' : 'Admin Kecamatan')],
             ['label' => 'Tanggal Kirim', 'value' => $this->record->submitted_at?->format('d M Y H:i')],
             ['label' => 'Diverifikasi Oleh', 'value' => $this->record->verifiedBy?->name],
             ['label' => 'Tanggal Verifikasi', 'value' => $this->record->verified_at?->format('d M Y H:i')],
-        ];
-    }
-
-    public function getBatchMetrics(): array
-    {
-        return [
-            ['label' => 'Total Item', 'value' => $this->record->items()->count()],
-            ['label' => 'Total Rumah', 'value' => $this->record->items()->where('entity_type', Rumah::class)->count()],
-            ['label' => 'Total KK', 'value' => $this->record->items()->where('entity_type', Keluarga::class)->count()],
-            ['label' => 'Total Penduduk', 'value' => $this->record->items()->where('entity_type', Penduduk::class)->count()],
-            ['label' => 'Total Pendidikan', 'value' => $this->record->items()->where('entity_type', DataPendidikanBulanan::class)->count()],
-            ['label' => 'Total Kesehatan', 'value' => $this->record->items()->where('entity_type', DataKesehatanBulanan::class)->count()],
-            ['label' => 'Catatan', 'value' => $this->record->notes],
         ];
     }
 
@@ -428,6 +439,25 @@ class ViewSubmissionBatch extends ViewRecord
     {
         $workflowInstanceId = $this->workflowInstanceId();
 
+        if (! Schema::hasTable('verification_comments')) {
+            if (! Schema::hasTable('workflow_logs')) {
+                return [];
+            }
+
+            return DB::table('workflow_logs')
+                ->leftJoin('users', 'users.id', '=', 'workflow_logs.actor_id')
+                ->where('workflow_logs.batch_id', $this->record->id)
+                ->whereNotNull('workflow_logs.notes')
+                ->orderBy('workflow_logs.created_at')
+                ->get(['workflow_logs.notes as komentar', 'workflow_logs.to_status as tipe', 'workflow_logs.created_at', 'users.name as pengguna'])
+                ->map(fn ($comment): array => [
+                    'komentar' => $comment->komentar,
+                    'tipe' => SubmissionBatch::statusLabel($comment->tipe),
+                    'created_at' => Carbon::parse($comment->created_at),
+                    'pengguna' => $comment->pengguna,
+                ])->all();
+        }
+
         if (! $workflowInstanceId) {
             return [];
         }
@@ -445,7 +475,7 @@ class ViewSubmissionBatch extends ViewRecord
             ->map(fn ($comment): array => [
                 'komentar' => $comment->komentar,
                 'tipe' => SubmissionBatch::statusLabel($comment->tipe),
-                'created_at' => \Illuminate\Support\Carbon::parse($comment->created_at),
+                'created_at' => Carbon::parse($comment->created_at),
                 'pengguna' => $comment->pengguna,
             ])
             ->all();
@@ -506,11 +536,29 @@ class ViewSubmissionBatch extends ViewRecord
 
             if ($history->isNotEmpty()) {
                 return $history->map(fn ($item): array => [
-                    'waktu' => \Illuminate\Support\Carbon::parse($item->created_at),
+                    'waktu' => Carbon::parse($item->created_at),
                     'status_sebelumnya' => $item->status_sebelumnya,
                     'status_baru' => $item->status_baru,
                     'catatan' => $item->catatan ?? $item->alasan,
                     'dilakukan_oleh' => $item->dilakukan_oleh,
+                ])->values();
+            }
+        }
+
+        if (Schema::hasTable('workflow_logs')) {
+            $logs = DB::table('workflow_logs')
+                ->leftJoin('users', 'users.id', '=', 'workflow_logs.actor_id')
+                ->where('workflow_logs.batch_id', $this->record->id)
+                ->orderBy('workflow_logs.created_at')
+                ->get(['workflow_logs.from_status', 'workflow_logs.to_status', 'workflow_logs.notes', 'workflow_logs.reason', 'workflow_logs.created_at', 'users.name as actor']);
+
+            if ($logs->isNotEmpty()) {
+                return $logs->map(fn ($item): array => [
+                    'waktu' => Carbon::parse($item->created_at),
+                    'status_sebelumnya' => $item->from_status ? SubmissionBatch::statusLabel($item->from_status) : null,
+                    'status_baru' => SubmissionBatch::statusLabel($item->to_status),
+                    'catatan' => $item->reason ?: $item->notes,
+                    'dilakukan_oleh' => $item->actor,
                 ])->values();
             }
         }
@@ -540,6 +588,10 @@ class ViewSubmissionBatch extends ViewRecord
 
     private function workflowInstanceId(): ?int
     {
+        if (! Schema::hasTable('workflow_instances')) {
+            return null;
+        }
+
         return DB::table('workflow_instances')
             ->where('submission_batch_id', $this->record->id)
             ->value('id');
@@ -586,6 +638,16 @@ class ViewSubmissionBatch extends ViewRecord
 
     private function batchReasons(SubmissionBatch $batch, string $status): array
     {
+        if (! Schema::hasTable('workflow_instances')) {
+            if (! Schema::hasTable('workflow_logs')) {
+                return [];
+            }
+
+            return DB::table('workflow_logs')->where('batch_id', $batch->id)
+                ->where('to_status', $status)->whereNotNull('reason')
+                ->orderBy('created_at')->pluck('reason')->all();
+        }
+
         $workflowInstanceId = DB::table('workflow_instances')
             ->where('submission_batch_id', $batch->id)
             ->value('id');
@@ -607,6 +669,15 @@ class ViewSubmissionBatch extends ViewRecord
 
     private function batchComments(SubmissionBatch $batch): array
     {
+        if (! Schema::hasTable('workflow_instances')) {
+            if (! Schema::hasTable('workflow_logs')) {
+                return [];
+            }
+
+            return DB::table('workflow_logs')->where('batch_id', $batch->id)
+                ->whereNotNull('notes')->orderBy('created_at')->pluck('notes')->all();
+        }
+
         $workflowInstanceId = DB::table('workflow_instances')
             ->where('submission_batch_id', $batch->id)
             ->value('id');
@@ -630,62 +701,17 @@ class ViewSubmissionBatch extends ViewRecord
         $module = $item->package_key ?? $this->record->module;
 
         return match (true) {
-            $entity instanceof Rumah => [
+            $entity instanceof MobileFieldPoint => [
                 'module' => $module,
-                'type' => 'Rumah',
-                'title' => $entity->kode_rumah ?? '-',
-                'subtitle' => $entity->alamat_lengkap ?? '-',
+                'type' => $entity->jenis === 'rumah' ? 'Titik Rumah' : 'Titik Infrastruktur',
+                'title' => $entity->nama,
+                'subtitle' => $entity->desa?->nama ?? '-',
                 'fields' => [
+                    ['label' => 'Jenis', 'value' => ucfirst(str_replace('_', ' ', $entity->jenis))],
                     ['label' => 'Desa', 'value' => $entity->desa?->nama],
                     ['label' => 'Koordinat', 'value' => trim(($entity->latitude ?? '').', '.($entity->longitude ?? ''), ', ')],
-                    ['label' => 'Status', 'value' => $entity->status_rumah],
-                ],
-            ],
-            $entity instanceof Keluarga => [
-                'module' => $module,
-                'type' => 'Keluarga',
-                'title' => $entity->nomor_kk ?? '-',
-                'subtitle' => $entity->nama_kepala_keluarga ?? '-',
-                'fields' => [
-                    ['label' => 'Rumah', 'value' => $entity->rumah?->kode_rumah],
-                    ['label' => 'Desa', 'value' => $entity->rumah?->desa?->nama],
-                    ['label' => 'Jumlah Anggota', 'value' => $entity->jumlah_anggota],
-                ],
-            ],
-            $entity instanceof Penduduk => [
-                'module' => $module,
-                'type' => 'Penduduk',
-                'title' => $entity->nama_lengkap ?? '-',
-                'subtitle' => $entity->nik ?? '-',
-                'fields' => [
-                    ['label' => 'KK', 'value' => $entity->keluarga?->nomor_kk],
-                    ['label' => 'Rumah', 'value' => $entity->keluarga?->rumah?->kode_rumah],
-                    ['label' => 'Pendidikan', 'value' => $entity->pendidikan],
-                    ['label' => 'Pekerjaan', 'value' => $entity->pekerjaan],
-                ],
-            ],
-            $entity instanceof DataPendidikanBulanan => [
-                'module' => $module,
-                'type' => 'Pendidikan',
-                'title' => $entity->sekolah ?? '-',
-                'subtitle' => 'Semester '.($entity->semester ?? '-').' / '.($entity->periode_tahun ?? '-'),
-                'fields' => [
-                    ['label' => 'Kecamatan', 'value' => $entity->kecamatan?->nama],
-                    ['label' => 'Desa', 'value' => $entity->desa?->nama],
-                    ['label' => 'Jumlah Siswa', 'value' => $entity->jumlah_siswa],
-                    ['label' => 'Status', 'value' => $entity->status],
-                ],
-            ],
-            $entity instanceof DataKesehatanBulanan => [
-                'module' => $module,
-                'type' => 'Kesehatan',
-                'title' => $entity->puskesmas ?? '-',
-                'subtitle' => 'Bulan '.($entity->periode_bulan ?? '-').' / '.($entity->periode_tahun ?? '-'),
-                'fields' => [
-                    ['label' => 'Kecamatan', 'value' => $entity->kecamatan?->nama],
-                    ['label' => 'Desa', 'value' => $entity->desa?->nama],
-                    ['label' => 'Jumlah Balita', 'value' => $entity->jumlah_balita],
-                    ['label' => 'Status', 'value' => $entity->status],
+                    ['label' => 'Alamat', 'value' => $entity->alamat ?: '-'],
+                    ['label' => 'Keluarga tertaut dari data OPD', 'value' => count($entity->keluarga_dataset_value_ids ?? [])],
                 ],
             ],
             default => [

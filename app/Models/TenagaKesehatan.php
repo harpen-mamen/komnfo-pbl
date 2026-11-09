@@ -18,7 +18,6 @@ class TenagaKesehatan extends Model
     protected $table = 'tenaga_kesehatans';
 
     protected $fillable = [
-        'data_kesehatan_bulanan_id',
         'submission_batch_id',
         'fasilitas_kesehatan_id',
         'penduduk_id',
@@ -64,11 +63,7 @@ class TenagaKesehatan extends Model
         return UserScope::visibleTo($query);
     }
 
-    public function dataKesehatan(): BelongsTo
-    {
-        return $this->belongsTo(DataKesehatanBulanan::class);
-    }
-
+    // dataKesehatan relationship removed - DataKesehatanBulanan table deleted
     public function submissionBatch(): BelongsTo
     {
         return $this->belongsTo(SubmissionBatch::class);

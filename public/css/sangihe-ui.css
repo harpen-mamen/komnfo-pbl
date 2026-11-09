@@ -1,0 +1,148 @@
+/* Sangihe visual system: deep sea, island teal, muted brass, warm paper. */
+:root {
+  --theme-primary: #194c48;
+  --theme-primary-light: #397a70;
+  --theme-primary-dark: #123334;
+  --theme-accent: #9a8038;
+  --theme-bg: #f3f5f2;
+  --theme-surface: #fbfcfa;
+  --theme-surface-muted: #edf1ed;
+  --theme-card: #fbfcfa;
+  --theme-text: #172b2d;
+  --theme-text-muted: #617171;
+  --theme-border: #dce4df;
+  --theme-border-light: #e8ede9;
+  --theme-radius: 10px;
+  --theme-radius-lg: 14px;
+  --theme-shadow: 0 1px 3px rgba(18,43,45,.06), 0 1px 2px rgba(18,43,45,.03);
+  --theme-shadow-md: 0 8px 22px rgba(18,43,45,.08);
+  --theme-shadow-lg: 0 16px 38px rgba(12,32,37,.13);
+}
+
+html, body, body.fi-body { background: var(--theme-bg) !important; color: var(--theme-text); }
+body.fi-body { font-family: 'Inter', 'DM Sans', system-ui, sans-serif !important; }
+.fi-sidebar, .filament-sidebar { background: linear-gradient(180deg,#102e36 0%,#153d3c 100%) !important; }
+.fi-sidebar-header, .filament-sidebar-header { background: rgba(8,24,29,.24) !important; border-color: rgba(225,210,157,.15) !important; }
+.fi-sidebar-header .fi-logo, .filament-sidebar-header .fi-logo { color: #f5f3e9 !important; }
+.fi-sidebar-group-label, .filament-sidebar-group-label { color: #a9bcb6 !important; }
+.fi-sidebar-item > a, .filament-sidebar-item > a { color: #d5e0dc !important; border-radius: 8px !important; }
+.fi-sidebar-item:hover > a, .filament-sidebar-item:hover > a { background: rgba(255,255,255,.08) !important; color: white !important; }
+.fi-sidebar-item.fi-active > a, .filament-sidebar-item-active > a { color: white !important; background: rgba(57,122,112,.32) !important; box-shadow: inset 3px 0 #c2aa61 !important; border-color: rgba(210,189,121,.2) !important; }
+.fi-topbar, .filament-topbar { background: rgba(251,252,250,.96) !important; border-color: var(--theme-border) !important; }
+.fi-main, .filament-main { background: var(--theme-bg) !important; }
+.fi-header-heading, .filament-header-heading { color: #173b3b !important; }
+.fi-section, .fi-wi-widget, .fi-ta-ctn, .fi-fo-component-ctn, .filament-card { border-color: var(--theme-border) !important; border-radius: var(--theme-radius-lg) !important; box-shadow: var(--theme-shadow) !important; }
+.fi-section-header, .fi-ta-header, .filament-table-header { background: var(--theme-surface-muted) !important; }
+.fi-wi-stats-overview-stat { border-color: var(--theme-border) !important; border-radius: 12px !important; box-shadow: var(--theme-shadow) !important; }
+.fi-wi-stats-overview-stat-value { color: var(--theme-text) !important; }
+.fi-wi-stats-overview-stat-description, .fi-breadcrumbs a:hover { color: var(--theme-primary) !important; }
+.fi-ta-row:hover td { background: #f2f6f2 !important; }
+.fi-btn-color-primary { --c-400: 57,122,112; --c-500: 36,95,88; --c-600: 25,76,72; }
+.fi-input-wrp:focus-within { --tw-ring-color: #397a70 !important; }
+.fi-pagination-item-active button { background: #194c48 !important; }
+
+/* Apply the same Sangihe tokens to hand-built OPD dashboards and pages. */
+.sd-wrap, .ds-dashboard, .dash-page, .opd-info, .sd-review, .sd-send,
+.data-opd-page, .opd-input-page { color: var(--theme-text) !important; }
+.sd-hero, .ds-hero, .dash-hero, .info-hero, .opd-info-hero,
+.sd-review-hero, .sd-send-hero, .sipandu-page-hero {
+  background: linear-gradient(112deg,#102e36 0%,#194c48 72%,#285c58 100%) !important;
+  color: #fff !important;
+  border: 1px solid rgba(205,187,123,.18) !important;
+  box-shadow: 0 14px 34px rgba(16,46,54,.13) !important;
+}
+.sd-hero h1, .ds-hero__title, .dash-hero h1, .info-hero h1,
+.opd-info-hero h1, .sd-review-hero h2, .sd-send-hero h2 { color: #fff !important; }
+.sd-hero p, .ds-hero__subtitle, .dash-hero p, .info-hero p,
+.opd-info-hero p, .sd-review-hero p, .sd-send-hero p { color: #dce9e4 !important; }
+.sd-kpi, .ds-kpi, .dash-stat, .sd-section, .ds-card, .dash-section,
+.info-card, .section, .opd-info-card, .opd-chart-card, .sd-review-package,
+.sd-send-toolbar, .sd-send-card, .opd-stat-card, .sipandu-stat-card,
+.sipandu-form-panel, .sipandu-history-card {
+  border-color: var(--theme-border) !important;
+  border-radius: var(--theme-radius-lg) !important;
+  background: var(--theme-surface) !important;
+  box-shadow: var(--theme-shadow) !important;
+}
+.sd-head, .ds-card-header, .sd-review-head { background: var(--theme-surface-muted) !important; border-color: var(--theme-border) !important; }
+.sd-kpi-value, .ds-kpi__value, .dash-stat .num, .info-card .num,
+.opd-info-title, .opd-chart-heading, .section-title, .dash-section h3,
+.sd-head h2, .ds-heading { color: #173b3b !important; }
+.sd-kpi-label, .sd-kpi-description, .ds-kpi__label, .ds-kpi__delta,
+.dash-stat .lbl, .dash-row .name small, .sd-meta, .sd-sub, .field-meta,
+.recent-item .id, .recent-item .preview, .opd-chart-help { color: var(--theme-text-muted) !important; }
+.sd-card, .dash-row, .field-item, .recent-item, .sd-row, .opd-empty,
+.sd-review-empty, .sd-send-empty { background: #f4f7f4 !important; border-color: var(--theme-border) !important; }
+.sd-code, .sd-send-button, .sd-primary, .action-bar a.primary,
+.sd-review-btn[style*="background"], .info-hero + .action-bar a.primary {
+  background-color: var(--theme-primary) !important; color: #fff !important;
+}
+.sd-code { background: transparent !important; color: var(--theme-primary) !important; }
+.sd-status.ready, .badge-success, .status-published, .info-card.published .num { background: #e5eee6 !important; color: #376b4c !important; }
+.badge-primary, .status-verified, .info-card.verified .num { background: #e7eff0 !important; color: #315d70 !important; }
+.status-submitted, .info-card.submitted .num, .status-revision, .info-card.revision .num { background: #f4efdf !important; color: #665326 !important; }
+.status-rejected, .info-card.rejected .num { background: #f8eae7 !important; color: #8e3f35 !important; }
+.ds-hero__decor { opacity: .18 !important; }
+.sd-progress-bar, .dash-progress-bar, .bar-fill, .stat-chart-bar { background: #397a70 !important; }
+.opd-chart-kpi { background: #edf5f3 !important; color: #194c48 !important; }
+.opd-chart-card:hover, .sd-card:hover { border-color: #9abbb0 !important; }
+.sd-secondary, .action-bar a.outline, .sd-review-detail { color: #294644 !important; border-color: #c7d7d0 !important; background: #fbfcfa !important; }
+.sd-review-field { border-color: var(--theme-border) !important; }
+.sd-review-field-label, .sd-review-meta { color: var(--theme-text-muted) !important; }
+.sd-review-field-value, .sd-title, .sd-send-name, .sd-row .sd-title { color: var(--theme-text) !important; }
+.fi-page .fi-btn-color-primary, .fi-modal .fi-btn-color-primary { --c-400: 57,122,112; --c-500: 36,95,88; --c-600: 25,76,72; }
+.fi-page input, .fi-page select, .fi-page textarea { border-color: var(--theme-border) !important; }
+.fi-page input:focus, .fi-page select:focus, .fi-page textarea:focus { --tw-ring-color: #397a70 !important; border-color: #397a70 !important; }
+.ds-dashboard { --ds-ink-50:#f3f5f2; --ds-ink-100:#edf1ed; --ds-ink-200:#dce4df; --ds-ink-300:#c6d2cc; --ds-ink-500:#617171; --ds-ink-600:#4b6261; --ds-ink-700:#334d4c; --ds-ink-800:#1e3b3a; --ds-ink-900:#173738; --ds-ink-950:#102e36; }
+.ds-dashboard .ds-hero__bg { background: linear-gradient(112deg,#102e36,#194c48 72%,#285c58) !important; }
+.ds-dashboard .ds-badge--info, .ds-dashboard .ds-kpi__icon--info { background: #edf3f4 !important; color: #315d70 !important; }
+.ds-dashboard .ds-action--info .ds-action__icon { background: #edf3f4 !important; color: #315d70 !important; }
+.dash-stat, .dash-section { border-color: var(--theme-border) !important; }
+.dash-stat .num, .dash-section h3, .dash-row .name { color: var(--theme-text) !important; }
+
+/* Normalize legacy design-system utilities used throughout OPD pages. */
+:root {
+  --ds-ink-0: #fbfcfa;
+  --ds-ink-50: #f3f5f2;
+  --ds-ink-100: #edf1ed;
+  --ds-ink-200: #dce4df;
+  --ds-ink-300: #c6d2cc;
+  --ds-ink-400: #91a19a;
+  --ds-ink-500: #617171;
+  --ds-ink-600: #4b6261;
+  --ds-ink-700: #334d4c;
+  --ds-ink-800: #1e3b3a;
+  --ds-ink-900: #173738;
+  --ds-ink-950: #102e36;
+}
+.ds-dashboard, .ds-page, .ds-card, .ds-table { color: var(--theme-text); }
+.ds-btn--primary, .ds-action--primary, .ds-badge--primary { background-color: #194c48 !important; border-color: #194c48 !important; color: #fff !important; }
+.ds-btn--primary:hover, .ds-action--primary:hover { background-color: #123334 !important; }
+.ds-kpi__value, .ds-heading, .ds-table th { color: #173b3b !important; }
+.ds-kpi__icon--success, .ds-badge--success { background: #e5eee6 !important; color: #376b4c !important; }
+.ds-kpi__icon--warning, .ds-badge--warning { background: #f4efdf !important; color: #665326 !important; }
+.ds-kpi__icon--danger, .ds-badge--danger { background: #f8eae7 !important; color: #8e3f35 !important; }
+.ds-table tbody tr:hover { background: #f2f6f2 !important; }
+
+@media(max-width:760px) {
+  .dash-grid-2 { grid-template-columns: 1fr !important; }
+  .sd-grid { grid-template-columns: 1fr !important; }
+  .sd-review-foot { flex-wrap: wrap !important; }
+}
+
+.filament-login-page { isolation: isolate; padding: 2rem 0; background: #102e36 !important; }
+.filament-login-backdrop { z-index: -3; background: linear-gradient(100deg,rgba(8,26,32,.88),rgba(13,42,48,.58) 55%,rgba(13,42,48,.30)),url('/images/sangihe-coast.svg') center/cover no-repeat; }
+.filament-login-orbit { z-index: -2; border: 1px solid rgba(220,201,137,.12); pointer-events: none; }
+.filament-login-orbit--one { width: 34rem; height: 34rem; right: -15rem; top: -18rem; }
+.filament-login-orbit--two { width: 46rem; height: 46rem; right: -21rem; top: -24rem; border-color: rgba(220,201,137,.07); }
+.filament-login-page > div.relative.z-10 { width: min(100%,29rem) !important; }
+.filament-login-page > div.relative.z-10 > .text-center { margin-bottom: 1.2rem !important; }
+.filament-login-card { color: var(--theme-text); border-color: rgba(255,255,255,.7) !important; background: rgba(251,252,250,.97) !important; box-shadow: 0 28px 80px rgba(4,17,22,.35) !important; backdrop-filter: blur(12px); }
+.filament-login-card .fi-fo-field-wrp-label, .filament-login-card label { color: #263f3e !important; font-weight: 600 !important; }
+.filament-login-card input { min-height: 2.9rem; border-color: #d5dfda !important; border-radius: 9px !important; background: white !important; }
+.filament-login-card input:focus { border-color: #397a70 !important; box-shadow: 0 0 0 3px rgba(57,122,112,.13) !important; }
+.filament-login-card button[type=submit] { min-height: 2.9rem; border-radius: 9px !important; background: #194c48 !important; color: white !important; box-shadow: none !important; }
+.filament-login-card button[type=submit]:hover { background: #123334 !important; }
+@media(max-width:640px) { .filament-login-page { padding: 1.5rem 0; } .filament-login-card { padding: 1.35rem !important; } }
+
+

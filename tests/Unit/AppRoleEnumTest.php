@@ -58,9 +58,9 @@ class AppRoleEnumTest extends TestCase
     public function test_opd_module_returns_correct_module(): void
     {
         $this->assertSame('kesehatan', AppRole::ADMIN_DINKES->opdModule());
-        $this->assertSame('kesehatan', AppRole::OPERATOR_PUSKESMAS->opdModule());
+        $this->assertSame('kesehatan', AppRole::OPERATOR_DINKES->opdModule());
         $this->assertSame('pendidikan', AppRole::ADMIN_DISPEND->opdModule());
-        $this->assertSame('pendidikan', AppRole::OPERATOR_SEKOLAH->opdModule());
+        $this->assertSame('pendidikan', AppRole::OPERATOR_DISPEND->opdModule());
         $this->assertSame('pu', AppRole::ADMIN_DPU->opdModule());
         $this->assertSame('sosial', AppRole::ADMIN_DINSOS->opdModule());
         $this->assertSame('ekonomi', AppRole::ADMIN_DISPERINDAG->opdModule());
@@ -76,7 +76,7 @@ class AppRoleEnumTest extends TestCase
     public function test_is_opd_level_returns_correct_value(): void
     {
         $this->assertTrue(AppRole::ADMIN_DINKES->isOpdLevel());
-        $this->assertTrue(AppRole::OPERATOR_PUSKESMAS->isOpdLevel());
+        $this->assertTrue(AppRole::OPERATOR_DINKES->isOpdLevel());
         $this->assertTrue(AppRole::ADMIN_OPD->isOpdLevel());
 
         $this->assertFalse(AppRole::SUPER_ADMIN->isOpdLevel());

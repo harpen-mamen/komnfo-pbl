@@ -1,5 +1,5 @@
 @php use Illuminate\Support\Str; @endphp
-<x-filament::page>
+<x-filament-panels::page>
     <div class="grid gap-4 lg:grid-cols-[18rem_1fr]" x-data="{ end: () => $nextTick(() => $refs.messages?.scrollTo(0, $refs.messages.scrollHeight)) }" x-init="end()">
         <aside class="rounded-xl bg-white p-4 shadow-sm dark:bg-gray-800">
             <div class="flex items-center justify-between gap-2"><h2 class="font-semibold text-gray-950 dark:text-white">Percakapan</h2><button type="button" wire:click="newConversation" class="rounded-lg bg-primary-600 px-3 py-2 text-xs font-semibold text-white">Chat Baru</button></div>
@@ -13,4 +13,4 @@
             <form wire:submit.prevent="sendMessage" class="border-t border-gray-200 p-4"><div class="flex items-end gap-2"><textarea wire:model.defer="message" rows="2" required placeholder="Tulis pertanyaan Anda..." class="flex-1 resize-none rounded-xl border-gray-300 text-sm"></textarea><button wire:loading.attr="disabled" wire:target="sendMessage" type="submit" class="rounded-xl bg-primary-600 px-4 py-3 text-sm font-semibold text-white disabled:opacity-50">Kirim</button></div>@if ($conversationId)<div class="mt-2 flex gap-3 text-xs text-gray-500"><button type="button" x-data x-on:click="navigator.clipboard.writeText(@js(collect($messages)->pluck('content')->implode("\n\n")))">Copy</button><button type="button" wire:click="exportConversation('txt')">Export</button><button type="button" wire:click="exportConversation('word')">Word</button><button type="button" wire:click="exportConversation('pdf')">PDF/Print</button></div>@endif</form>
         </section>
     </div>
-</x-filament::page>
+</x-filament-panels::page>

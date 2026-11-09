@@ -2,6 +2,7 @@
 
 namespace App\Services\AI;
 
+use Throwable;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -49,7 +50,7 @@ class AIService
                         ]]
                     ),
                 ]);
-        } catch (\Throwable $exception) {
+        } catch (Throwable $exception) {
             Log::error('AI gateway request failed.', [
                 'exception' => $exception,
                 'url' => $url,

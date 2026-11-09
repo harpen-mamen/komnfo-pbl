@@ -2,27 +2,19 @@
 
 namespace App\Filament\Pages;
 
-use App\Models\Kecamatan;
-use App\Models\Keluarga;
-use App\Models\Penduduk;
-use App\Models\Rumah;
+use App\Filament\Resources\SubmissionBatchResource;
+use App\Models\MobileFieldPoint;
 use App\Models\SubmissionBatch;
-use App\Services\SubmissionBatchService;
+use App\Models\Wilayah;
 use App\Support\PanelAccess;
-use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 
 class KirimDataKeKominfo extends Page
 {
-    public ?int $periodeBulan;
-    public string $semester;
-    public int $periodeTahun;
-    public array $selectedModules = [];
-    public ?string $notes = null;
-
-    protected static ?string $title = 'Kirim Data ke Kominfo';
-    protected static string $view = 'filament.pages.kirim-data-kominfo';
-    protected static ?string $navigationIcon = 'heroicon-o-upload';
+    protected static ?string $navigationLabel = 'Kiriman Mobile';
+    protected static ?string $title = 'Kiriman Mobile Kecamatan';
+    protected string $view = 'filament.pages.kirim-data-kominfo';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-arrow-up-tray';
     protected static ?int $navigationSort = 50;
 
     public static function shouldRegisterNavigation(): bool
@@ -34,64 +26,50 @@ class KirimDataKeKominfo extends Page
     {
         abort_unless(PanelAccess::isAdminKecamatan(), 403);
 
-        $this->periodeBulan = now()->month;
-        $this->semester = now()->month <= 6 ? 'ganjil' : 'genap';
-        $this->periodeTahun = now()->year;
-        $this->selectedModules = array_keys(app(SubmissionBatchService::class)->moduleDefinitions());
     }
 
     protected function getViewData(): array
     {
         $user = PanelAccess::user();
-        $kecamatanId = $user?->kecamatan_id;
-        $service = app(SubmissionBatchService::class);
+        $kecamatanId = (int) ($user?->kecamatan_id ?: $user?->desa?->parent_id);
 
-        $rumahs = Rumah::query()->whereHas('desa', fn ($q) => $q->where('kecamatan_id', $kecamatanId));
-        $keluargas = Keluarga::query()->whereHas('rumah.desa', fn ($q) => $q->where('kecamatan_id', $kecamatanId));
-        $penduduks = Penduduk::query()->whereHas('keluarga.rumah.desa', fn ($q) => $q->where('kecamatan_id', $kecamatanId));
+        if (! $kecamatanId) {
+            return [
+                'kecamatan' => null,
+                'totalPoints' => 0,
+                'pendingBatches' => 0,
+                'inReviewBatches' => 0,
+                'forwardedBatches' => 0,
+                'points' => collect(),
+                'hasVillages' => false,
+            ];
+        }
 
-        $lastBatches = SubmissionBatch::query()->where('kecamatan_id', $kecamatanId)->latest('submitted_at')->limit(5)->get();
-        $preview = $service->preview($kecamatanId, $this->periodeBulan, $this->semester, $this->periodeTahun);
+        $desaIds = Wilayah::query()
+            ->where('parent_id', $kecamatanId)
+            ->where('tipe', Wilayah::TIPE_DESA)
+            ->pluck('id');
+
+        $mobileBatches = SubmissionBatch::query()
+            ->where('kecamatan_id', $kecamatanId)
+            ->where('module', SubmissionBatch::MODULE_LAPANGAN)
+            ->where('payload_snapshot->source', 'mobile');
+
+        $points = MobileFieldPoint::query()
+            ->with(['desa:id,nama,parent_id', 'submissionBatch:id,submission_number,module,status,submitted_at,forwarded_at'])
+            ->whereIn('desa_id', $desaIds)
+            ->latest()
+            ->limit(50)
+            ->get();
 
         return [
-            'total_rumah' => $rumahs->count(),
-            'total_keluarga' => $keluargas->count(),
-            'total_penduduk' => $penduduks->count(),
-            'last_submissions' => $lastBatches,
-            'modules' => $service->moduleDefinitions(),
-            'preview' => $preview,
+            'kecamatan' => Wilayah::query()->whereKey($kecamatanId)->value('nama'),
+            'totalPoints' => MobileFieldPoint::query()->whereIn('desa_id', $desaIds)->count(),
+            'pendingBatches' => (clone $mobileBatches)->where('status', SubmissionBatch::STATUS_PENDING)->count(),
+            'inReviewBatches' => (clone $mobileBatches)->where('status', SubmissionBatch::STATUS_IN_REVIEW)->whereNull('forwarded_at')->count(),
+            'forwardedBatches' => (clone $mobileBatches)->whereNotNull('forwarded_at')->count(),
+            'points' => $points,
+            'hasVillages' => $desaIds->isNotEmpty(),
         ];
-    }
-
-    public function submit()
-    {
-        $user = PanelAccess::user();
-        $kecamatanId = $user?->kecamatan_id;
-
-        try {
-            $batches = app(SubmissionBatchService::class)->submit($kecamatanId, $this->selectedModules, $this->periodeBulan, $this->semester, $this->periodeTahun, $this->notes, $user);
-
-            Notification::make()
-                ->title('Batch pengiriman berhasil dibuat')
-                ->body('Batch modul data telah dikirim ke Kominfo dan siap diverifikasi.')
-                ->success()
-                ->send();
-
-            return redirect()->route('filament.pages.dashboard-operasional');
-        } catch (\Throwable $e) {
-            if (request()->wantsJson()) {
-                return response()->json([
-                    'message' => $e->getMessage(),
-                ], 422);
-            }
-
-            Notification::make()
-                ->title('Gagal membuat batch')
-                ->body($e->getMessage())
-                ->danger()
-                ->send();
-
-            return null;
-        }
     }
 }

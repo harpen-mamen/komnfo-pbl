@@ -8,7 +8,7 @@ use Filament\Widgets\ChartWidget;
 
 class MaritalStatusAnalyticsWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Status Perkawinan Penduduk';
+    protected ?string $heading = 'Status Perkawinan Penduduk';
     protected static ?int $sort = 4;
 
     public static function canView(): bool

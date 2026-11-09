@@ -2,13 +2,21 @@
 
 namespace App\Services;
 
-use App\Models\Kecamatan;
+use RuntimeException;
+use Illuminate\Auth\Access\AuthorizationException;
+use App\Models\Rumah;
+use App\Models\Keluarga;
+use App\Models\Penduduk;
+use App\Models\StokObat;
+use App\Models\RekamMedis;
+use App\Models\DataGuru;
+use App\Models\DataSiswa;
+use App\Models\DataPrasarana;
+use App\Models\Wilayah;
 use App\Models\SubmissionBatch;
 use App\Models\SubmissionBatchItem;
 use App\Models\User;
 use App\Services\Submission\Modules\ModuleRegistry;
-use App\Services\SubmissionSnapshotService;
-use App\Services\SubmissionWorkflowService;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -37,6 +45,7 @@ class SubmissionBatchService
     public const MODULE_PENDIDIKAN = SubmissionBatch::MODULE_PENDIDIKAN;
     public const MODULE_PUSKES = SubmissionBatch::MODULE_PUSKES;
     public const MODULE_SEKOLAH = SubmissionBatch::MODULE_SEKOLAH;
+    public const MODULE_LAPANGAN = SubmissionBatch::MODULE_LAPANGAN;
 
     private readonly ModuleRegistry $registry;
 
@@ -64,6 +73,7 @@ class SubmissionBatchService
             'semester' => $semester,
             'periode_tahun' => $periodeTahun,
             'modules' => collect($this->registry->definitions())
+                ->when($actor && $this->isSupportedOpdSubmitter($actor), fn ($definitions) => $definitions->filter(fn (array $_, string $module): bool => in_array($module, $this->modulesForOpdActor($actor), true)))
                 ->map(fn (array $definition, string $module): array => $this->modulePreviewRow($module, $kecamatanId, $periodeBulan, $semester, $periodeTahun, $definition, $actor))
                 ->values()
                 ->all(),
@@ -75,7 +85,18 @@ class SubmissionBatchService
         $actor ??= auth()->user();
 
         if (! $actor) {
-            throw new \RuntimeException('Pengguna harus terautentikasi untuk mengirim batch.');
+            throw new RuntimeException('Pengguna harus terautentikasi untuk mengirim batch.');
+        }
+
+        $isOpdSubmitter = $this->isSupportedOpdSubmitter($actor);
+        if ($isOpdSubmitter) {
+            $modules = array_values(array_intersect($this->normalizeModules($modules), $this->modulesForOpdActor($actor)));
+            if ($modules === []) {
+                throw new AuthorizationException('OPD hanya dapat mengirim dataset sektoral sesuai kewenangannya.');
+            }
+            if ($actor->kecamatan_id && (int) $actor->kecamatan_id !== $kecamatanId) {
+                throw new AuthorizationException('Akun OPD tidak dapat mengirim laporan kecamatan lain.');
+            }
         }
 
         if ($actor->hasRole('admin_desa')) {
@@ -87,28 +108,32 @@ class SubmissionBatchService
 
         $desaId = $this->assertActorScope($actor, $kecamatanId, $modules);
 
-        $actorKecamatanId = $actor->kecamatan_id ?: $actor->desa?->kecamatan_id;
+        $actorKecamatanId = $actor->kecamatan_id ?: $actor->desa?->parent_id;
         if ($actor->hasAnyRole(['admin_kecamatan', 'admin_desa']) && (int) $actorKecamatanId !== $kecamatanId) {
-            throw new \Illuminate\Auth\Access\AuthorizationException('Admin Kecamatan tidak dapat mengirim data kecamatan lain.');
+            throw new AuthorizationException('Admin Kecamatan tidak dapat mengirim data kecamatan lain.');
         }
 
-        if (! $actor->hasAnyRole(['admin_kecamatan', 'admin_desa', 'admin', 'super_admin', 'admin_kominfo'])) {
-            throw new \Illuminate\Auth\Access\AuthorizationException('Role ini tidak memiliki izin membuat batch pengiriman.');
+        if (! $actor->hasAnyRole(['admin_kecamatan', 'admin_desa', 'admin', 'super_admin', 'admin_kominfo']) && ! $isOpdSubmitter) {
+            throw new AuthorizationException('Role ini tidak memiliki izin membuat batch pengiriman.');
         }
 
-        return DB::transaction(function () use ($kecamatanId, $modules, $periodeBulan, $semester, $periodeTahun, $notes, $actor, $desaId): Collection {
-            Kecamatan::query()->findOrFail($kecamatanId);
+        return DB::transaction(function () use ($kecamatanId, $modules, $periodeBulan, $semester, $periodeTahun, $notes, $actor, $desaId, $isOpdSubmitter): Collection {
+            Wilayah::query()->where('tipe', Wilayah::TIPE_KECAMATAN)->findOrFail($kecamatanId);
             $selectedModules = $this->normalizeModules($modules);
 
             if ($selectedModules === []) {
-                throw new \RuntimeException('Pilih minimal satu modul data untuk dikirim.');
+                throw new RuntimeException('Pilih minimal satu modul data untuk dikirim.');
             }
 
             $modulePayloads = collect($selectedModules)
-                ->map(function (string $module) use ($kecamatanId, $periodeBulan, $semester, $periodeTahun, $desaId): array {
+                ->map(function (string $module) use ($kecamatanId, $periodeBulan, $semester, $periodeTahun, $desaId, $actor, $isOpdSubmitter): array {
                     $handler = $this->registry->get($module);
                     $context = $handler->context($periodeBulan, $semester, $periodeTahun);
-                    $records = $handler->query($kecamatanId, $context, $desaId)->get();
+                    $query = $handler->query($kecamatanId, $context, $desaId);
+                    if ($isOpdSubmitter) {
+                        $query->where('created_by', $actor->id);
+                    }
+                    $records = $query->get();
                     $ids = $records->pluck('id')->values();
 
                     return [
@@ -123,7 +148,7 @@ class SubmissionBatchService
                 ->values();
 
             if ($modulePayloads->isEmpty()) {
-                throw new \RuntimeException('Tidak ada data untuk dikirim pada modul yang dipilih.');
+                throw new RuntimeException('Tidak ada data untuk dikirim pada modul yang dipilih.');
             }
 
             $modulePayloads->each(function (array $payload) use ($kecamatanId): void {
@@ -136,7 +161,7 @@ class SubmissionBatchService
                 );
 
                 if ($existingBatch) {
-                    throw new \RuntimeException('Sudah ada batch aktif untuk modul '.$this->moduleLabel($payload['module']).' pada kecamatan dan periode yang sama.');
+                    throw new RuntimeException('Sudah ada batch aktif untuk modul '.$this->moduleLabel($payload['module']).' pada kecamatan dan periode yang sama.');
                 }
             });
 
@@ -222,8 +247,8 @@ class SubmissionBatchService
      * @param  string|null $notes
      * @param  User|null  $actor
      * @return Collection  Collection containing the submitted SubmissionBatch
-     * @throws \RuntimeException           When no entities provided
-     * @throws \RuntimeException           When active batch already exists
+     * @throws RuntimeException When no entities provided
+     * @throws RuntimeException When active batch already exists
      * @throws AuthorizationException      When actor not authorized
      */
     public function mobileSyncPush(int $kecamatanId, array $entityPayloads, ?string $notes = null, ?User $actor = null): Collection
@@ -231,25 +256,25 @@ class SubmissionBatchService
         $actor ??= auth()->user();
 
         if (! $actor) {
-            throw new \RuntimeException('Pengguna harus terautentikasi untuk mengirim batch.');
+            throw new RuntimeException('Pengguna harus terautentikasi untuk mengirim batch.');
         }
 
         if (! $actor->hasRole('admin_desa')) {
-            throw new \Illuminate\Auth\Access\AuthorizationException('Hanya Admin Desa yang dapat mengirim data via mobile sync.');
+            throw new AuthorizationException('Hanya Admin Desa yang dapat mengirim data via mobile sync.');
         }
 
         $desaId = $actor->desa_id;
-        $actorKecamatanId = $actor->kecamatan_id ?: $actor->desa?->kecamatan_id;
+        $actorKecamatanId = $actor->kecamatan_id ?: $actor->desa?->parent_id;
         if ((int) $actorKecamatanId !== $kecamatanId) {
-            throw new \Illuminate\Auth\Access\AuthorizationException('Admin Desa tidak dapat mengirim data kecamatan lain.');
+            throw new AuthorizationException('Admin Desa tidak dapat mengirim data kecamatan lain.');
         }
 
         if (! $desaId) {
-            throw new \RuntimeException('Akun Admin Desa belum terhubung ke desa.');
+            throw new RuntimeException('Akun Admin Desa belum terhubung ke desa.');
         }
 
         if ($entityPayloads === []) {
-            throw new \RuntimeException('Tidak ada data untuk dikirim.');
+            throw new RuntimeException('Tidak ada data untuk dikirim.');
         }
 
         return DB::transaction(function () use ($kecamatanId, $entityPayloads, $notes, $actor, $desaId): Collection {
@@ -289,7 +314,7 @@ class SubmissionBatchService
                 ->values();
 
             if ($flatPayloads->isEmpty()) {
-                throw new \RuntimeException('Tidak ada data valid untuk dikirim.');
+                throw new RuntimeException('Tidak ada data valid untuk dikirim.');
             }
 
             // Check for active batch conflicts
@@ -349,7 +374,7 @@ class SubmissionBatchService
      * Validate that entity IDs exist and belong to the actor's desa.
      * For mobile, we only accept rumah/keluarga/penduduk entities created by the actor.
      */
-    private function validateMobileEntityIds(string $module, array $ids, User $actor): \Illuminate\Support\Collection
+    private function validateMobileEntityIds(string $module, array $ids, User $actor): Collection
     {
         if ($ids === []) {
             return collect();
@@ -359,15 +384,15 @@ class SubmissionBatchService
 
         foreach ($ids as $id) {
             $valid = match ($module) {
-                self::MODULE_RUMAH => \App\Models\Rumah::query()
+                self::MODULE_RUMAH => Rumah::query()
                     ->whereKey($id)
                     ->where('desa_id', $actor->desa_id)
                     ->exists(),
-                self::MODULE_KELUARGA => \App\Models\Keluarga::query()
+                self::MODULE_KELUARGA => Keluarga::query()
                     ->whereKey($id)
                     ->whereHas('rumah', fn ($q) => $q->where('desa_id', $actor->desa_id))
                     ->exists(),
-                self::MODULE_PENDUDUK => \App\Models\Penduduk::query()
+                self::MODULE_PENDUDUK => Penduduk::query()
                     ->whereKey($id)
                     ->whereHas('keluarga.rumah', fn ($q) => $q->where('desa_id', $actor->desa_id))
                     ->exists(),
@@ -398,7 +423,7 @@ class SubmissionBatchService
             );
 
             if ($existingBatch) {
-                throw new \RuntimeException(
+                throw new RuntimeException(
                     'Sudah ada batch aktif untuk modul '.$this->moduleLabel($payload['module'])
                     .'. Selesaikan atau batalkan batch sebelumnya sebelum mengirim data baru.'
                 );
@@ -441,7 +466,11 @@ class SubmissionBatchService
         $handler = $definition['handler'] ?? $this->registry->get($module);
         $context = $handler->context($periodeBulan, $semester, $periodeTahun);
         $desaId = $actor ? $this->assertActorScope($actor, $kecamatanId, [$module]) : null;
-        $count = $handler->query($kecamatanId, $context, $desaId)->count();
+        $query = $handler->query($kecamatanId, $context, $desaId);
+        if ($actor && $this->isSupportedOpdSubmitter($actor) && in_array($module, $this->modulesForOpdActor($actor), true)) {
+            $query->where('created_by', $actor->id);
+        }
+        $count = $query->count();
         $latestBatch = SubmissionBatch::query()
             ->forModule($module)
             ->where('kecamatan_id', $kecamatanId)
@@ -467,20 +496,38 @@ class SubmissionBatchService
 
     private function assertActorScope(User $actor, int $kecamatanId, array $modules): ?int
     {
-        $actorKecamatanId = $actor->kecamatan_id ?: $actor->desa?->kecamatan_id;
+        $actorKecamatanId = $actor->kecamatan_id ?: $actor->desa?->parent_id;
         if ($actor->hasAnyRole(['admin_kecamatan', 'admin_desa']) && (int) $actorKecamatanId !== $kecamatanId) {
-            throw new \Illuminate\Auth\Access\AuthorizationException('Akun tidak dapat mengirim data kecamatan lain.');
+            throw new AuthorizationException('Akun tidak dapat mengirim data kecamatan lain.');
         }
 
         if ($actor->hasRole('admin_desa')) {
-            if (! $actor->desa_id || (int) $actor->desa?->kecamatan_id !== $kecamatanId) {
-                throw new \Illuminate\Auth\Access\AuthorizationException('Akun Desa belum memiliki wilayah yang valid.');
+            if (! $actor->desa_id || (int) $actor->desa?->parent_id !== $kecamatanId) {
+                throw new AuthorizationException('Akun Desa belum memiliki wilayah yang valid.');
             }
 
             return (int) $actor->desa_id;
         }
 
         return null;
+    }
+
+    private function isSupportedOpdSubmitter(User $actor): bool
+    {
+        return $actor->hasAnyRole(['admin_dinkes', 'operator_dinkes', 'admin_dispend', 'operator_dispend']);
+    }
+
+    private function modulesForOpdActor(User $actor): array
+    {
+        if ($actor->hasAnyRole(['admin_dinkes', 'operator_dinkes'])) {
+            return [self::MODULE_KESEHATAN];
+        }
+
+        if ($actor->hasAnyRole(['admin_dispend', 'operator_dispend'])) {
+            return [self::MODULE_PENDIDIKAN];
+        }
+
+        return [];
     }
 
     private function moduleLabel(string $module): string
@@ -534,13 +581,13 @@ class SubmissionBatchService
             // puskes module: assign child records (stok_obats, rekam_medis)
             if ($payload['module'] === self::MODULE_PUSKES) {
                 $childTableAssignments[] = [
-                    'model' => \App\Models\StokObat::class,
+                    'model' => StokObat::class,
                     'foreign_key' => 'fasilitas_kesehatan_id',
                     'parent_ids' => $payload['ids'],
                     'batch_id' => $batch->id,
                 ];
                 $childTableAssignments[] = [
-                    'model' => \App\Models\RekamMedis::class,
+                    'model' => RekamMedis::class,
                     'foreign_key' => 'fasilitas_kesehatan_id',
                     'parent_ids' => $payload['ids'],
                     'batch_id' => $batch->id,
@@ -550,19 +597,19 @@ class SubmissionBatchService
             // sekolah module: assign child records (data_gurus, data_siswas, data_prasaranas)
             if ($payload['module'] === self::MODULE_SEKOLAH) {
                 $childTableAssignments[] = [
-                    'model' => \App\Models\DataGuru::class,
+                    'model' => DataGuru::class,
                     'foreign_key' => 'sekolah_id',
                     'parent_ids' => $payload['ids'],
                     'batch_id' => $batch->id,
                 ];
                 $childTableAssignments[] = [
-                    'model' => \App\Models\DataSiswa::class,
+                    'model' => DataSiswa::class,
                     'foreign_key' => 'sekolah_id',
                     'parent_ids' => $payload['ids'],
                     'batch_id' => $batch->id,
                 ];
                 $childTableAssignments[] = [
-                    'model' => \App\Models\DataPrasarana::class,
+                    'model' => DataPrasarana::class,
                     'foreign_key' => 'sekolah_id',
                     'parent_ids' => $payload['ids'],
                     'batch_id' => $batch->id,

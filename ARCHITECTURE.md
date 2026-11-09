@@ -18,7 +18,7 @@ Tujuan utama:
 - Satu sumber data kebenaran (Single Source of Truth) untuk seluruh data pemerintahan
 - Setiap data resmi wajib melewati workflow verifikasi sebelum dipublikasikan
 - OPD adalah produsen dan pemilik dataset, Kominfo adalah penjaga kualitas dan gateway publikasi
-- Mobile app memungkinkan input data offline-first di tingkat desa
+- Mobile app memungkinkan pendataan titik objek secara offline oleh Admin Lapangan
 - Dashboard eksekutif tersedia untuk bupati, wakil bupati, dan kepala OPD
 
 ### 1.2 Prinsip Arsitektur
@@ -38,36 +38,27 @@ Tujuan utama:
 
 BUPATI & WAKIL BUPATI (Dashboard Eksekutif)
   |-- DINAS KOMINFO (Gateway & Verifikasi Final)
-  |-- 20 DINAS/BADAN (OPD) - Produsen Dataset
-  |     |-- Admin OPD + Operator OPD + Kepala Dinas
+  |-- 20 DINAS/BADAN (OPD) - Pemilik Dataset
+  |     |-- Admin OPD
+  |-- DINAS KOMINFO - Walidata Kabupaten
   |-- 15 KECAMATAN
-        |-- Admin Kecamatan
-              |-- 197 DESA
-                    |-- Admin Desa (Mobile App)
+        |-- Admin Kecamatan - pemeriksa pendataan lapangan
+        |-- Admin Lapangan - pengumpul titik objek wilayah
 
 ---
 
 ## 2. ALUR DATA END-TO-END
 
-### 2.1 Tiga Jalur Input Data
+### 2.1 Jalur Data
 
-**JALUR 1: WILAYAH (Desa -> Kecamatan -> Kominfo)**
-Admin Desa (Mobile App) input: Rumah, Keluarga, Penduduk -> Sync ke Server -> Batch Draft -> Kirim ke Kecamatan -> Admin Kecamatan merangkum data dari semua desa -> Kirim ke Kominfo -> Batch Pending Review
+**JALUR 1: PENDATAAN LAPANGAN (Admin Lapangan -> Kecamatan -> Walidata)**
+Admin Lapangan hanya mencatat objek geografis seperti titik koordinat rumah dan fasilitas. Form rumah mencari dan memilih data Keluarga/Penduduk yang sudah tersedia dari OPD pemilik data; petugas lapangan tidak membuat atau mengubah nama, NIK, KK, maupun atribut demografi. Data titik beserta relasinya disimpan sebagai batch, dikirim ke Admin Kecamatan untuk pemeriksaan wilayah, lalu diteruskan ke Walidata untuk validasi akhir dan publikasi.
 
-**JALUR 2: OPD (Langsung Input)**
-Admin/Operator OPD input data sektoral sesuai OPD -> Batch OPD Draft -> Verifikasi Internal (Kepala Dinas) -> Batch Approved OPD -> Kirim ke Kominfo
+**JALUR 2: DATA SEKTORAL (Admin OPD -> Walidata)**
+Admin OPD mengisi dan mengelola dataset milik OPD-nya di platform. Setiap OPD memiliki form, validasi, dan periode pelaporan yang sesuai kewenangannya. Data sektoral dikirim ke Walidata untuk validasi dan publikasi; OPD lain tidak boleh mengubah dataset tersebut.
 
-**JALUR 3: Verifikasi Silang OPD**
-Data dari Kecamatan masuk ke verifikasi OPD terkait:
-- DUKCAPIL -> verifikasi NIK/akta
-- DISDIK -> verifikasi NPSN/guru
-- DINKES -> verifikasi faskes
-- DPUPR -> verifikasi infrastruktur jalan
-- DLH -> verifikasi TPA/Sampah
-- DISTAN -> verifikasi lahan
-- DISPERINDAG -> verifikasi pasar/UMKM
-- BPBD -> verifikasi bencana
-Setelah verifikasi OPD -> Forward ke Kominfo
+**JALUR 3: DATA MASTER RUJUKAN OPD**
+OPD pemilik sumber data mengelola data master yang menjadi rujukan lintas sektor, misalnya data keluarga dan penduduk oleh Dukcapil. Modul lapangan hanya membaca data rujukan yang berhak dipakai dan menghubungkannya ke objek spasial. Perubahan atribut identitas tetap menjadi kewenangan OPD pemilik data.
 
 ### 2.2 Workflow Status Batch
 
@@ -91,37 +82,29 @@ Setelah verifikasi OPD -> Forward ke Kominfo
 
 | Status Awal | Aksi | Status Baru | Actor |
 |------------|------|------------|-------|
-| DRAFT | Kirim | PENDING | Admin Desa / Admin Kecamatan |
-| PENDING | Mulai Review | IN_REVIEW | Admin Kecamatan / Admin Kominfo |
-| IN_REVIEW | Setuju | APPROVED | Admin Kominfo |
-| IN_REVIEW | Minta Revisi | REVISION | Admin Kominfo / OPD Verifikator |
-| IN_REVIEW | Tolak | REJECTED | Admin Kominfo |
-| REVISION | Kirim Ulang | PENDING | Admin Desa / Admin Kecamatan |
-| APPROVED | Arsipkan | ARCHIVED | Admin Kominfo |
-| REJECTED | Arsipkan | ARCHIVED | Admin Kominfo |
+| DRAFT | Kirim data lapangan | PENDING | Admin Lapangan |
+| PENDING | Mulai pemeriksaan wilayah | IN_REVIEW | Admin Kecamatan |
+| IN_REVIEW | Teruskan | IN_REVIEW + forwarded | Admin Kecamatan |
+| IN_REVIEW + forwarded | Setuju / Tolak / Minta Revisi | APPROVED / REJECTED / REVISION | Walidata |
+| DRAFT | Kirim data sektoral | PENDING | Admin OPD |
+| PENDING | Mulai validasi sektoral | IN_REVIEW | Walidata |
+| IN_REVIEW | Setuju / Tolak / Minta Revisi | APPROVED / REJECTED / REVISION | Walidata |
+| REVISION | Kirim ulang | PENDING | Admin Lapangan / Admin OPD |
+| APPROVED | Arsipkan | ARCHIVED | Walidata |
+| REJECTED | Arsipkan | ARCHIVED | Walidata |
 
 ---
 
 ## 3. STRUKTUR ROLE & AKSES
 
-### 3.1 Hierarki Role (5 Tier)
+### 3.1 Role Operasional
 
-**TIER 1: SUPER ADMIN**
-full system access, manage all users & OPDs
+Role operasional utama adalah **Admin OPD**, **Walidata**, **Admin Kecamatan**, dan **Admin Lapangan**. Super Admin dapat dipertahankan untuk konfigurasi teknis dan pengelolaan akun.
 
-**TIER 2: ADMIN KOMINFO (KABUPATEN)**
-view all batches from all kecamatan, approve/reject, publish to public portal, manage wilayah master data, OPD configurations
-
-**TIER 3: ADMIN OPD (DINAS/BADAN)**
-- admin_[kode_opd] -> full OPD data access
-- kepala_dinas_[kode] -> approve OPD batch internally
-- operator_[kode_opd] -> input data only
-
-**TIER 4: ADMIN KECAMATAN**
-compile/aggregate batch from all desas in their kecamatan, forward to Kominfo, request revision on desa batches
-
-**TIER 5: ADMIN DESA (MOBILE)**
-input rumah, keluarga, penduduk for their desa, create draft batch, submit to kecamatan
+- **Admin OPD** mengelola dataset dan form sektoral OPD yang ditetapkan untuk akun/OPD-nya.
+- **Walidata (Kominfo)** melihat kiriman kabupaten, memvalidasi, meminta revisi, menyetujui, dan mempublikasikan data.
+- **Admin Kecamatan** memeriksa batch pendataan lapangan untuk kecamatannya dan meneruskannya ke Walidata.
+- **Admin Lapangan** mencatat titik koordinat objek dan menghubungkannya ke data keluarga/penduduk yang telah ada. Ia tidak membuat atau mengedit data identitas keluarga/penduduk.
 
 ### 3.2 Matriks Akses
 
@@ -129,27 +112,49 @@ input rumah, keluarga, penduduk for their desa, create draft batch, submit to ke
 |------|-----------|-------------|--------|---------|---------|---------|
 | super_admin | Ya (all) | Ya | Ya | Ya | Ya | Ya |
 | admin | Ya (all) | Ya | Ya | Ya | Ya | Ya |
-| admin_kominfo | View only | - | Ya | Ya | Ya | Ya |
-| admin_[opd] | OPD sendiri | Ya | Ya* | - | - | - |
-| operator_[opd] | OPD sendiri | Ya | - | - | - | - |
-| kepala_dinas_[opd] | OPD sendiri | - | Ya | Ya | - | - |
-| admin_kecamatan | Wilayah sendiri | Ya | Ya** | - | - | - |
-| admin_desa | Desa sendiri | Ya | - | - | - | - |
+| walidata | View all | - | Ya | Ya | Ya | Ya |
+| admin_opd | Dataset OPD sendiri | Ya | - | - | - | - |
+| admin_kecamatan | Batch lapangan wilayah sendiri | Teruskan | Ya | - | - | Wilayah sendiri |
+| admin_lapangan | Titik dan relasi data rujukan | Ya | - | - | - | Wilayah tugas |
 | bupati / wakil_bupati | Dashboard only | - | - | - | - | - |
 | kepala_dinas | Dashboard only | - | - | - | - | - |
-
-* Admin OPD hanya review batch yang masuk ke OPD-nya untuk verifikasi silang
-** Admin Kecamatan review batch yang dibuat oleh Admin Desa di kecamatannya
 
 ### 3.3 Role-Based Navigation
 
 | Role | Menu yang Ditampilkan |
 |------|----------------------|
 | Super Admin / Admin | Dashboard, Wilayah, Semua modul data, Verifikasi Batch, User Management, OPD Management, Audit Trail |
-| Admin Kominfo | Dashboard Kominfo, Monitoring Semua Kecamatan, Verifikasi Batch, Wilayah, Data Master, Audit Trail |
-| Admin OPD | Dashboard OPD, Modul data sesuai OPD, Kirim Batch OPD, Monitoring submission |
-| Admin Kecamatan | Dashboard Kecamatan, Input Data, Kirim Batch ke Kominfo, Monitoring submission |
-| Admin Desa (Mobile) | Dashboard Desa, Input Rumah/Keluarga/Penduduk, Kirim Draft ke Kecamatan |
+| Walidata | Dashboard kabupaten, monitoring, validasi/publikasi batch, katalog OPD, audit |
+| Admin OPD | Dashboard OPD, form dan dataset sektoral OPD sendiri, kirim data |
+| Admin Kecamatan | Dashboard kecamatan, review dan teruskan batch lapangan |
+| Admin Lapangan | Peta dan form titik rumah/fasilitas, pencarian/pemilihan keluarga atau penduduk yang sudah ada |
+
+### 3.4 Inventaris Dataset Sektoral yang Sudah Ada
+
+Inventaris berikut berasal dari model, migrasi, resource, dan seeder di repository. Katalog OPD pada `OpdSeeder` bukan bukti bahwa dataset operasionalnya sudah tersedia. Dataset dinyatakan tersedia bila ada model/tabel dan form/resource terkait.
+
+| OPD / pemilik data | Dataset yang sudah ditemukan | Kondisi |
+|---|---|---|
+| Dinas Kesehatan | Laporan kesehatan bulanan; fasilitas kesehatan; kasus penyakit; ibu hamil; bayi; tenaga kesehatan; pelayanan kesehatan; stok obat; rekam medis | Dataset domain paling lengkap. Rekam medis bersifat sensitif dan perlu pembatasan akses khusus. |
+| Dinas Pendidikan | Laporan pendidikan bulanan; sekolah; guru; siswa; prasarana sekolah | Dataset domain tersedia. Data siswa saat ini tidak memakai NIK sebagai relasi ke Penduduk. |
+| Dukcapil | Keluarga dan Penduduk (termasuk NIK), ditambah Rumah sebagai relasi spasial | Model tersedia, tetapi form lama masih mengizinkan input/edit keluarga dan penduduk dari panel wilayah; belum dibatasi menjadi sumber resmi khusus OPD. |
+| Kominfo | Profil/katalog OPD, berita dan konten portal | Ada untuk administrasi portal; bukan katalog dataset sektoral dinamis. |
+| DPUPR | Belum ditemukan model/tabel operasional infrastruktur jalan/jembatan/air bersih | Kategori OPD tersedia, dataset operasional belum ada. |
+| Dinas Sosial | Belum ditemukan tabel dataset sektoral bantuan/perlindungan sosial | Status ekonomi keluarga ada pada data Keluarga, namun bukan dataset bansos. |
+| Disperindag | Belum ditemukan tabel dataset pasar/UMKM/perdagangan | Kategori OPD saja. |
+| DLH | Belum ditemukan tabel dataset persampahan/lingkungan | Kategori OPD saja. |
+| Dinas Pertanian | Belum ditemukan tabel dataset pertanian/peternakan/perikanan | Kategori OPD saja. |
+| Distaman | Belum ditemukan tabel dataset perkebunan/pertambangan | Kategori OPD saja. |
+| Dishub | Belum ditemukan tabel dataset transportasi/perhubungan | Kategori OPD saja. |
+| Dinas Pariwisata | Belum ditemukan tabel dataset pariwisata | Kategori OPD saja. |
+| Dispora | Belum ditemukan tabel dataset kepemudaan/olahraga | Kategori OPD saja. |
+| BKPSDMD | Belum ditemukan tabel dataset kepegawaian | Kategori OPD saja. |
+| Bappeda | Belum ditemukan tabel dataset perencanaan/statistik sektoral | Kategori OPD saja. |
+| Bapenda | Belum ditemukan tabel dataset pendapatan/pajak daerah | Kategori OPD saja. |
+| BPBD | Belum ditemukan tabel dataset kejadian/risiko bencana | Kategori OPD saja. |
+| DPMPTSP | Belum ditemukan tabel dataset perizinan/investasi | Kategori OPD saja. |
+
+Implementasi resource `DATA_SEKTORAL` yang belum terlacak di Git merujuk ke model `Dataset` dan `Unit`, tetapi model serta migrasi tabel tersebut tidak ditemukan pada repository saat pemeriksaan. Resource itu belum dapat dianggap sebagai dataset berjalan.
 
 ---
 

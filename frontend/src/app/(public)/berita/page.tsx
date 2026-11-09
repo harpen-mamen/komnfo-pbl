@@ -1,6 +1,5 @@
 import Link from 'next/link';
-import Image from 'next/image';
-import { fetchBeritaList } from '@/lib/api/berita';
+import { fetchBeritaList, type NewsListResponse } from '@/lib/api/berita';
 import { Calendar, Tag } from 'lucide-react';
 
 export const revalidate = 300;
@@ -22,10 +21,10 @@ export default async function BeritaPage({ searchParams }: PageProps) {
   const kat = params.kategori;
   const page = parseInt(params.page ?? '1');
 
-  let newsData: { data: any[]; meta?: any } = { data: [] };
+  let newsData: NewsListResponse = { data: [] };
   try {
     newsData = await fetchBeritaList({ kategori: kat, per_page: 12, page });
-  } catch (e) {}
+  } catch {}
 
   const news = newsData.data;
   const meta = newsData.meta;
@@ -59,7 +58,7 @@ export default async function BeritaPage({ searchParams }: PageProps) {
                 <div className="flex flex-col md:flex-row">
                   {news[0].gambar && (
                     <div className="relative h-64 md:h-auto md:w-1/2 lg:w-2/5 flex-shrink-0">
-                      <Image src={news[0].gambar} alt={news[0].judul} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 768px) 100vw, 40vw" />
+                      <img src={news[0].gambar} alt={news[0].judul} className="absolute inset-0 h-full w-full object-cover transition group-hover:scale-105" />
                     </div>
                   )}
                   <div className="flex flex-col justify-center p-6 md:p-8">
@@ -74,11 +73,11 @@ export default async function BeritaPage({ searchParams }: PageProps) {
               </Link>
             )}
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {(page === 1 ? news.slice(1) : news).map((item: any) => (
+              {(page === 1 ? news.slice(1) : news).map((item) => (
                 <Link key={item.id} href={`/berita/${item.slug}`} className="group flex flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:shadow-lg">
                   {item.gambar && (
                     <div className="relative h-48 flex-shrink-0 overflow-hidden">
-                      <Image src={item.gambar} alt={item.judul} fill className="object-cover transition group-hover:scale-105" sizes="(max-width: 768px) 100vw, 33vw" />
+                      <img src={item.gambar} alt={item.judul} className="absolute inset-0 h-full w-full object-cover transition group-hover:scale-105" />
                     </div>
                   )}
                   <div className="flex flex-1 flex-col p-5">

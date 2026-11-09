@@ -2,9 +2,9 @@
 
 namespace App\Services;
 
-use App\Models\DataKesehatanBulanan;
-use App\Models\DataPendidikanBulanan;
+use RuntimeException;
 use App\Models\Keluarga;
+use App\Models\MobileFieldPoint;
 use App\Models\Penduduk;
 use App\Models\Rumah;
 use App\Models\SubmissionBatch;
@@ -38,7 +38,7 @@ class SubmissionPublishService
                 ->firstOrFail();
 
             if ($lockedBatch->status !== SubmissionBatch::STATUS_APPROVED) {
-                throw new \RuntimeException('Batch harus approved sebelum dipublikasikan.');
+                throw new RuntimeException('Batch harus approved sebelum dipublikasikan.');
             }
 
             // Idempotent guard — if already published, return empty summary.
@@ -69,14 +69,14 @@ class SubmissionPublishService
                 $records = $moduleSnapshot['records'] ?? null;
 
                 if (! $module || ! $entityType || ! is_array($records)) {
-                    throw new \RuntimeException('Snapshot publikasi tidak lengkap untuk modul '.($module ?? '-').'.');
+                    throw new RuntimeException('Snapshot publikasi tidak lengkap untuk modul '.($module ?? '-').'.');
                 }
 
                 foreach ($records as $record) {
                     $entityId = $record['entity_id'] ?? ($record['attributes']['id'] ?? null);
 
                     if (! $entityId || ! isset($record['attributes']) || ! is_array($record['attributes'])) {
-                        throw new \RuntimeException('Snapshot publikasi memiliki record tidak valid.');
+                        throw new RuntimeException('Snapshot publikasi memiliki record tidak valid.');
                     }
 
                     DB::table('audit_trails')->insert([
@@ -206,10 +206,11 @@ class SubmissionPublishService
             SubmissionBatch::MODULE_RUMAH => Rumah::class,
             SubmissionBatch::MODULE_KELUARGA => Keluarga::class,
             SubmissionBatch::MODULE_PENDUDUK => Penduduk::class,
-            SubmissionBatch::MODULE_KESEHATAN => DataKesehatanBulanan::class,
-            SubmissionBatch::MODULE_PENDIDIKAN => DataPendidikanBulanan::class,
+            // DataKesehatanBulanan and DataPendidikanBulanan tables removed - handled by modular models
+            SubmissionBatch::MODULE_KESEHATAN => null,
+            SubmissionBatch::MODULE_PENDIDIKAN => null,
+            SubmissionBatch::MODULE_LAPANGAN => MobileFieldPoint::class,
             default => null,
         };
     }
 }
-

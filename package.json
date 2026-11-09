@@ -1,0 +1,17 @@
+{
+  "name": "sipandu-admin-assets",
+  "private": true,
+  "scripts": {
+    "build": "npm run build:admin-css && npm run build:public-css",
+    "build:admin-css": "tailwindcss -i resources/css/filament/admin.css -o public/css/filament/admin.css --minify",
+    "dev:admin-css": "tailwindcss -i resources/css/filament/admin.css -o public/css/filament/admin.css --watch",
+    "build:public-css": "tailwindcss -i resources/css/app.css -o public/css/app.css --minify"
+  },
+  "devDependencies": {
+    "@tailwindcss/cli": "^4.3.3",
+    "tailwindcss": "^4.3.3"
+  },
+  "engines": {
+    "node": ">=22.20.0"
+  }
+}

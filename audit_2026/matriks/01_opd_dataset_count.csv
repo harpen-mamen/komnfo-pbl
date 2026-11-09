@@ -1,0 +1,40 @@
+KODE|OPD|KATEGORI|DATASETS|FIELDS
+BKPSDM|Badan Kepegawaian dan Pengembangan SDM|kepegawaian|3|0
+BKPSDMD|Badan Kepegawaian dan Pengembangan SDM|kepegawaian|4|12
+KESBANGPOL|Badan Kesatuan Bangsa dan Politik|lainnya|3|3
+BPBD|Badan Penanggulangan Bencana Daerah|bencana|2|6
+BAPENDA|Badan Pendapatan Daerah|keuangan|0|0
+BPKPD|Badan Pendapatan Keuangan dan Pajak Daerah|keuangan|7|12
+BATAS|Badan Pengelola Perbatasan|lainnya|3|0
+BAPPEDA|Badan Perencanaan Pembangunan Daerah|perencanaan|0|0
+BAPPELITBANG|Badan Perencanaan Pembangunan, Penelitian dan Pengembangan|perencanaan|3|4
+DUKCAPIL|Dinas Kependudukan dan Pencatatan Sipil|kependudukan|6|14
+DINKES|Dinas Kesehatan|kesehatan|9|9
+KETPANGAN|Dinas Ketahanan Pangan|lainnya|6|11
+DISKOMINFO|Dinas Komunikasi dan Informatika|kominfo|6|11
+KOPERASI|Dinas Koperasi dan UKM|ekonomi|4|6
+DLH|Dinas Lingkungan Hidup|lingkungan|6|6
+DISTPAR|Dinas Pariwisata|pariwisata|0|0
+PARIWISATA|Dinas Pariwisata|pariwisata|5|7
+PUPR|Dinas Pekerjaan Umum dan Penataan Ruang|pu|0|0
+DPUPR|Dinas Pekerjaan Umum dan Penataan Ruang|pu|4|11
+DPMD|Dinas Pemberdayaan Masyarakat Desa|lainnya|4|4
+DPPKB|Dinas Pemberdayaan Perempuan dan Keluarga Berencana|sosial|4|6
+DP3A|Dinas Pemberdayaan Perempuan dan Perlindungan Anak|sosial|5|9
+DISPORA|Dinas Pemuda dan Olahraga|pemuda|4|2
+DPMPTSP|Dinas Penanaman Modal dan PTSP|investasi|4|5
+dispendik|Dinas Pendidikan|pendidikan|0|0
+DISDIK|Dinas Pendidikan|pendidikan|9|14
+PERIKANAN|Dinas Perikanan|lainnya|8|11
+DISPERINDAG|Dinas Perindustrian dan Perdagangan|perdagangan|8|13
+DISTAMAN|Dinas Perkebunan dan Pertambangan|perkebunan|0|0
+PERPUS|Dinas Perpustakaan dan Kearsipan|lainnya|3|2
+DISTAN|Dinas Pertanian dan Peternakan|pertanian|7|14
+DISHUB|Dinas Perumahan dan Kawasan Permukiman|hubungan|11|19
+PERKIM|Dinas Perumahan Rakyat, Kawasan Permukiman serta Pertanahan|pu|5|7
+DINSOS|Dinas Sosial|sosial|4|2
+DISNAKER|Dinas Tenaga Kerja|lainnya|5|9
+INSPEKTORAT|Inspektorat|lainnya|3|3
+SATPOLPP|Satuan Polisi Pamong Praja dan Pemadam Kebakaran|lainnya|6|6
+SETDA|Sekretariat Daerah|lainnya|6|15
+SETWAN|Sekretariat DPRD|lainnya|5|9

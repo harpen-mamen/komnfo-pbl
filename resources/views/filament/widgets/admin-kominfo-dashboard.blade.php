@@ -1,4 +1,4 @@
-<x-filament::widgets::widget>
+<x-filament-widgets::widget>
     <div class="p-6 space-y-6">
         <!-- Stats Overview -->
         <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -152,7 +152,7 @@
             </div>
         </div>
     </div>
-</x-filament::widgets::widget>
+</x-filament-widgets::widget>
 
 <script>
     document.addEventListener('alpine:init', () => {
@@ -289,4 +289,5 @@
         }
     });
 </script>
-</x-filament::widgets::widget>
+</x-filament-widgets::widget>
+

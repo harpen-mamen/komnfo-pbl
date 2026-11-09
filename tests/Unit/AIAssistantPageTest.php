@@ -12,7 +12,7 @@ class AIAssistantPageTest extends TestCase
         $reflection = new \ReflectionClass(AIAssistant::class);
 
         $this->assertSame('AI Assistant', $reflection->getStaticPropertyValue('navigationLabel'));
-        $this->assertSame('heroicon-o-cpu-chip', $reflection->getStaticPropertyValue('navigationIcon'));
+        $this->assertSame('heroicon-o-sparkles', $reflection->getStaticPropertyValue('navigationIcon'));
         $this->assertSame('AI Assistant', $reflection->getStaticPropertyValue('title'));
     }
 }

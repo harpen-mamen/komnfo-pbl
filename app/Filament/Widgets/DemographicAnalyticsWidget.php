@@ -6,11 +6,10 @@ use App\Models\Penduduk;
 use App\Support\PanelAccess;
 use Carbon\Carbon;
 use Filament\Widgets\ChartWidget;
-use Illuminate\Support\Facades\DB;
 
 class DemographicAnalyticsWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Analisis Demografis - Piramida Usia';
+    protected ?string $heading = 'Analisis Demografis - Piramida Usia';
     protected static ?int $sort = 2;
 
     public static function canView(): bool

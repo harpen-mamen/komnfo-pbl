@@ -7,8 +7,6 @@ use App\Models\Kecamatan;
 use App\Models\Penduduk;
 use App\Models\Rumah;
 use App\Models\Keluarga;
-use App\Models\DataKesehatanBulanan;
-use App\Models\DataPendidikanBulanan;
 use App\Services\Authorization\WewenangService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Validator;
@@ -354,7 +352,9 @@ class DataInputService
     public function assertNikUnique(array $data, ?int $ignoreId = null): void
     {
         $nik = $data['nik'] ?? null;
-        if (! $nik) return;
+        if (! $nik) {
+            return;
+        }
 
         $user = $this->wewenang->getUser();
 

@@ -2,16 +2,17 @@
 
 namespace App\Filament\Resources\KeluargaResource\Pages;
 
+use Filament\Actions\EditAction;
 use App\Filament\Resources\KeluargaResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewKeluarga extends ViewRecord
 {
     protected static string $resource = KeluargaResource::class;
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
-        return [Actions\EditAction::make()];
+        return [EditAction::make()];
     }
 }

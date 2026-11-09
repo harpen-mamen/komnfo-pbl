@@ -4,14 +4,14 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     public function up(): void
     {
         Schema::create('submission_batches', function (Blueprint $table) {
             $table->id();
             $table->string('submission_number')->unique();
-            $table->foreignId('kecamatan_id')->nullable()->constrained('kecamatans')->nullOnDelete();
+            // Legacy `kecamatans` is archived; final regional references use `wilayahs`.
+            $table->foreignId('kecamatan_id')->nullable();
             $table->string('semester', 32)->nullable();
             $table->unsignedSmallInteger('tahun')->nullable();
             $table->string('status', 32)->default('draft');

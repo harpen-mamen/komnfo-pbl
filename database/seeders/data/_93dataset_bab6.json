@@ -1,0 +1,226 @@
+{
+    "DPMPTSP": [
+        "2.12",
+        {
+            "6.64": [
+                "Data Investasi",
+                "tahunan",
+                {
+                    "jenis_usaha": [
+                        "Jenis Usaha",
+                        "enum",
+                        true,
+                        [
+                            "Mikro",
+                            "Kecil",
+                            "Menengah",
+                            "Besar"
+                        ]
+                    ],
+                    "jumlah_usaha": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Unit"
+                    ],
+                    "nilai_investasi": [
+                        "Nilai",
+                        "decimal",
+                        false,
+                        "Rp"
+                    ]
+                }
+            ],
+            "6.65": [
+                "Jenis Izin Diterbitkan",
+                "tahunan",
+                {
+                    "jenis_izin": [
+                        "Jenis Izin",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "jumlah_pemohon": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Orang"
+                    ]
+                }
+            ]
+        }
+    ],
+    "KOPERASI": [
+        "2.11",
+        {
+            "6.66": [
+                "Koperasi dan UKM",
+                "tahunan",
+                {
+                    "jenis": [
+                        "Jenis",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "status": [
+                        "Status",
+                        "enum",
+                        true,
+                        [
+                            "Aktif",
+                            "Tidak Aktif"
+                        ]
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Unit"
+                    ]
+                }
+            ],
+            "6.67": [
+                "Koperasi Bersertifikat",
+                "tahunan",
+                {
+                    "nama": [
+                        "Nama",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "nik": [
+                        "NIK",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ]
+                }
+            ]
+        }
+    ],
+    "DISPERINDAG": [
+        "3.07",
+        {
+            "6.68": [
+                "Industri Kecil Menengah",
+                "tahunan",
+                {
+                    "jenis": [
+                        "Jenis",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "jumlah_unit": [
+                        "Unit",
+                        "integer",
+                        false,
+                        "Unit"
+                    ],
+                    "tenaga_kerja": [
+                        "Tenaga Kerja",
+                        "integer",
+                        false,
+                        "Orang"
+                    ]
+                }
+            ],
+            "6.69": [
+                "Harga Barang Pokok",
+                "bulanan",
+                {
+                    "komoditas": [
+                        "Komoditas",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "bulan": [
+                        "Bulan",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "harga": [
+                        "Harga",
+                        "decimal",
+                        false,
+                        "Rp"
+                    ]
+                }
+            ],
+            "6.70": [
+                "UTTP Ditera Ulang",
+                "tahunan",
+                {
+                    "jenis": [
+                        "Jenis Alat",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Unit"
+                    ]
+                }
+            ],
+            "6.71": [
+                "Pasar Tradisional",
+                "tahunan",
+                {
+                    "nama": [
+                        "Nama Pasar",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "lokasi": [
+                        "Lokasi",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "bangunan": [
+                        "Bangunan",
+                        "enum",
+                        true,
+                        [
+                            "Permanen",
+                            "Semi Permanen"
+                        ]
+                    ]
+                }
+            ],
+            "6.72": [
+                "Pedagang dan Sarana",
+                "tahunan",
+                {
+                    "jenis": [
+                        "Jenis Dagangan",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "jumlah_pedagang": [
+                        "Pedagang",
+                        "integer",
+                        false,
+                        "Orang"
+                    ]
+                }
+            ]
+        }
+    ]
+}

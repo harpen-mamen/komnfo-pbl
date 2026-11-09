@@ -2,23 +2,40 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Grid;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\Toggle;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Columns\IconColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Actions\ViewAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\OpdResource\Pages\ListOpds;
+use App\Filament\Resources\OpdResource\Pages\CreateOpd;
+use App\Filament\Resources\OpdResource\Pages\ViewOpd;
+use App\Filament\Resources\OpdResource\Pages\EditOpd;
 use App\Filament\Resources\OpdResource\Pages;
 use App\Models\Opd;
 use App\Support\PanelAccess;
 use Filament\Forms;
-use Filament\Resources\Form;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
-use Illuminate\Database\Eloquent\Builder;
 
 class OpdResource extends Resource
 {
     protected static ?string $model = Opd::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-office-building';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-building-office';
 
-    protected static ?string $navigationLabel = 'Data OPD';
+    protected static ?string $navigationLabel = 'Master OPD';
 
     protected static ?string $pluralModelLabel = 'Organisasi Perangkat Daerah';
 
@@ -28,14 +45,14 @@ class OpdResource extends Resource
 
     protected static ?int $navigationSort = 1;
 
-    protected static function shouldRegisterNavigation(): bool
+    public static function shouldRegisterNavigation(): bool
     {
-        return PanelAccess::canManageUsers();
+        return PanelAccess::isSuperAdmin() || PanelAccess::isKominfoKabupaten();
     }
 
     public static function canViewAny(): bool
     {
-        return PanelAccess::canManageUsers();
+        return PanelAccess::isSuperAdmin() || PanelAccess::isKominfoKabupaten();
     }
 
     public static function canCreate(): bool
@@ -53,88 +70,88 @@ class OpdResource extends Resource
         return PanelAccess::isSuperAdmin();
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
-            ->schema([
-                Forms\Components\Section::make('Informasi OPD')
+        return $schema
+            ->components([
+                Section::make('Informasi OPD')
                     ->description('Data dasar Organisasi Perangkat Daerah')
                     ->icon('heroicon-o-information-circle')
                     ->schema([
-                        Forms\Components\Grid::make(2)
+                        Grid::make(2)
                             ->schema([
-                                Forms\Components\TextInput::make('kode')
+                                TextInput::make('kode')
                                     ->label('Kode OPD')
                                     ->required()
                                     ->maxLength(20)
                                     ->unique(Opd::class, 'kode', ignoreRecord: true),
-                                Forms\Components\TextInput::make('nama')
+                                TextInput::make('nama')
                                     ->label('Nama OPD')
                                     ->required()
                                     ->maxLength(255),
                             ]),
-                        Forms\Components\Select::make('kategori')
+                        Select::make('kategori')
                             ->label('Kategori OPD')
                             ->options(Opd::kategoriOptions())
                             ->required()
                             ->reactive(),
-                        Forms\Components\Textarea::make('deskripsi')
+                        Textarea::make('deskripsi')
                             ->label('Deskripsi')
                             ->rows(2)
                             ->columnSpanFull(),
                     ]),
 
-                Forms\Components\Section::make('Struktur')
+                Section::make('Struktur')
                     ->description('Hubungan hierarki dengan OPD lain')
                     ->icon('heroicon-o-user-group')
                     ->schema([
-                        Forms\Components\Select::make('parent_id')
+                        Select::make('parent_id')
                             ->label('OPD Induk')
                             ->options(fn () => Opd::whereNull('parent_id')->aktif()->pluck('nama', 'id'))
                             ->searchable()
                             ->nullable(),
                     ]),
 
-                Forms\Components\Section::make('Informasi Kontak')
+                Section::make('Informasi Kontak')
                     ->description('Data kontak OPD')
                     ->icon('heroicon-o-phone')
                     ->collapsible()
                     ->schema([
-                        Forms\Components\Grid::make(2)
+                        Grid::make(2)
                             ->schema([
-                                Forms\Components\TextInput::make('alamat')
+                                TextInput::make('alamat')
                                     ->label('Alamat')
                                     ->maxLength(500),
-                                Forms\Components\TextInput::make('telepon')
+                                TextInput::make('telepon')
                                     ->label('Telepon')
                                     ->tel()
                                     ->maxLength(20),
-                                Forms\Components\TextInput::make('email')
+                                TextInput::make('email')
                                     ->label('Email')
                                     ->email()
                                     ->maxLength(255),
                             ]),
                     ]),
 
-                Forms\Components\Section::make('Kepala Dinas')
+                Section::make('Kepala Dinas')
                     ->description('Data kepala daerah')
                     ->icon('heroicon-o-user')
                     ->collapsible()
                     ->schema([
-                        Forms\Components\Grid::make(2)
+                        Grid::make(2)
                             ->schema([
-                                Forms\Components\TextInput::make('kepala_dinas')
+                                TextInput::make('kepala_dinas')
                                     ->label('Nama Kepala Dinas')
                                     ->maxLength(255),
-                                Forms\Components\TextInput::make('nip_kepala_dinas')
+                                TextInput::make('nip_kepala_dinas')
                                     ->label('NIP Kepala Dinas')
                                     ->maxLength(50),
                             ]),
                     ]),
 
-                Forms\Components\Section::make('Status')
+                Section::make('Status')
                     ->schema([
-                        Forms\Components\Toggle::make('aktif')
+                        Toggle::make('aktif')
                             ->label('OPD Aktif')
                             ->default(true),
                     ]),
@@ -145,15 +162,15 @@ class OpdResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('kode')
+                TextColumn::make('kode')
                     ->label('Kode')
                     ->sortable()
                     ->searchable(),
-                Tables\Columns\TextColumn::make('nama')
+                TextColumn::make('nama')
                     ->label('Nama OPD')
                     ->sortable()
                     ->searchable(),
-                Tables\Columns\BadgeColumn::make('kategori')
+                BadgeColumn::make('kategori')
                     ->label('Kategori')
                     ->formatStateUsing(fn (string $state): string => Opd::kategoriLabels($state))
                     ->colors([
@@ -161,46 +178,46 @@ class OpdResource extends Resource
                         'success' => Opd::KATEGORI_PENDIDIKAN,
                         'warning' => Opd::KATEGORI_PU,
                         'danger' => Opd::KATEGORI_SOSIAL,
-                        'info' => Opd::KATEGORI_EKONOMI,
+                        'info' => Opd::KATEGORI_PERDAGANGAN,
                         'gray' => Opd::KATEGORI_KEPENDUDUKAN,
                         'secondary' => Opd::KATEGORI_LINGKUNGAN,
                     ])
                     ->sortable(),
-                Tables\Columns\TextColumn::make('parent.nama')
+                TextColumn::make('parent.nama')
                     ->label('Induk')
                     ->sortable()
                     ->default('-'),
-                Tables\Columns\TextColumn::make('kepala_dinas')
+                TextColumn::make('kepala_dinas')
                     ->label('Kepala Dinas')
                     ->sortable()
                     ->default('-'),
-                Tables\Columns\IconColumn::make('aktif')
+                IconColumn::make('aktif')
                     ->label('Status')
                     ->boolean()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('users_count')
+                TextColumn::make('users_count')
                     ->label('User')
                     ->getStateUsing(fn ($record) => $record->users()->count())
                     ->sortable(),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('kategori')
+                SelectFilter::make('kategori')
                     ->label('Kategori')
                     ->options(Opd::kategoriOptions()),
-                Tables\Filters\SelectFilter::make('aktif')
+                SelectFilter::make('aktif')
                     ->label('Status')
                     ->options([
                         1 => 'Aktif',
                         0 => 'Nonaktif',
                     ]),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+            ->recordActions([
+                ViewAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                DeleteBulkAction::make(),
             ])
             ->defaultSort('nama');
     }
@@ -208,10 +225,10 @@ class OpdResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListOpds::route('/'),
-            'create' => Pages\CreateOpd::route('/create'),
-            'view' => Pages\ViewOpd::route('/{record}'),
-            'edit' => Pages\EditOpd::route('/{record}/edit'),
+            'index' => ListOpds::route('/'),
+            'create' => CreateOpd::route('/create'),
+            'view' => ViewOpd::route('/{record}'),
+            'edit' => EditOpd::route('/{record}/edit'),
         ];
     }
 }

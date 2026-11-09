@@ -15,9 +15,9 @@ class DataPendidikanBulananFactory extends Factory
             'kecamatan_id' => null,
             'desa_id' => null,
             'sekolah' => $this->faker->company,
-            'periode_bulan' => $this->faker->numberBetween(1,12),
+            'periode_bulan' => $this->faker->numberBetween(1, 12),
             'periode_tahun' => now()->year,
-            'jumlah_siswa' => $this->faker->numberBetween(0,500),
+            'jumlah_siswa' => $this->faker->numberBetween(0, 500),
         ];
     }
 }

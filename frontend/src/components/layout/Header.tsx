@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import Image from 'next/image';
 import { useState, useEffect } from 'react';
 import { Menu, X, ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -40,19 +41,15 @@ export default function Header() {
     <header
       className={cn(
         'sticky top-0 z-50 transition-all duration-300',
-        scrolled ? 'bg-white/95 shadow-md backdrop-blur' : 'bg-white'
+        scrolled ? 'bg-[#fbfcfa]/95 shadow-[0_8px_28px_rgba(18,43,45,.08)] backdrop-blur' : 'bg-[#fbfcfa]'
       )}
     >
       <div className="container-page">
         <div className="flex h-16 items-center justify-between lg:h-20">
           <Link href="/" className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary-600 to-primary-700 text-white font-bold text-lg shadow-md">
-              S
-            </div>
+            <div className="flex h-12 w-12 flex-none items-center justify-center rounded-xl bg-white p-1 shadow-sm ring-1 ring-[#9a8038]/40"><Image src="/logo.png" alt="Lambang Kabupaten Kepulauan Sangihe" width={44} height={44} unoptimized className="h-full w-full object-contain" /></div>
             <div className="hidden sm:block">
-              <div className="font-heading text-base font-bold text-slate-900 leading-tight">
-                Kab. Kepulauan Sangihe
-              </div>
+              <div className="font-[cursive] text-3xl font-bold italic leading-none tracking-wide text-[#23625f] drop-shadow-[0_1px_0_rgba(198,155,73,.45)]">Sangihe</div>
               <div className="text-xs text-slate-500">Portal Resmi Pemerintah Daerah</div>
             </div>
           </Link>
@@ -99,12 +96,6 @@ export default function Header() {
               </div>
             ))}
 
-            <Link
-              href="/admin"
-              className="ml-3 rounded-lg border border-primary-600 px-4 py-2 text-sm font-semibold text-primary-700 transition hover:bg-primary-600 hover:text-white"
-            >
-              Login Admin
-            </Link>
           </nav>
 
           <button
@@ -119,7 +110,7 @@ export default function Header() {
       </div>
 
       {open && (
-        <div className="border-t border-slate-200 bg-white lg:hidden">
+        <div className="border-t border-[#dce4df] bg-[#fbfcfa] lg:hidden">
           <nav className="container-page flex flex-col gap-1 py-2">
             {NAV_ITEMS.map((item) => (
               <div key={item.label}>
@@ -153,15 +144,10 @@ export default function Header() {
                 )}
               </div>
             ))}
-            <Link
-              href="/admin"
-              className="mt-2 rounded-lg border border-primary-600 px-3 py-2 text-center text-sm font-semibold text-primary-700"
-            >
-              Login Admin
-            </Link>
           </nav>
         </div>
       )}
     </header>
   );
 }
+

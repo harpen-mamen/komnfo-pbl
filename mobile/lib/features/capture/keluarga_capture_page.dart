@@ -5,7 +5,14 @@ import '../../core/local_store.dart';
 import '../../core/models.dart';
 
 class KeluargaCapturePage extends StatefulWidget {
-  const KeluargaCapturePage({super.key, required this.store, this.userDesaId, this.bootstrap, this.editDraft, required this.onSaved});
+  const KeluargaCapturePage({
+    super.key,
+    required this.store,
+    this.userDesaId,
+    this.bootstrap,
+    this.editDraft,
+    required this.onSaved,
+  });
 
   final LocalStore store;
   final int? userDesaId;
@@ -45,7 +52,6 @@ class _KeluargaCapturePageState extends State<KeluargaCapturePage> {
       _jumlah.text = '${p['jumlah_anggota'] ?? 1}';
       final st = p['status_ekonomi'] as String?;
       if (st != null && _statuses.contains(st)) _status = st;
-      // Resolve rumah key
       final rumahId = p['rumah_id'] as int?;
       final rumahLocalId = p['rumah_local_id'] as String?;
       if (rumahId != null) {
@@ -85,7 +91,7 @@ class _KeluargaCapturePageState extends State<KeluargaCapturePage> {
     final payload = <String, dynamic>{
       'nomor_kk': _kk.text.trim(),
       'nama_kepala_keluarga': _kepala.text.trim(),
-      'jumlah_anggota': int.tryParse(_jumlah.text.trim()) ?? 0,
+      'jumlah_anggota': int.parse(_jumlah.text.trim()),
       'status_ekonomi': _status,
     };
     if (_houseKey!.startsWith('server:')) {
@@ -96,7 +102,17 @@ class _KeluargaCapturePageState extends State<KeluargaCapturePage> {
     final draft = widget.editDraft;
     final localId = draft?.localId ?? const Uuid().v4();
     final opId = draft?.operationId ?? const Uuid().v4();
-    await widget.store.saveDraft(DraftRecord(localId: localId, operationId: opId, type: DraftType.keluarga, title: 'KK ${_kk.text.trim()}', payload: payload, syncState: 'queued', createdAt: draft?.createdAt ?? DateTime.now()));
+    await widget.store.saveDraft(
+      DraftRecord(
+        localId: localId,
+        operationId: opId,
+        type: DraftType.keluarga,
+        title: 'KK ${_kk.text.trim()}',
+        payload: payload,
+        syncState: 'queued',
+        createdAt: draft?.createdAt ?? DateTime.now(),
+      ),
+    );
     if (!mounted) return;
     widget.onSaved();
     Navigator.of(context).pop();
@@ -106,27 +122,127 @@ class _KeluargaCapturePageState extends State<KeluargaCapturePage> {
   Widget build(BuildContext context) {
     final houses = _houses();
     return Scaffold(
-      appBar: AppBar(title: Text(widget.editDraft != null ? 'Edit Kartu Keluarga' : 'Tambah Kartu Keluarga')),
+      appBar: AppBar(
+        title: Text(widget.editDraft != null ? 'Edit Kartu Keluarga' : 'Pendataan KK Baru'),
+      ),
       body: Form(
         key: _formKey,
-        child: ListView(padding: const EdgeInsets.all(16), children: [
-          Card(color: Colors.orange.shade50, child: const Padding(padding: EdgeInsets.all(14), child: Text('Pilih rumah terlebih dahulu. KK baru akan dikaitkan ke rumah tersebut.'))),
-          const SizedBox(height: 16),
-          DropdownButtonFormField<String>(initialValue: _houseKey, decoration: const InputDecoration(labelText: 'Rumah *'), items: houses.map((house) => DropdownMenuItem(value: house.key, child: Text(house.label, overflow: TextOverflow.ellipsis))).toList(), onChanged: (value) => setState(() => _houseKey = value), validator: (value) => value == null ? 'Rumah wajib dipilih' : null),
-          const SizedBox(height: 12),
-          _field(_kk, 'Nomor KK', '16 digit nomor KK', required: true, keyboardType: TextInputType.number),
-          const SizedBox(height: 12),
-          _field(_kepala, 'Nama kepala keluarga', 'Sesuai dokumen KK', required: true),
-          const SizedBox(height: 12),
-          _field(_jumlah, 'Jumlah anggota', '0', required: true, keyboardType: TextInputType.number),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(initialValue: _status, decoration: const InputDecoration(labelText: 'Status ekonomi'), items: _statuses.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(), onChanged: (value) => setState(() => _status = value ?? _statuses.first)),
-          const SizedBox(height: 24),
-          FilledButton.icon(onPressed: _saving || houses.isEmpty ? null : _save, icon: _saving ? const SizedBox.square(dimension: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Icon(Icons.save), label: Text(houses.isEmpty ? 'Buat Rumah Terlebih Dahulu' : (widget.editDraft != null ? 'Simpan Perubahan' : 'Simpan ke Draft'))),
-        ]),
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+          children: [
+            _infoCard('Pilih bangunan rumah acuan terlebih dahulu. Kartu Keluarga akan dikaitkan langsung ke rumah tersebut.'),
+            const SizedBox(height: 20),
+            DropdownButtonFormField<String>(
+              initialValue: _houseKey,
+              decoration: const InputDecoration(
+                labelText: 'Rumah Acuan (Wajib) *',
+                prefixIcon: Icon(Icons.home_rounded, color: Color(0xff0b3c4d)),
+              ),
+              items: houses
+                  .map((house) => DropdownMenuItem(
+                        value: house.key,
+                        child: Text(house.label, overflow: TextOverflow.ellipsis),
+                      ))
+                  .toList(),
+              onChanged: (value) => setState(() => _houseKey = value),
+              validator: (value) => value == null ? 'Rumah acuan wajib dipilih' : null,
+            ),
+            const SizedBox(height: 14),
+            _field(_kk, 'Nomor Kartu Keluarga (KK)', '16 digit nomor KK Dukcapil', required: true, keyboardType: TextInputType.number, icon: Icons.badge_rounded, kkValidator: true),
+            const SizedBox(height: 14),
+            _field(_kepala, 'Nama Kepala Keluarga', 'Sesuai dokumen resmi KK', required: true, icon: Icons.person_rounded),
+            const SizedBox(height: 14),
+            _field(_jumlah, 'Jumlah Anggota Keluarga', 'Minimal 1 orang', required: true, keyboardType: TextInputType.number, numericMin: 1, icon: Icons.groups_rounded),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<String>(
+              initialValue: _status,
+              decoration: const InputDecoration(
+                labelText: 'Kategori Status Ekonomi',
+                prefixIcon: Icon(Icons.payments_rounded, color: Color(0xff0b3c4d)),
+              ),
+              items: _statuses.map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
+              onChanged: (value) => setState(() => _status = value ?? _statuses.first),
+            ),
+            const SizedBox(height: 32),
+            FilledButton.icon(
+              onPressed: _saving || houses.isEmpty ? null : _save,
+              icon: _saving
+                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                  : const Icon(Icons.save_rounded),
+              label: Text(houses.isEmpty
+                  ? 'Catat Rumah Terlebih Dahulu'
+                  : (widget.editDraft != null ? 'Simpan Perubahan' : 'Simpan Ke Draft Lokal')),
+              style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 18)),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _field(TextEditingController controller, String label, String hint, {bool required = false, TextInputType? keyboardType}) => TextFormField(controller: controller, keyboardType: keyboardType, decoration: InputDecoration(labelText: required ? '$label *' : label, hintText: hint), validator: required ? (value) => value == null || value.trim().isEmpty ? '$label wajib diisi' : null : null);
+  Widget _infoCard(String text) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xfffff8e7),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xffe2c46c)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xffd4af37).withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: const Icon(Icons.lightbulb_outline_rounded, color: Color(0xff3b2e04), size: 20),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontSize: 12, color: Color(0xff3b2e04), fontWeight: FontWeight.w600, height: 1.4),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _field(
+    TextEditingController controller,
+    String label,
+    String hint, {
+    bool required = false,
+    TextInputType? keyboardType,
+    int? numericMin,
+    required IconData icon,
+    bool kkValidator = false,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: required ? '$label *' : label,
+        hintText: hint,
+        prefixIcon: Icon(icon, color: const Color(0xff0b3c4d)),
+      ),
+      validator: (value) {
+        final v = (value ?? '').trim();
+        if (required && v.isEmpty) return '$label wajib diisi';
+        if (v.isNotEmpty && kkValidator) {
+          if (!RegExp(r'^\d{16}$').hasMatch(v)) {
+            return 'Nomor KK harus 16 digit angka';
+          }
+        }
+        if (v.isNotEmpty && numericMin != null) {
+          final n = int.tryParse(v);
+          if (n == null) return '$label harus berupa angka';
+          if (n < numericMin) return '$label minimal $numericMin';
+        }
+        return null;
+      },
+    );
+  }
 }

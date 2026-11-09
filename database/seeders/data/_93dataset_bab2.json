@@ -1,0 +1,329 @@
+{
+    "SETDA": [
+        "1.06",
+        {
+            "2.1": [
+                "Kepala Daerah Kabupaten Kepulauan Sangihe",
+                "master",
+                {
+                    "no": [
+                        "No",
+                        "integer",
+                        true,
+                        null
+                    ],
+                    "nama": [
+                        "Nama",
+                        "string",
+                        false,
+                        null
+                    ],
+                    "jabatan": [
+                        "Jabatan",
+                        "string",
+                        false,
+                        null
+                    ],
+                    "mulai": [
+                        "Periode Mulai",
+                        "integer",
+                        false,
+                        "Tahun"
+                    ],
+                    "selesai": [
+                        "Periode Selesai",
+                        "integer",
+                        false,
+                        "Tahun"
+                    ]
+                }
+            ],
+            "2.2": [
+                "Sekretaris Daerah",
+                "master",
+                {
+                    "no": [
+                        "No",
+                        "integer",
+                        true,
+                        null
+                    ],
+                    "nama": [
+                        "Nama",
+                        "string",
+                        false,
+                        null
+                    ],
+                    "nip": [
+                        "NIP",
+                        "string",
+                        false,
+                        null
+                    ]
+                }
+            ],
+            "2.3": [
+                "Perangkat Daerah",
+                "master",
+                {
+                    "no": [
+                        "No",
+                        "integer",
+                        true,
+                        null
+                    ],
+                    "kode_opd": [
+                        "Kode OPD",
+                        "string",
+                        false,
+                        null
+                    ],
+                    "nama_opd": [
+                        "Nama OPD",
+                        "string",
+                        false,
+                        null
+                    ],
+                    "jumlah_pegawai": [
+                        "Jumlah Pegawai",
+                        "integer",
+                        false,
+                        "Orang"
+                    ]
+                }
+            ],
+            "2.4": [
+                "Kecamatan Kelurahan Kampung",
+                "tahunan",
+                {
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "jumlah_kelurahan": [
+                        "Jumlah Kelurahan",
+                        "integer",
+                        false,
+                        "Kelurahan"
+                    ],
+                    "jumlah_kampung": [
+                        "Jumlah Kampung",
+                        "integer",
+                        false,
+                        "Kampung"
+                    ]
+                }
+            ]
+        }
+    ],
+    "SETWAN": [
+        "1.06",
+        {
+            "2.5": [
+                "DPRD Menurut JK dan Pendidikan",
+                "master",
+                {
+                    "jenis_kelamin": [
+                        "JK",
+                        "enum",
+                        true,
+                        [
+                            "L",
+                            "P"
+                        ]
+                    ],
+                    "pendidikan": [
+                        "Pendidikan",
+                        "enum",
+                        true,
+                        [
+                            "SMA",
+                            "D3",
+                            "S1",
+                            "S2",
+                            "S3"
+                        ]
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Orang"
+                    ]
+                }
+            ],
+            "2.6": [
+                "DPRD Menurut Dapil dan Partai",
+                "master",
+                {
+                    "dapil": [
+                        "Dapil",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "partai": [
+                        "Partai",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Orang"
+                    ]
+                }
+            ],
+            "2.7": [
+                "Keputusan DPRD",
+                "tahunan",
+                {
+                    "jenis": [
+                        "Jenis",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "tahun": [
+                        "Tahun",
+                        "integer",
+                        true,
+                        null
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Dokumen"
+                    ]
+                }
+            ]
+        }
+    ],
+    "BKPSDMD": [
+        "2.18",
+        {
+            "2.8": [
+                "PNS Berdasarkan Golongan",
+                "tahunan",
+                {
+                    "golongan": [
+                        "Golongan",
+                        "enum",
+                        true,
+                        [
+                            "I",
+                            "II",
+                            "III",
+                            "IV"
+                        ]
+                    ],
+                    "tahun": [
+                        "Tahun",
+                        "integer",
+                        true,
+                        null
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Orang"
+                    ]
+                }
+            ],
+            "2.9": [
+                "PNS Berdasarkan Eselon",
+                "tahunan",
+                {
+                    "eselon": [
+                        "Eselon",
+                        "enum",
+                        true,
+                        [
+                            "II",
+                            "III",
+                            "IV",
+                            "Non"
+                        ]
+                    ],
+                    "tahun": [
+                        "Tahun",
+                        "integer",
+                        true,
+                        null
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Orang"
+                    ]
+                }
+            ],
+            "2.10": [
+                "PNS Berdasarkan Jabatan",
+                "tahunan",
+                {
+                    "jabatan": [
+                        "Jabatan",
+                        "enum",
+                        true,
+                        [
+                            "Struktural",
+                            "Fungsional",
+                            "Pelaksana"
+                        ]
+                    ],
+                    "tahun": [
+                        "Tahun",
+                        "integer",
+                        true,
+                        null
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Orang"
+                    ]
+                }
+            ],
+            "2.11": [
+                "PNS Berdasarkan Pendidikan",
+                "tahunan",
+                {
+                    "pendidikan": [
+                        "Pendidikan",
+                        "enum",
+                        true,
+                        [
+                            "SMA",
+                            "D1",
+                            "D2",
+                            "D3",
+                            "S1/D4",
+                            "S2"
+                        ]
+                    ],
+                    "tahun": [
+                        "Tahun",
+                        "integer",
+                        true,
+                        null
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Orang"
+                    ]
+                }
+            ]
+        }
+    ]
+}

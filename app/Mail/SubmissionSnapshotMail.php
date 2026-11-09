@@ -8,7 +8,8 @@ use Illuminate\Queue\SerializesModels;
 
 class SubmissionSnapshotMail extends Mailable
 {
-    use Queueable, SerializesModels;
+    use Queueable;
+    use SerializesModels;
 
     public array $snapshot;
     public string $kecamatanName;

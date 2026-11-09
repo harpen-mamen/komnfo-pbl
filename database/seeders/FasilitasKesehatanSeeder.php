@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\Desa;
 use App\Models\FasilitasKesehatan;
 use App\Models\Kecamatan;
 use Illuminate\Database\Seeder;
@@ -29,7 +28,10 @@ class FasilitasKesehatanSeeder extends Seeder
 
         foreach ($puskesData as $data) {
             $kec = $kecamatanList->get($data['kecamatan']);
-            if (!$kec) { $this->command->warn("Kecamatan {$data['kecamatan']} not found"); continue; }
+            if (!$kec) {
+                $this->command->warn("Kecamatan {$data['kecamatan']} not found");
+                continue;
+            }
             $desa = $kec->desas->firstWhere('nama', $data['desa']);
             FasilitasKesehatan::firstOrCreate(
                 ['kode_faskes' => $data['kode']],

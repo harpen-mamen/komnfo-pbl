@@ -1,0 +1,40 @@
+KODE_OPD|NAMA_OPD|KATEGORI|JUMLAH_DATASET|JUMLAH_FIELD|VALUE_TERISI|PERIOD_TYPES|CAKUPAN
+BKPSDM|Badan Kepegawaian dan Pengembangan SDM|kepegawaian|3|22|0|master,tahunan,event|kabupaten
+BKPSDMD|Badan Kepegawaian dan Pengembangan SDM|kepegawaian|4|12|0|tahunan|kabupaten
+KESBANGPOL|Badan Kesatuan Bangsa dan Politik|lainnya|3|13|0|tahunan,master,event|kabupaten
+BPBD|Badan Penanggulangan Bencana Daerah|bencana|2|6|0|master,tahunan|kabupaten
+BAPENDA|Badan Pendapatan Daerah|keuangan|0|0|0||
+BPKPD|Badan Pendapatan Keuangan dan Pajak Daerah|keuangan|7|30|2|tahunan,master,bulanan|kabupaten
+BATAS|Badan Pengelola Perbatasan|lainnya|3|20|0|master,event|kabupaten
+BAPPEDA|Badan Perencanaan Pembangunan Daerah|perencanaan|0|0|0||
+BAPPELITBANG|Badan Perencanaan Pembangunan, Penelitian dan Pengembangan|perencanaan|3|16|0|tahunan,bulanan|kabupaten
+DUKCAPIL|Dinas Kependudukan dan Pencatatan Sipil|kependudukan|6|33|2|tahunan,bulanan|kabupaten
+DINKES|Dinas Kesehatan|kesehatan|9|74|7|bulanan,tahunan,real_time,master,harian|kabupaten,kecamatan
+KETPANGAN|Dinas Ketahanan Pangan|lainnya|6|21|0|tahunan,harian,bulanan|kabupaten
+DISKOMINFO|Dinas Komunikasi dan Informatika|kominfo|6|22|6|tahunan,master|kabupaten
+KOPERASI|Dinas Koperasi dan UKM|ekonomi|4|19|0|tahunan,master|kabupaten
+DLH|Dinas Lingkungan Hidup|lingkungan|6|23|0|tahunan,triwulanan,master,harian|kabupaten
+PARIWISATA|Dinas Pariwisata|pariwisata|5|23|0|bulanan,tahunan,master|kabupaten
+DISTPAR|Dinas Pariwisata|pariwisata|0|0|0||
+PUPR|Dinas Pekerjaan Umum dan Penataan Ruang|pu|0|0|0||
+DPUPR|Dinas Pekerjaan Umum dan Penataan Ruang|pu|8|39|2|tahunan,master,event|kabupaten
+DPMD|Dinas Pemberdayaan Masyarakat Desa|lainnya|4|22|0|tahunan,master|kabupaten
+DPPKB|Dinas Pemberdayaan Perempuan dan Keluarga Berencana|sosial|4|18|0|tahunan,bulanan|kabupaten
+DP3A|Dinas Pemberdayaan Perempuan dan Perlindungan Anak|sosial|5|18|0|tahunan,master,event|kabupaten
+DISPORA|Dinas Pemuda dan Olahraga|pemuda|4|19|0|tahunan,master,event|kabupaten
+DPMPTSP|Dinas Penanaman Modal dan PTSP|investasi|4|17|3|tahunan,triwulanan,bulanan|kabupaten
+DISDIK|Dinas Pendidikan|pendidikan|9|84|2|tahunan,master,semesteran|kabupaten
+dispendik|Dinas Pendidikan|pendidikan|0|0|0||
+PERIKANAN|Dinas Perikanan|lainnya|8|41|0|tahunan,bulanan,master|kabupaten
+DISPERINDAG|Dinas Perindustrian dan Perdagangan|perdagangan|8|34|0|tahunan,bulanan,master|kabupaten
+DISTAMAN|Dinas Perkebunan dan Pertambangan|perkebunan|2|10|0|tahunan,master|kabupaten
+PERPUS|Dinas Perpustakaan dan Kearsipan|lainnya|3|13|0|tahunan,master,bulanan|kabupaten
+DISTAN|Dinas Pertanian dan Peternakan|pertanian|7|32|0|tahunan,master,bulanan|kabupaten
+DISHUB|Dinas Perumahan dan Kawasan Permukiman|hubungan|11|45|3|tahunan,master,event,harian|kabupaten
+PERKIM|Dinas Perumahan Rakyat, Kawasan Permukiman serta Pertanahan|pu|5|17|0|tahunan,master|kabupaten
+DINSOS|Dinas Sosial|sosial|4|21|0|tahunan,master|kabupaten
+DISNAKER|Dinas Tenaga Kerja|lainnya|5|22|0|tahunan,semesteran,master,event|kabupaten
+INSPEKTORAT|Inspektorat|lainnya|3|15|0|tahunan,event|kabupaten
+SATPOLPP|Satuan Polisi Pamong Praja dan Pemadam Kebakaran|lainnya|6|22|0|tahunan,event,master|kabupaten
+SETDA|Sekretariat Daerah|lainnya|6|25|0|master,tahunan,event|kabupaten
+SETWAN|Sekretariat DPRD|lainnya|5|18|0|master,tahunan,event|kabupaten

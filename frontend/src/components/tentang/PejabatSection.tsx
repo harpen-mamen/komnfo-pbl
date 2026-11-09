@@ -6,7 +6,7 @@ const API_BASE = (process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000
 const TIPE_LABELS: Record<string, string> = {
   bupati: 'Bupati',
   wakil_bupati: 'Wakil Bupati',
-  Sekda: 'Sekretaris Daerah',
+  sekda: 'Sekretaris Daerah',
   asisten: 'Asisten',
   staf_ahli: 'Staf Ahli',
   kepala_dinas: 'Kepala Dinas',
@@ -29,7 +29,7 @@ export default async function PejabatSection() {
       <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {pejabat.map((p) => (
           <div key={p.id} className="group overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
-            <div className="relative aspect-[3/4] bg-gradient-to-br from-primary-100 to-primary-200">
+            <div className="relative aspect-[3/4] bg-linear-to-br from-primary-100 to-primary-200">
               {p.foto ? (
                 <Image src={`${API_BASE}/storage/${p.foto}`} alt={p.nama_lengkap} fill className="object-cover" />
               ) : (

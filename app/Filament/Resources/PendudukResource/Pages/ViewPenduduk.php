@@ -2,16 +2,17 @@
 
 namespace App\Filament\Resources\PendudukResource\Pages;
 
+use Filament\Actions\EditAction;
 use App\Filament\Resources\PendudukResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewPenduduk extends ViewRecord
 {
     protected static string $resource = PendudukResource::class;
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
-        return [Actions\EditAction::make()];
+        return [EditAction::make()];
     }
 }

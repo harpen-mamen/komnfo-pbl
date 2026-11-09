@@ -8,7 +8,7 @@ use Filament\Widgets\ChartWidget;
 
 class EmploymentDistributionWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Distribusi Pekerjaan Penduduk';
+    protected ?string $heading = 'Distribusi Pekerjaan Penduduk';
     protected static ?int $sort = 5;
 
     public static function canView(): bool

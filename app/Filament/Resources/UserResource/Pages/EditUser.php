@@ -2,9 +2,10 @@
 
 namespace App\Filament\Resources\UserResource\Pages;
 
+use Filament\Actions\DeleteAction;
 use App\Filament\Resources\UserResource;
 use Illuminate\Auth\Access\AuthorizationException;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
 class EditUser extends EditRecord
@@ -13,10 +14,10 @@ class EditUser extends EditRecord
 
     private ?string $role = null;
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            DeleteAction::make(),
         ];
     }
 
@@ -34,22 +35,17 @@ class EditUser extends EditRecord
         }
 
         // Reset wilayah for non-wilayah roles
-        if (! in_array($this->role, ['admin_kecamatan', 'admin_desa'], true)) {
+        if (! in_array($this->role, ['admin_kecamatan', 'admin_desa', 'admin_lapangan'], true)) {
             $data['kecamatan_id'] = null;
         }
 
-        if ($this->role !== 'admin_desa') {
+        if (! in_array($this->role, ['admin_desa', 'admin_lapangan'], true)) {
             $data['desa_id'] = null;
         }
 
         // Reset OPD for non-OPD roles
         if (! UserResource::isOpdRole($this->role)) {
             $data['opd_id'] = null;
-        }
-
-        // Reset puskes_id for non-puskes roles
-        if (! in_array($this->role, ['admin_puskes', 'operator_puskes'], true)) {
-            $data['puskes_id'] = null;
         }
 
         return $data;

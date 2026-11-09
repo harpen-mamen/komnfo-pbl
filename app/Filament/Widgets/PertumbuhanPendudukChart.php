@@ -8,7 +8,7 @@ use Filament\Widgets\ChartWidget;
 
 class PertumbuhanPendudukChart extends ChartWidget
 {
-    protected static ?string $heading = 'Grafik Pertumbuhan Penduduk';
+    protected ?string $heading = 'Grafik Pertumbuhan Penduduk';
 
     public static function canView(): bool
     {

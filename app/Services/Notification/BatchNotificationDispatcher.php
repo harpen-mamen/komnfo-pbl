@@ -33,7 +33,7 @@ class BatchNotificationDispatcher
         }
 
         $message = sprintf(
-            'Admin Desa %s telah mengirim batch %s (%s) untuk %s. Silakan review sebelum diteruskan ke Kominfo.',
+            '%s telah mengirim batch %s (%s) untuk %s. Silakan periksa sebelum diteruskan ke Walidata.',
             $actor->name,
             $batch->submission_number,
             SubmissionBatch::moduleLabel($batch->module),
@@ -42,7 +42,7 @@ class BatchNotificationDispatcher
 
         $this->sendNotification(
             $recipients,
-            'Batch Baru dari Admin Desa',
+            'Batch Baru dari Admin Lapangan',
             $message,
             $batch,
             $actor,
@@ -449,7 +449,8 @@ class BatchNotificationDispatcher
         return User::query()
             ->whereHas('roles', fn (Builder $query) => $query->whereIn('name', [
                 'admin',
-                'admin_kominfo',
+            'admin_kominfo',
+            'walidata',
                 'super_admin',
             ]))
             ->get();

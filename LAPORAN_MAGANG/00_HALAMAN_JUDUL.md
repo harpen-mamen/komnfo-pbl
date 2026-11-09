@@ -1,0 +1,27 @@
+# HALAMAN JUDUL
+
+# LAPORAN MAGANG MBKM
+
+## SISTEM INFORMASI PANGKALAN DATA TERPADU (SIPANDU)
+### WEBSITE ADMIN PORTAL
+### PADA DINAS KOMUNIKASI DAN INFORMATIKA
+### KABUPATEN KEPULAUAN SANGIHE
+
+---
+
+**Disusun oleh:**
+
+[NAMA MAHASISWA]
+
+NIM: [NOMOR NIM]
+
+**PROGRAM STUDI SISTEM INFORMASI**
+**JURUSAN TEKNOLOGI INFORMATIKA**
+**POLITEKNIK NEGERI NUSA UTARA**
+**TAHUNA**
+
+**[TAHUN]**
+
+---
+
+*Catatan: Laporan ini disusun untuk memenuhi salah satu syarat penyelesaian program Magang MBKM pada Program Studi Sistem Informasi Politeknik Negeri Nusa Utara.*

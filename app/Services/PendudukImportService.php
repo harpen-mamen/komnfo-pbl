@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use InvalidArgumentException;
+use PhpOffice\PhpSpreadsheet\IOFactory;
 use App\Models\ImportPendudukLog;
 use App\Models\Keluarga;
 use App\Models\Penduduk;
@@ -33,12 +35,12 @@ class PendudukImportService
     public function import(string $path): array
     {
         if (! is_file($path) || filesize($path) > 10 * 1024 * 1024) {
-            throw new \InvalidArgumentException('File import tidak ditemukan atau melebihi batas 10 MB.');
+            throw new InvalidArgumentException('File import tidak ditemukan atau melebihi batas 10 MB.');
         }
 
         $rows = $this->readRows($path);
         if (count($rows) > self::MAX_ROWS) {
-            throw new \InvalidArgumentException('File import maksimal berisi '.self::MAX_ROWS.' baris data.');
+            throw new InvalidArgumentException('File import maksimal berisi '.self::MAX_ROWS.' baris data.');
         }
         $created = 0;
         $failed = 0;
@@ -57,7 +59,7 @@ class PendudukImportService
                 continue;
             }
 
-                
+
             $validator = Validator::make($data, [
                 'nomor_kk' => ['required'],
                 'nik' => ['required', 'max:32', Rule::unique('penduduk', 'nik')],
@@ -107,7 +109,7 @@ class PendudukImportService
     {
         $extension = strtolower(pathinfo($path, PATHINFO_EXTENSION));
 
-        if (in_array($extension, ['xls', 'xlsx'], true) && class_exists(\PhpOffice\PhpSpreadsheet\IOFactory::class)) {
+        if (in_array($extension, ['xls', 'xlsx'], true) && class_exists(IOFactory::class)) {
             return $this->readSpreadsheetRows($path);
         }
 
@@ -138,7 +140,7 @@ class PendudukImportService
 
     private function readSpreadsheetRows(string $path): array
     {
-        $spreadsheet = \PhpOffice\PhpSpreadsheet\IOFactory::load($path);
+        $spreadsheet = IOFactory::load($path);
         $sheet = $spreadsheet->getActiveSheet();
         $rawRows = $sheet->toArray(null, true, true, false);
         $header = array_map(fn ($value) => strtolower(trim((string) $value)), array_shift($rawRows) ?: []);

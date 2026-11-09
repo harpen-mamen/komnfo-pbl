@@ -8,7 +8,7 @@ use Filament\Widgets\ChartWidget;
 
 class IncomeDistributionWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Distribusi Penghasilan Penduduk';
+    protected ?string $heading = 'Distribusi Penghasilan Penduduk';
     protected static ?int $sort = 6;
 
     public static function canView(): bool
@@ -36,7 +36,7 @@ class IncomeDistributionWidget extends ChartWidget
                 ->inApprovedBatch()
                 ->whereBetween('penghasilan', $range)
                 ->count();
-            
+
             $incomeData[] = $count;
             $labels[] = $label;
         }

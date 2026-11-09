@@ -2,11 +2,15 @@
 
 namespace App\Services\Authorization;
 
+use App\Models\Keluarga;
+use App\Models\Penduduk;
+use App\Models\Rumah;
 use App\Contracts\WewenangInterface;
 use App\Enums\AppRole;
 use App\Models\Desa;
 use App\Models\Kecamatan;
 use App\Models\User;
+use App\Models\Wilayah;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Auth;
@@ -20,8 +24,6 @@ class WewenangService implements WewenangInterface
     public const MODULE_PENDUDUK = 'penduduk';
     public const MODULE_KESEHATAN = 'kesehatan';
     public const MODULE_PENDIDIKAN = 'pendidikan';
-    public const MODULE_PUSKESMAS = 'puskesmas';
-    public const MODULE_SEKOLAH = 'sekolah';
 
     public function __construct()
     {
@@ -41,7 +43,9 @@ class WewenangService implements WewenangInterface
 
     public function isKabupatenLevel(): bool
     {
-        if (!$this->user) return false;
+        if (!$this->user) {
+            return false;
+        }
         $roleName = $this->user->roles->first()?->name;
         $role = AppRole::tryFrom($roleName ?? '');
         return $role?->isKabupatenLevel() ?? false;
@@ -49,7 +53,9 @@ class WewenangService implements WewenangInterface
 
     public function isKecamatanLevel(): bool
     {
-        if (!$this->user) return false;
+        if (!$this->user) {
+            return false;
+        }
         $roleName = $this->user->roles->first()?->name;
         $role = AppRole::tryFrom($roleName ?? '');
         return $role?->isKecamatanLevel() ?? false;
@@ -57,7 +63,9 @@ class WewenangService implements WewenangInterface
 
     public function isDesaLevel(): bool
     {
-        if (!$this->user) return false;
+        if (!$this->user) {
+            return false;
+        }
         $roleName = $this->user->roles->first()?->name;
         $role = AppRole::tryFrom($roleName ?? '');
         return $role?->isDesaLevel() ?? false;
@@ -65,7 +73,9 @@ class WewenangService implements WewenangInterface
 
     public function isOpdLevel(): bool
     {
-        if (!$this->user) return false;
+        if (!$this->user) {
+            return false;
+        }
         $roleName = $this->user->roles->first()?->name;
         $role = AppRole::tryFrom($roleName ?? '');
         return $role?->isOpdLevel() ?? false;
@@ -83,7 +93,9 @@ class WewenangService implements WewenangInterface
 
     public function getAllowedModulesForCurrentRole(): array
     {
-        if (!$this->user) return [];
+        if (!$this->user) {
+            return [];
+        }
 
         if ($this->isKabupatenLevel()) {
             return [
@@ -96,20 +108,15 @@ class WewenangService implements WewenangInterface
         }
 
         $roleName = $this->user->roles->first()?->name;
-        
+
         $roleModules = [
-            AppRole::ADMIN_KECAMATAN->value => [self::MODULE_RUMAH, self::MODULE_KELUARGA, self::MODULE_PENDUDUK],
-            AppRole::ADMIN_DESA->value => [self::MODULE_RUMAH, self::MODULE_KELUARGA, self::MODULE_PENDUDUK],
-            AppRole::ADMIN_KESEHATAN->value => [self::MODULE_KESEHATAN],
-            AppRole::OPERATOR_KESEHATAN->value => [self::MODULE_KESEHATAN],
+            AppRole::ADMIN_KECAMATAN->value => [self::MODULE_RUMAH],
+            AppRole::ADMIN_DESA->value => [self::MODULE_RUMAH],
+            AppRole::ADMIN_LAPANGAN->value => [self::MODULE_RUMAH],
             AppRole::ADMIN_DINKES->value => [self::MODULE_KESEHATAN],
             AppRole::OPERATOR_DINKES->value => [self::MODULE_KESEHATAN],
-            AppRole::ADMIN_PUSKESMAS->value => [self::MODULE_PUSKESMAS],
-            AppRole::OPERATOR_PUSKESMAS->value => [self::MODULE_PUSKESMAS],
-            AppRole::ADMIN_PENDIDIKAN->value => [self::MODULE_PENDIDIKAN],
-            AppRole::OPERATOR_PENDIDIKAN->value => [self::MODULE_PENDIDIKAN],
-            AppRole::ADMIN_SEKOLAH->value => [self::MODULE_SEKOLAH],
-            AppRole::OPERATOR_SEKOLAH->value => [self::MODULE_SEKOLAH],
+            AppRole::ADMIN_DISPEND->value => [self::MODULE_PENDIDIKAN],
+            AppRole::OPERATOR_DISPEND->value => [self::MODULE_PENDIDIKAN],
         ];
 
         return $roleModules[$roleName] ?? [];
@@ -117,22 +124,26 @@ class WewenangService implements WewenangInterface
 
     public function getAccessibleKecamatanIds(): array
     {
-        if (!$this->user) return [];
-
-        if ($this->isKabupatenLevel()) {
-            return Kecamatan::query()->pluck('id')->all();
+        if (!$this->user) {
+            return [];
         }
 
-        $kecamatanId = $this->user->kecamatan_id ?? $this->user->desa?->kecamatan_id;
+        if ($this->isKabupatenLevel()) {
+            return Wilayah::query()->where('tipe', Wilayah::TIPE_KECAMATAN)->where('aktif', true)->pluck('id')->all();
+        }
+
+        $kecamatanId = $this->user->kecamatan_id ?? $this->user->desa?->parent_id;
         return $kecamatanId ? [$kecamatanId] : [];
     }
 
     public function getAccessibleDesaIds(): array
     {
-        if (!$this->user) return [];
+        if (!$this->user) {
+            return [];
+        }
 
         if ($this->isKabupatenLevel()) {
-            return Desa::query()->pluck('id')->all();
+            return Wilayah::query()->whereIn('tipe', [Wilayah::TIPE_DESA, Wilayah::TIPE_KAMPUNG])->where('aktif', true)->pluck('id')->all();
         }
 
         if ($this->isDesaLevel() && $this->user->desa_id) {
@@ -141,7 +152,7 @@ class WewenangService implements WewenangInterface
 
         $kecamatanId = $this->user->kecamatan_id;
         if ($kecamatanId) {
-            return Desa::query()->where('kecamatan_id', $kecamatanId)->pluck('id')->all();
+            return Wilayah::query()->where('parent_id', $kecamatanId)->whereIn('tipe', [Wilayah::TIPE_DESA, Wilayah::TIPE_KAMPUNG])->where('aktif', true)->pluck('id')->all();
         }
 
         return [];
@@ -149,13 +160,15 @@ class WewenangService implements WewenangInterface
 
     public function canCreateInRegion(int $kecamatanId, ?int $desaId = null): bool
     {
-        if (!$this->user) return false;
+        if (!$this->user) {
+            return false;
+        }
 
         if ($this->isKabupatenLevel()) {
             return true;
         }
 
-        $userKecamatanId = $this->user->kecamatan_id ?? $this->user->desa?->kecamatan_id;
+        $userKecamatanId = $this->user->kecamatan_id ?? $this->user->desa?->parent_id;
         if ((int) $userKecamatanId !== $kecamatanId) {
             return false;
         }
@@ -172,16 +185,25 @@ class WewenangService implements WewenangInterface
     public function canEditRecord(string $modelClass, int $recordId): bool
     {
         $model = $modelClass::query()->find($recordId);
-        if (!$model) return false;
+        if (!$model) {
+            return false;
+        }
 
-        if ($this->isKabupatenLevel()) return true;
+        if ($this->isKabupatenLevel()) {
+            return true;
+        }
+
+        if ($model instanceof Keluarga || $model instanceof Penduduk) {
+            if ($this->isKependudukanDataOwner()) {
+                return ! $model->hasApprovedSubmissionBatch();
+            }
+        }
 
         return match (true) {
-            $model instanceof \App\Models\Rumah => $this->canEditRumah($model),
-            $model instanceof \App\Models\Keluarga => $this->canEditKeluarga($model),
-            $model instanceof \App\Models\Penduduk => $this->canEditPenduduk($model),
-            $model instanceof \App\Models\DataKesehatanBulanan => $this->canEditDataKesehatan($model),
-            $model instanceof \App\Models\DataPendidikanBulanan => $this->canEditDataPendidikan($model),
+            $model instanceof Rumah => $this->canEditRumah($model),
+            $model instanceof Keluarga => $this->canEditKeluarga($model),
+            $model instanceof Penduduk => $this->canEditPenduduk($model),
+            // DataKesehatanBulanan and DataPendidikanBulanan tables removed
             default => $this->canEditOwnRecord($model),
         };
     }
@@ -189,22 +211,35 @@ class WewenangService implements WewenangInterface
     public function canDeleteRecord(string $modelClass, int $recordId): bool
     {
         $model = $modelClass::query()->find($recordId);
-        if (!$model) return false;
+        if (!$model) {
+            return false;
+        }
 
         if (method_exists($model, 'hasApprovedSubmissionBatch') && $model->hasApprovedSubmissionBatch()) {
             return false;
         }
 
-        if ($this->isKabupatenLevel()) return true;
-        if ($this->isKecamatanLevel()) return false;
-        if ($this->isDesaLevel()) return $this->isOwner($model);
+        if ($this->isKabupatenLevel()) {
+            return true;
+        }
+        if (($model instanceof Keluarga || $model instanceof Penduduk) && $this->isKependudukanDataOwner()) {
+            return true;
+        }
+        if ($this->isKecamatanLevel()) {
+            return false;
+        }
+        if ($this->isDesaLevel()) {
+            return $this->isOwner($model);
+        }
 
         return false;
     }
 
     public function canSubmitData(): bool
     {
-        if (!$this->user) return false;
+        if (!$this->user) {
+            return false;
+        }
 
         return $this->user->hasAnyRole([
             AppRole::ADMIN_KECAMATAN->value,
@@ -217,22 +252,30 @@ class WewenangService implements WewenangInterface
 
     public function canVerifyData(): bool
     {
-        if (!$this->user) return false;
+        if (!$this->user) {
+            return false;
+        }
 
-        if ($this->user->hasRole(AppRole::ADMIN_KECAMATAN->value)) return true;
+        if ($this->user->hasRole(AppRole::ADMIN_KECAMATAN->value)) {
+            return true;
+        }
 
         if ($this->user->hasAnyRole([
             AppRole::ADMIN_KOMINFO->value,
             AppRole::ADMIN->value,
             AppRole::SUPER_ADMIN->value,
-        ])) return true;
+        ])) {
+            return true;
+        }
 
         return false;
     }
 
     public function canApproveData(): bool
     {
-        if (!$this->user) return false;
+        if (!$this->user) {
+            return false;
+        }
 
         return $this->user->hasAnyRole([
             AppRole::ADMIN_KOMINFO->value,
@@ -248,42 +291,66 @@ class WewenangService implements WewenangInterface
 
     public function isOwner(Model $model): bool
     {
-        if (!$this->user) return false;
+        if (!$this->user) {
+            return false;
+        }
 
         if (isset($model->created_by)) {
             return (int) $model->created_by === $this->user->id;
         }
 
-        if ($model instanceof \App\Models\Keluarga && $model->rumah) {
+        if ($model instanceof Keluarga && $model->rumah) {
             return $this->isOwner($model->rumah);
         }
 
-        if ($model instanceof \App\Models\Penduduk && $model->keluarga?->rumah) {
+        if ($model instanceof Penduduk && $model->keluarga?->rumah) {
             return $this->isOwner($model->keluarga->rumah);
         }
 
         return false;
     }
 
-    private function canEditRumah(\App\Models\Rumah $rumah): bool
+    private function canEditRumah(Rumah $rumah): bool
     {
-        if ($rumah->hasApprovedSubmissionBatch()) return false;
+        if ($rumah->hasApprovedSubmissionBatch()) {
+            return false;
+        }
 
         if ($this->isKecamatanLevel()) {
             $userKecamatanId = $this->user->kecamatan_id;
-            return $rumah->desa?->kecamatan_id === $userKecamatanId;
+            return $rumah->desa?->parent_id === $userKecamatanId;
         }
 
         if ($this->isDesaLevel()) {
             return (int) $rumah->desa_id === (int) $this->user->desa_id;
         }
 
+        if ($this->user->isAdminLapangan()) {
+            return Rumah::query()->visibleToCurrentUser()->whereKey($rumah->id)->exists();
+        }
+
         return false;
     }
 
-    private function canEditKeluarga(\App\Models\Keluarga $keluarga): bool
+    private function isKependudukanDataOwner(): bool
     {
-        if ($keluarga->hasApprovedSubmissionBatch()) return false;
+        if (! $this->user) {
+            return false;
+        }
+
+        return $this->user->hasAnyRole([
+            AppRole::ADMIN_KEPENDUDUKAN->value,
+            AppRole::OPERATOR_KEPENDUDUKAN->value,
+            AppRole::ADMIN_DUKCAPIL->value,
+            AppRole::OPERATOR_DUKCAPIL->value,
+        ]) || ($this->user->hasRole(AppRole::ADMIN_OPD->value) && $this->user->opd?->kode === 'DUKCAPIL');
+    }
+
+    private function canEditKeluarga(Keluarga $keluarga): bool
+    {
+        if ($keluarga->hasApprovedSubmissionBatch()) {
+            return false;
+        }
 
         if ($this->isKecamatanLevel() || $this->isDesaLevel()) {
             return $this->isOwner($keluarga) || $this->canEditRumah($keluarga->rumah);
@@ -292,9 +359,11 @@ class WewenangService implements WewenangInterface
         return false;
     }
 
-    private function canEditPenduduk(\App\Models\Penduduk $penduduk): bool
+    private function canEditPenduduk(Penduduk $penduduk): bool
     {
-        if ($penduduk->hasApprovedSubmissionBatch()) return false;
+        if ($penduduk->hasApprovedSubmissionBatch()) {
+            return false;
+        }
 
         if ($this->isKecamatanLevel() || $this->isDesaLevel()) {
             return $this->isOwner($penduduk) || $this->canEditKeluarga($penduduk->keluarga);
@@ -303,24 +372,7 @@ class WewenangService implements WewenangInterface
         return false;
     }
 
-    private function canEditDataKesehatan(\App\Models\DataKesehatanBulanan $data): bool
-    {
-        if ($this->isOpdLevel()) {
-            return (int) $data->created_by === $this->user->id;
-        }
-
-        return $this->isKabupatenLevel();
-    }
-
-    private function canEditDataPendidikan(\App\Models\DataPendidikanBulanan $data): bool
-    {
-        if ($this->isOpdLevel()) {
-            return (int) $data->created_by === $this->user->id;
-        }
-
-        return $this->isKabupatenLevel();
-    }
-
+    // Note: canEditDataKesehatan and canEditDataPendidikan removed - tables deleted
     private function canEditOwnRecord(Model $model): bool
     {
         if (isset($model->created_by)) {
@@ -340,12 +392,16 @@ class WewenangService implements WewenangInterface
 
     public function canSubmitBatch(int $kecamatanId, array $modules = []): bool
     {
-        if (!$this->canSubmitData()) return false;
+        if (!$this->canSubmitData()) {
+            return false;
+        }
 
         if ($this->isDesaLevel()) {
             $allowedModules = [self::MODULE_RUMAH, self::MODULE_KELUARGA, self::MODULE_PENDUDUK];
             foreach ($modules as $module) {
-                if (!in_array($module, $allowedModules, true)) return false;
+                if (!in_array($module, $allowedModules, true)) {
+                    return false;
+                }
             }
         }
 

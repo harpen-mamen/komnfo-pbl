@@ -8,7 +8,7 @@ use Filament\Widgets\ChartWidget;
 
 class StatusEkonomiChart extends ChartWidget
 {
-    protected static ?string $heading = 'Grafik Status Ekonomi';
+    protected ?string $heading = 'Grafik Status Ekonomi';
 
     public static function canView(): bool
     {

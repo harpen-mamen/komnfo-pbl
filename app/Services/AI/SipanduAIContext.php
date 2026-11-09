@@ -2,6 +2,8 @@
 
 namespace App\Services\AI;
 
+use Illuminate\Contracts\Cache\Repository;
+
 class SipanduAIContext
 {
     public function __construct(private readonly SipanduAITools $tools)
@@ -34,6 +36,6 @@ class SipanduAIContext
 
     public function cachedForQuestion(string $question): string
     {
-        return app(\Illuminate\Contracts\Cache\Repository::class)->remember('ai:context:'.sha1($question), 300, fn (): string => $this->forQuestion($question));
+        return app(Repository::class)->remember('ai:context:'.sha1($question), 300, fn (): string => $this->forQuestion($question));
     }
 }

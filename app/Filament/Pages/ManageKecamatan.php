@@ -2,37 +2,37 @@
 
 namespace App\Filament\Pages;
 
-use App\Models\Kabupaten;
-use App\Models\Kecamatan;
+use Filament\Forms\Contracts\HasForms;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use App\Models\Wilayah;
 use App\Support\PanelAccess;
 use Filament\Forms;
 use Filament\Pages\Page;
 
-class ManageKecamatan extends Page implements Forms\Contracts\HasForms
+class ManageKecamatan extends Page implements HasForms
 {
-    use Forms\Concerns\InteractsWithForms;
+    use InteractsWithForms;
 
-    protected static ?string $navigationIcon = 'heroicon-o-location-marker';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-map-pin';
     protected static ?string $navigationLabel = 'Manajemen Kecamatan';
     protected static ?string $title = 'Manajemen Kecamatan';
     protected static ?int $navigationSort = 4;
-    protected static string $view = 'filament.pages.manage-kecamatan';
+    protected string $view = 'filament.pages.manage-kecamatan';
 
     public ?array $data = [];
 
     public function mount(): void
     {
-        abort_unless(
-            PanelAccess::canManageUsers(),
-            403
-        );
+        abort_unless(PanelAccess::isSuperAdmin(), 403);
 
         $this->form->fill();
     }
 
     public static function shouldRegisterNavigation(): bool
     {
-        return PanelAccess::canManageUsers();
+        return PanelAccess::isSuperAdmin();
     }
 
     public function getTitle(): string
@@ -50,11 +50,11 @@ class ManageKecamatan extends Page implements Forms\Contracts\HasForms
     protected function getFormSchema(): array
     {
         return [
-            Forms\Components\Select::make('kabupaten_id')
+            Select::make('kabupaten_id')
                 ->label('Kabupaten')
-                ->options(fn () => Kabupaten::query()->orderBy('nama')->pluck('nama', 'id'))
+                ->options(fn () => Wilayah::query()->where('tipe', Wilayah::TIPE_KABUPATEN)->orderBy('nama')->pluck('nama', 'id'))
                 ->required(),
-            Forms\Components\TextInput::make('nama')
+            TextInput::make('nama')
                 ->label('Nama Kecamatan')
                 ->required()
                 ->maxLength(255),
@@ -70,15 +70,15 @@ class ManageKecamatan extends Page implements Forms\Contracts\HasForms
     {
         $state = $this->form->getState();
 
-        $kecamatan = Kecamatan::firstOrCreate(
-            ['kabupaten_id' => $state['kabupaten_id'], 'nama' => $state['nama']],
-            ['kabupaten_id' => $state['kabupaten_id'], 'nama' => $state['nama']]
+        $kecamatan = Wilayah::firstOrCreate(
+            ['parent_id' => $state['kabupaten_id'], 'tipe' => Wilayah::TIPE_KECAMATAN, 'nama' => $state['nama']],
+            []
         );
 
         if ($kecamatan->wasRecentlyCreated) {
-            $this->notify('success', 'Kecamatan baru berhasil ditambahkan.');
+            \Filament\Notifications\Notification::make()->success()->title('Kecamatan baru berhasil ditambahkan.')->send();
         } else {
-            $this->notify('warning', 'Kecamatan sudah ada, tidak ada yang ditambahkan.');
+            \Filament\Notifications\Notification::make()->warning()->title('Kecamatan sudah ada, tidak ada yang ditambahkan.')->send();
         }
 
         $this->form->fill();
@@ -86,8 +86,9 @@ class ManageKecamatan extends Page implements Forms\Contracts\HasForms
 
     public function getKecamatansProperty()
     {
-        return Kecamatan::query()
-            ->with('kabupaten')
+        return Wilayah::query()
+            ->where('tipe', Wilayah::TIPE_KECAMATAN)
+            ->with('parent')
             ->orderBy('nama')
             ->get();
     }

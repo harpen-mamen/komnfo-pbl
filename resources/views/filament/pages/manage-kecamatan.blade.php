@@ -1,4 +1,4 @@
-<x-filament::page>
+<x-filament-panels::page>
     <div class="space-y-6">
         <!-- Form Section -->
         <div class="card-kominfo">
@@ -35,7 +35,7 @@
                     <tbody class="divide-y divide-slate-200 dark:divide-slate-700">
                         @forelse ($this->kecamatans as $kecamatan)
                             <tr class="hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                                <td class="px-6 py-3 text-slate-700 dark:text-slate-300">{{ $kecamatan->kabupaten->nama }}</td>
+                                <td class="px-6 py-3 text-slate-700 dark:text-slate-300">{{ $kecamatan->parent?->nama ?? 'Belum ditentukan' }}</td>
                                 <td class="px-6 py-3 font-medium text-slate-900 dark:text-white">{{ $kecamatan->nama }}</td>
                                 <td class="px-6 py-3">
                                     <span class="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
@@ -58,4 +58,4 @@
             </div>
         </div>
     </div>
-</x-filament::page>
+</x-filament-panels::page>

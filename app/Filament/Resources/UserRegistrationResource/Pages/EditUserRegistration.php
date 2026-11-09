@@ -2,18 +2,19 @@
 
 namespace App\Filament\Resources\UserRegistrationResource\Pages;
 
+use Filament\Actions\DeleteAction;
 use App\Filament\Resources\UserRegistrationResource;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
 class EditUserRegistration extends EditRecord
 {
     protected static string $resource = UserRegistrationResource::class;
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
+            DeleteAction::make(),
         ];
     }
 

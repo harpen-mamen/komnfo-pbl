@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class SekolahSeeder extends Seeder
@@ -44,7 +43,10 @@ class SekolahSeeder extends Seeder
 
         foreach ($sekolahData as $data) {
             $kec = $kecList->get($data['kec']);
-            if (!$kec) { $this->command->warn("Kecamatan {$data['kec']} not found"); continue; }
+            if (!$kec) {
+                $this->command->warn("Kecamatan {$data['kec']} not found");
+                continue;
+            }
             \App\Models\Sekolah::firstOrCreate(
                 ['npsn' => $data['npsn']],
                 [

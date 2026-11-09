@@ -16,7 +16,6 @@ class Bayi extends Model
     protected $table = 'bayis';
 
     protected $fillable = [
-        'data_kesehatan_bulanan_id',
         'submission_batch_id',
         'penduduk_id',
         'ibu_id',
@@ -84,11 +83,6 @@ class Bayi extends Model
     {
         // SPEC-004: Single source of truth — UserScope::visibleTo().
         return UserScope::visibleTo($query);
-    }
-
-    public function dataKesehatan(): BelongsTo
-    {
-        return $this->belongsTo(DataKesehatanBulanan::class);
     }
 
     public function submissionBatch(): BelongsTo

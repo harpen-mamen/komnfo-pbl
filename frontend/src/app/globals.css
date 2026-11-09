@@ -1,13 +1,42 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
+@plugin '@tailwindcss/typography';
+@variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-primary-50: #edf5f3;
+  --color-primary-100: #d8e9e5;
+  --color-primary-200: #b5d2cb;
+  --color-primary-300: #8ab5aa;
+  --color-primary-400: #5d978b;
+  --color-primary-500: #397a70;
+  --color-primary-600: #245f58;
+  --color-primary-700: #194c48;
+  --color-primary-800: #153d3c;
+  --color-primary-900: #123334;
+  --color-primary-950: #0b2024;
+  --color-accent-50: #f8f4e8;
+  --color-accent-100: #eee4c7;
+  --color-accent-200: #ddce9d;
+  --color-accent-300: #c9b46f;
+  --color-accent-400: #b49b50;
+  --color-accent-500: #9a8038;
+  --color-accent-600: #7d672d;
+  --color-accent-700: #665326;
+  --font-heading: 'Poppins', system-ui, sans-serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --animate-fade-in: fadeIn 0.5s ease-out;
+  --animate-slide-up: slideUp 0.6s ease-out;
+
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+}
 
 @layer base {
   html {
     scroll-behavior: smooth;
   }
   body {
-    @apply bg-white text-slate-900 antialiased;
+    @apply bg-[#f3f5f2] text-slate-900 antialiased;
     font-family: 'Inter', system-ui, sans-serif;
   }
   h1, h2, h3, h4, h5, h6 {
@@ -16,15 +45,19 @@
   }
 }
 
+:root { color-scheme: light; --sangihe-ink: #122b2d; --sangihe-sea: #194c48; --sangihe-deep-sea: #102e36; --sangihe-gold: #9a8038; --sangihe-paper: #f3f5f2; }
+::selection { background: #d8e9e5; color: #123334; }
+
 @layer components {
   .container-page {
-    @apply mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8;
+    @apply mx-auto w-full max-w-[1320px] px-4 sm:px-6 lg:px-8;
   }
   .section-padding {
-    @apply py-16 md:py-24;
+    @apply py-14 md:py-20;
   }
-  .heading-xl { @apply text-3xl md:text-4xl lg:text-5xl font-bold; }
-  .heading-lg { @apply text-2xl md:text-3xl font-bold; }
+  .heading-xl { @apply text-[2.25rem] leading-[1.08] md:text-5xl lg:text-6xl font-bold; }
+  .heading-lg { @apply text-3xl md:text-4xl font-bold; }
   .heading-md { @apply text-xl md:text-2xl font-semibold; }
-  .prose-content { @apply prose prose-slate max-w-none prose-headings:font-heading; }
+  .prose-content { @apply prose prose-slate max-w-none prose-headings:font-heading prose-headings:text-[#173b3b] prose-a:text-primary-700; }
 }
+

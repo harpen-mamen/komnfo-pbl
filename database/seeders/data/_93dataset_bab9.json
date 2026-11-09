@@ -1,0 +1,165 @@
+{
+    "DISKOMINFO": [
+        "2.10",
+        {
+            "9.88": [
+                "Indeks SPBE",
+                "tahunan",
+                {
+                    "instansi": [
+                        "Instansi",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "indeks": [
+                        "Indeks",
+                        "decimal",
+                        false,
+                        "Nilai"
+                    ],
+                    "predikat": [
+                        "Predikat",
+                        "enum",
+                        true,
+                        [
+                            "Sangat Baik",
+                            "Baik",
+                            "Cukup",
+                            "Kurang"
+                        ]
+                    ]
+                }
+            ],
+            "9.89": [
+                "Pengunjung Website",
+                "tahunan",
+                {
+                    "bulan": [
+                        "Bulan",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "pengunjung": [
+                        "Pengunjung",
+                        "integer",
+                        false,
+                        "Orang"
+                    ],
+                    "berita": [
+                        "Berita",
+                        "integer",
+                        false,
+                        "Berita"
+                    ]
+                }
+            ],
+            "9.90": [
+                "Pelayanan Informasi Publik",
+                "tahunan",
+                {
+                    "media": [
+                        "Media",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Layanan"
+                    ]
+                }
+            ],
+            "9.91": [
+                "Menara Telekomunikasi",
+                "tahunan",
+                {
+                    "lokasi": [
+                        "Lokasi",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "provider": [
+                        "Provider",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "tinggi": [
+                        "Tinggi",
+                        "decimal",
+                        false,
+                        "Meter"
+                    ]
+                }
+            ]
+        }
+    ],
+    "PARIWISATA": [
+        "3.02",
+        {
+            "9.92": [
+                "Kunjungan Wisman Wisnu",
+                "bulanan",
+                {
+                    "bulan": [
+                        "Bulan",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "wisman": [
+                        "Wisman",
+                        "integer",
+                        false,
+                        "Orang"
+                    ],
+                    "wisnu": [
+                        "Wisnu",
+                        "integer",
+                        false,
+                        "Orang"
+                    ]
+                }
+            ],
+            "9.93": [
+                "Objek Wisata",
+                "tahunan",
+                {
+                    "nama": [
+                        "Nama",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "jenis": [
+                        "Jenis",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "lokasi": [
+                        "Lokasi",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "pengelola": [
+                        "Pengelola",
+                        "enum",
+                        true,
+                        [
+                            "Pemda",
+                            "Swasta",
+                            "Masyarakat"
+                        ]
+                    ]
+                }
+            ]
+        }
+    ]
+}

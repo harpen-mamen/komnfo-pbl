@@ -2,12 +2,12 @@
 
 namespace App\Http\Controllers\Api;
 
+use Cache;
 use App\Http\Controllers\Controller;
-use App\Models\Desa;
-use App\Models\Kecamatan;
 use App\Models\Opd;
 use App\Models\User;
 use App\Models\UserRegistration;
+use App\Models\Wilayah;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -25,12 +25,14 @@ class RegistrationController extends Controller
     public function formData(): JsonResponse
     {
         $roles = self::AVAILABLE_ROLES;
-        $kecamatans = Kecamatan::query()->orderBy('nama')->pluck('nama', 'id');
+        $kecamatans = Wilayah::query()->where('tipe', Wilayah::TIPE_KECAMATAN)->where('aktif', true)->orderBy('nama')->pluck('nama', 'id');
+        $desas = Wilayah::query()->whereIn('tipe', [Wilayah::TIPE_DESA, Wilayah::TIPE_KAMPUNG])->where('aktif', true)->orderBy('nama')->get(['id', 'nama', 'parent_id']);
         $opds = Opd::query()->where('aktif', true)->orderBy('nama')->pluck('nama', 'id');
 
         return response()->json([
             'roles' => $roles,
             'kecamatans' => $kecamatans,
+            'desas' => $desas,
             'opds' => $opds,
         ]);
     }
@@ -49,8 +51,8 @@ class RegistrationController extends Controller
             'no_hp' => ['nullable', 'string', 'max:20'],
             'jabatan' => ['nullable', 'string', 'max:100'],
             'role' => ['required', 'string', 'in:' . implode(',', array_keys(self::AVAILABLE_ROLES))],
-            'kecamatan_id' => ['nullable', 'exists:kecamatans,id'],
-            'desa_id' => ['nullable', 'exists:desas,id'],
+            'kecamatan_id' => ['nullable', 'exists:wilayahs,id'],
+            'desa_id' => ['nullable', 'exists:wilayahs,id'],
             'opd_id' => ['nullable', 'exists:opds,id'],
         ]);
 
@@ -76,13 +78,18 @@ class RegistrationController extends Controller
                 }
             }
             if (! empty($data['desa_id']) && ! empty($data['kecamatan_id'])) {
-                $belongs = Desa::query()
+                $belongs = Wilayah::query()
                     ->whereKey($data['desa_id'])
-                    ->where('kecamatan_id', $data['kecamatan_id'])
+                    ->whereIn('tipe', [Wilayah::TIPE_DESA, Wilayah::TIPE_KAMPUNG])
+                    ->where('aktif', true)
+                    ->where('parent_id', $data['kecamatan_id'])
                     ->exists();
                 if (! $belongs) {
                     $validator->errors()->add('desa_id', 'Desa tidak berada di kecamatan yang dipilih.');
                 }
+            }
+            if (! empty($data['kecamatan_id']) && ! Wilayah::query()->whereKey($data['kecamatan_id'])->where('tipe', Wilayah::TIPE_KECAMATAN)->where('aktif', true)->exists()) {
+                $validator->errors()->add('kecamatan_id', 'Kecamatan tidak aktif atau tidak ditemukan.');
             }
             if (! empty($data['opd_id']) && ! Opd::query()->whereKey($data['opd_id'])->where('aktif', true)->exists()) {
                 $validator->errors()->add('opd_id', 'OPD yang dipilih tidak aktif.');
@@ -142,7 +149,7 @@ class RegistrationController extends Controller
             : UserRegistration::create($registrationData);
 
         $token = Str::random(64);
-        \Cache::put('registration_token_' . $registration->id, $token, now()->addDays(7));
+        Cache::put('registration_token_' . $registration->id, $token, now()->addDays(7));
 
         return response()->json([
             'message' => 'Registrasi berhasil dikirim. Menunggu verifikasi administrator.',

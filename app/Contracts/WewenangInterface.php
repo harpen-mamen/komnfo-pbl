@@ -4,7 +4,7 @@ namespace App\Contracts;
 
 /**
  * Interface untuk sistem wewenang/authorization terpusat.
- * 
+ *
  * Kontrak ini mendefinisikan operasi authorization yang harus diimplementasikan
  * untuk mengontrol akses data berdasarkan role dan wilayah.
  */

@@ -29,7 +29,7 @@ class MobileDataController
         abort_unless($request->user()->isAdminDesa() && $request->user()->desa_id, 403, 'Akses ditolak.');
 
         $desaId = (int) $request->user()->desa_id;
-        $kecamatanId = $request->user()->kecamatan_id ?? $request->user()->desa?->kecamatan_id;
+        $kecamatanId = $request->user()->kecamatan_id ?? $request->user()->desa?->parent_id;
 
         // READ MODEL: Only approved data (Arsitektur §4.3)
         $rumahCount = Rumah::query()->inApprovedBatch()->where('desa_id', $desaId)->count();
@@ -233,7 +233,7 @@ class MobileDataController
     {
         abort_unless($request->user()->isAdminDesa() && $request->user()->desa_id, 403, 'Akses ditolak.');
 
-        $kecamatanId = $request->user()->kecamatan_id ?? $request->user()->desa?->kecamatan_id;
+        $kecamatanId = $request->user()->kecamatan_id ?? $request->user()->desa?->parent_id;
         $perPage = (int) $request->get('per_page', 20);
         $status = $request->get('status');
 
@@ -305,3 +305,4 @@ class MobileDataController
         ]);
     }
 }
+

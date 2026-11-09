@@ -2,8 +2,10 @@
 
 namespace App\Support;
 
+use App\Models\SubmissionBatch;
 use App\Enums\AppRole;
 use App\Models\User;
+use App\Models\Wilayah;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Schema;
@@ -50,7 +52,7 @@ class UserScope
     {
         $user = self::user();
 
-        return $user?->kecamatan_id ?? $user?->desa?->kecamatan_id;
+        return $user?->kecamatan_id ?? $user?->desa?->parent_id;
     }
 
     /**
@@ -89,6 +91,31 @@ class UserScope
         $user = self::user();
 
         return AppRole::tryFrom($user?->roles->first()?->name ?? '')?->isDesaLevel() ?? false;
+    }
+
+    public static function isLapanganLevel(): bool
+    {
+        return (bool) self::user()?->hasRole(AppRole::ADMIN_LAPANGAN->value);
+    }
+
+    public static function isKependudukanOwner(): bool
+    {
+        $user = self::user();
+        if (! $user) {
+            return false;
+        }
+
+        if ($user->hasAnyRole([
+            AppRole::ADMIN_KEPENDUDUKAN->value,
+            AppRole::OPERATOR_KEPENDUDUKAN->value,
+            AppRole::ADMIN_DUKCAPIL->value,
+            AppRole::OPERATOR_DUKCAPIL->value,
+        ])) {
+            return true;
+        }
+
+        return $user->hasRole(AppRole::ADMIN_OPD->value)
+            && $user->opd?->kode === 'DUKCAPIL';
     }
 
     /**
@@ -193,26 +220,69 @@ class UserScope
 
             // Tables that access through a `rumah` relation (e.g., Keluarga, Penduduk, Bayi, etc.)
             if (method_exists($query->getModel(), 'rumah')) {
-                return $query->whereHas('rumah.desa', fn ($q) =>
-                    $q->where('kecamatan_id', $kecamatanId)
+                return $query->whereHas(
+                    'rumah.desa',
+                    fn ($q) =>
+                    $q->where('parent_id', $kecamatanId)
                 );
             }
 
             // Tables with `desa_id` column (e.g., Rumah) → filter via desa.kecamatan_id
             if ($hasDesaId && method_exists($query->getModel(), 'desa')) {
-                return $query->whereHas('desa', fn ($q) =>
-                    $q->where('kecamatan_id', $kecamatanId)
+                return $query->whereHas(
+                    'desa',
+                    fn ($q) =>
+                    $q->where('parent_id', $kecamatanId)
                 );
             }
 
             // Tables with `keluarga_id` column (e.g., Penduduk) → filter via keluarga.rumah.desa
             if (self::hasColumn($table, 'keluarga_id') && method_exists($query->getModel(), 'keluarga')) {
-                return $query->whereHas('keluarga.rumah.desa', fn ($q) =>
-                    $q->where('kecamatan_id', $kecamatanId)
+                return $query->whereHas(
+                    'keluarga.rumah.desa',
+                    fn ($q) =>
+                    $q->where('parent_id', $kecamatanId)
                 );
             }
 
             // Fallback: if neither, return empty
+            return $query->whereRaw('1 = 0');
+        }
+
+        // Admin Lapangan can see mapped objects and only the resident records
+        // needed to select a family for a new spatial point.
+        if (self::isLapanganLevel()) {
+            if ($table === 'submission_batches') {
+                return $query
+                    ->where('created_by', $user?->id)
+                    ->where('module', SubmissionBatch::MODULE_LAPANGAN);
+            }
+
+            $desaId = self::getDesaId();
+            $kecamatanId = self::getKecamatanId();
+
+            if (! $desaId && ! $kecamatanId) {
+                return $query->whereRaw('1 = 0');
+            }
+
+            if ($hasDesaId && method_exists($query->getModel(), 'desa')) {
+                return $query->whereHas('desa', fn ($q) => $q
+                    ->when($desaId, fn ($q) => $q->whereKey($desaId))
+                    ->when(! $desaId && $kecamatanId, fn ($q) => $q->where('parent_id', $kecamatanId)));
+            }
+
+            if ($table === 'keluarga' && method_exists($query->getModel(), 'rumah')) {
+                return $query->whereHas('rumah.desa', fn ($q) => $q
+                    ->when($desaId, fn ($q) => $q->whereKey($desaId))
+                    ->when(! $desaId && $kecamatanId, fn ($q) => $q->where('parent_id', $kecamatanId)));
+            }
+
+            if ($table === 'penduduk' && method_exists($query->getModel(), 'keluarga')) {
+                return $query->whereHas('keluarga.rumah.desa', fn ($q) => $q
+                    ->when($desaId, fn ($q) => $q->whereKey($desaId))
+                    ->when(! $desaId && $kecamatanId, fn ($q) => $q->where('parent_id', $kecamatanId)));
+            }
+
             return $query->whereRaw('1 = 0');
         }
 
@@ -227,19 +297,28 @@ class UserScope
 
             // Tables that access through a relation
             if (method_exists($query->getModel(), 'rumah')) {
-                return $query->whereHas('rumah', fn ($q) =>
+                return $query->whereHas(
+                    'rumah',
+                    fn ($q) =>
                     $q->where('desa_id', $desaId)
                 );
             }
 
             // Tables with `rumah_id` column but no direct desa_id
             if (self::hasColumn($table, 'rumah_id')) {
-                return $query->whereHas('rumah', fn ($q) =>
+                return $query->whereHas(
+                    'rumah',
+                    fn ($q) =>
                     $q->where('desa_id', $desaId)
                 );
             }
 
             return $query->whereRaw('1 = 0');
+        }
+
+        // Dukcapil owns the shared household and resident source records.
+        if (self::isKependudukanOwner() && in_array($table, ['keluarga', 'penduduk'], true)) {
+            return $query;
         }
 
         // OPD level: see only data created by self
@@ -278,7 +357,9 @@ class UserScope
             }
             // DataGuru, DataSiswa, DataPrasarana: filter through sekolah relation
             if (method_exists($query->getModel(), 'sekolah')) {
-                return $query->whereHas('sekolah', fn ($q) =>
+                return $query->whereHas(
+                    'sekolah',
+                    fn ($q) =>
                     $q->where('kecamatan_id', $kecamatanId)
                 );
             }

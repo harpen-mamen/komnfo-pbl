@@ -16,6 +16,6 @@ class Authenticate extends Middleware
             return null;
         }
 
-        return route('filament.auth.login');
+        return route('filament.admin.auth.login');
     }
 }

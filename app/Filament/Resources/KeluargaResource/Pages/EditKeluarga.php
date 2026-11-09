@@ -2,18 +2,20 @@
 
 namespace App\Filament\Resources\KeluargaResource\Pages;
 
+use Filament\Actions\ViewAction;
+use Filament\Actions\DeleteAction;
 use App\Filament\Resources\KeluargaResource;
 use App\Models\Rumah;
-use Filament\Pages\Actions;
+use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
 
 class EditKeluarga extends EditRecord
 {
     protected static string $resource = KeluargaResource::class;
 
-    protected function getActions(): array
+    protected function getHeaderActions(): array
     {
-        return [Actions\ViewAction::make(), Actions\DeleteAction::make()];
+        return [ViewAction::make(), DeleteAction::make()];
     }
 
     protected function mutateFormDataBeforeSave(array $data): array

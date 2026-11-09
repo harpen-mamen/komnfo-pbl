@@ -11,7 +11,9 @@ export default async function SejarahSection() {
         <span className="inline-block rounded-full bg-primary-100 px-4 py-1 text-sm font-medium text-primary-700">Sejarah</span>
         <h2 className="heading-lg mt-4">Sejarah Singkat</h2>
         <p className="mt-2 text-slate-600">Perjalanan Kabupaten Kepulauan Sangihe dari masa ke masa.</p>
+        <p className="mt-2 text-xs text-slate-500">Ringkasan mengikuti linimasa pada situs resmi Pemerintah Kabupaten.</p>
       </div>
+      <p className="mx-auto mt-8 max-w-4xl text-center text-xs text-slate-500">Sumber: <a className="underline hover:text-primary-700" href="https://sangihekab.go.id/tentang-daerah/sejarah-daerah/" target="_blank" rel="noreferrer">Sejarah Daerah · sangihekab.go.id</a></p>
 
       <div className="relative mx-auto mt-12 max-w-4xl">
         <div className="absolute left-1/2 hidden h-full w-0.5 -translate-x-1/2 bg-primary-200 md:block"></div>

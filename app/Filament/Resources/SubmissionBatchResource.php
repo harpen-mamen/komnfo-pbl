@@ -2,12 +2,20 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\Filter;
+use Filament\Forms\Components\Radio;
+use Filament\Actions\ViewAction;
+use App\Filament\Resources\SubmissionBatchResource\Pages\ListSubmissionBatches;
+use App\Filament\Resources\SubmissionBatchResource\Pages\ViewSubmissionBatch;
 use App\Filament\Resources\SubmissionBatchResource\Pages;
 use App\Models\SubmissionBatch;
 use App\Support\PanelAccess;
-use Filament\Resources\Form;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -15,14 +23,16 @@ use Illuminate\Database\Eloquent\Model;
 class SubmissionBatchResource extends Resource
 {
     protected static ?string $model = SubmissionBatch::class;
-    protected static ?string $navigationIcon = 'heroicon-o-badge-check';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-check-badge';
     protected static ?int $navigationSort = 14;
 
     public static function getNavigationLabel(): string
     {
-        return PanelAccess::isAdminKecamatan()
-            ? 'Verifikasi Tingkat Kecamatan'
-            : 'Verifikasi Kominfo';
+        if (PanelAccess::isAdminLapangan()) {
+            return 'Kiriman Titik Lapangan';
+        }
+
+        return PanelAccess::isAdminKecamatan() ? 'Verifikasi Tingkat Kecamatan' : 'Kiriman Lapangan';
     }
 
     public static function getPluralModelLabel(): string
@@ -42,19 +52,29 @@ class SubmissionBatchResource extends Resource
             ->with(['kecamatan', 'createdBy', 'verifiedBy']);
     }
 
-    protected static function shouldRegisterNavigation(): bool
+    public static function shouldRegisterNavigation(): bool
     {
-        return PanelAccess::canAccessKabupatenPanel() || PanelAccess::isAdminKecamatan();
+        return PanelAccess::canAccessKabupatenPanel() || PanelAccess::isAdminKecamatan() || PanelAccess::isAdminLapangan();
     }
 
     public static function canViewAny(): bool
     {
-        return PanelAccess::canAccessKabupatenPanel() || PanelAccess::isAdminKecamatan();
+        return PanelAccess::canAccessKabupatenPanel() || PanelAccess::isAdminKecamatan() || PanelAccess::isAdminLapangan();
     }
 
     public static function canView(Model $record): bool
     {
-        return PanelAccess::canAccessKabupatenPanel() || PanelAccess::isAdminKecamatan();
+        if (PanelAccess::isAdminKecamatan()) {
+            return $record instanceof SubmissionBatch && $record->requiresKecamatanGate();
+        }
+
+        if (PanelAccess::isAdminLapangan()) {
+            return $record instanceof SubmissionBatch
+                && $record->module === SubmissionBatch::MODULE_LAPANGAN
+                && (int) $record->created_by === (int) PanelAccess::user()?->id;
+        }
+
+        return PanelAccess::canAccessKabupatenPanel();
     }
 
     public static function canCreate(): bool
@@ -72,17 +92,17 @@ class SubmissionBatchResource extends Resource
         return false;
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([]);
+        return $schema->components([]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('submission_number')->label('Batch')->searchable()->sortable(),
-                Tables\Columns\BadgeColumn::make('source')
+                TextColumn::make('submission_number')->label('Batch')->searchable()->sortable(),
+                BadgeColumn::make('source')
                     ->label('Asal')
                     ->formatStateUsing(fn (SubmissionBatch $record): string => $record->isFromMobile() ? 'Mobile' : 'Web')
                     ->colors([
@@ -92,12 +112,12 @@ class SubmissionBatchResource extends Resource
                     ->sortable(query: function (Builder $query, string $direction): Builder {
                         return $query->orderByRaw("JSON_EXTRACT(payload_snapshot, '\$.source') {$direction}");
                     }),
-                Tables\Columns\TextColumn::make('module')
+                TextColumn::make('module')
                     ->label('Modul')
                     ->formatStateUsing(fn ($state) => SubmissionBatch::moduleLabel($state))
                     ->sortable(),
-                Tables\Columns\TextColumn::make('kecamatan.nama')->label('Kecamatan')->searchable()->sortable(),
-                Tables\Columns\BadgeColumn::make('status')
+                TextColumn::make('kecamatan.nama')->label('Kecamatan')->searchable()->sortable(),
+                BadgeColumn::make('status')
                     ->label('Status')
                     ->colors([
                         'gray' => SubmissionBatch::STATUS_DRAFT,
@@ -108,12 +128,12 @@ class SubmissionBatchResource extends Resource
                     ])
                     ->formatStateUsing(fn ($state) => SubmissionBatch::statusLabel($state))
                     ->sortable(),
-                Tables\Columns\TextColumn::make('createdBy.name')->label('Pengirim')->sortable()->searchable(),
-                Tables\Columns\TextColumn::make('submitted_at')->label('Tanggal Kirim')->dateTime('d M Y H:i')->sortable(),
+                TextColumn::make('createdBy.name')->label('Pengirim')->sortable()->searchable(),
+                TextColumn::make('submitted_at')->label('Tanggal Kirim')->dateTime('d M Y H:i')->sortable(),
             ])
             ->defaultSort('submitted_at', 'desc')
             ->filters([
-                Tables\Filters\SelectFilter::make('status')
+                SelectFilter::make('status')
                     ->label('Status')
                     ->options([
                         SubmissionBatch::STATUS_DRAFT => SubmissionBatch::statusLabel(SubmissionBatch::STATUS_DRAFT),
@@ -122,7 +142,7 @@ class SubmissionBatchResource extends Resource
                         SubmissionBatch::STATUS_APPROVED => SubmissionBatch::statusLabel(SubmissionBatch::STATUS_APPROVED),
                         SubmissionBatch::STATUS_REJECTED => SubmissionBatch::statusLabel(SubmissionBatch::STATUS_REJECTED),
                     ]),
-                Tables\Filters\SelectFilter::make('module')
+                SelectFilter::make('module')
                     ->label('Modul')
                     ->options([
                         SubmissionBatch::MODULE_RUMAH => SubmissionBatch::moduleLabel(SubmissionBatch::MODULE_RUMAH),
@@ -130,11 +150,12 @@ class SubmissionBatchResource extends Resource
                         SubmissionBatch::MODULE_PENDUDUK => SubmissionBatch::moduleLabel(SubmissionBatch::MODULE_PENDUDUK),
                         SubmissionBatch::MODULE_KESEHATAN => SubmissionBatch::moduleLabel(SubmissionBatch::MODULE_KESEHATAN),
                         SubmissionBatch::MODULE_PENDIDIKAN => SubmissionBatch::moduleLabel(SubmissionBatch::MODULE_PENDIDIKAN),
+                        SubmissionBatch::MODULE_LAPANGAN => SubmissionBatch::moduleLabel(SubmissionBatch::MODULE_LAPANGAN),
                     ]),
-                Tables\Filters\Filter::make('source')
+                Filter::make('source')
                     ->label('Asal')
-                    ->form([
-                        \Filament\Forms\Components\Radio::make('source')
+                    ->schema([
+                        Radio::make('source')
                             ->options([
                                 'mobile' => 'Mobile',
                                 'web' => 'Web',
@@ -152,16 +173,16 @@ class SubmissionBatchResource extends Resource
                         return $query->whereRaw("JSON_EXTRACT(payload_snapshot, '\$.source') IS NULL");
                     }),
             ])
-            ->actions([
-                Tables\Actions\ViewAction::make(),
+            ->recordActions([
+                ViewAction::make(),
             ]);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListSubmissionBatches::route('/'),
-            'view' => Pages\ViewSubmissionBatch::route('/{record}'),
+            'index' => ListSubmissionBatches::route('/'),
+            'view' => ViewSubmissionBatch::route('/{record}'),
         ];
     }
 }

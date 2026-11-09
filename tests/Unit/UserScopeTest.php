@@ -86,7 +86,7 @@ class UserScopeTest extends TestCase
             AppRole::ADMIN_DINKES->value,
             AppRole::OPERATOR_DINKES->value,
             AppRole::ADMIN_DISPEND->value,
-            AppRole::OPERATOR_PUSKESMAS->value,
+            AppRole::OPERATOR_DUKCAPIL->value,
             AppRole::ADMIN_OPD->value,
         ];
 

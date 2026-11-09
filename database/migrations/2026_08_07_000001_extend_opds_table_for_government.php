@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class () extends Migration {
     public function up(): void
     {
         Schema::table('opds', function (Blueprint $table) {
@@ -17,13 +16,13 @@ return new class extends Migration
             $table->string('email', 255)->nullable()->after('telepon');
             $table->string('kepala_dinas', 255)->nullable()->after('email');
             $table->string('nip_kepala_dinas', 50)->nullable()->after('kepala_dinas');
-            
+
             // Add foreign key for parent OPD
             $table->foreign('parent_id')
                 ->references('id')
                 ->on('opds')
                 ->onDelete('set null');
-            
+
             // Add index for faster lookups
             $table->index('kategori');
         });

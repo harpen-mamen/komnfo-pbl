@@ -15,9 +15,9 @@ class DataKesehatanBulananFactory extends Factory
             'kecamatan_id' => null,
             'desa_id' => null,
             'puskesmas' => $this->faker->company,
-            'periode_bulan' => $this->faker->numberBetween(1,12),
+            'periode_bulan' => $this->faker->numberBetween(1, 12),
             'periode_tahun' => now()->year,
-            'jumlah_balita' => $this->faker->numberBetween(0,200),
+            'jumlah_balita' => $this->faker->numberBetween(0, 200),
         ];
     }
 }

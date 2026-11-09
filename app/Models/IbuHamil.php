@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use App\Support\UserScope;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -16,7 +17,6 @@ class IbuHamil extends Model
     protected $table = 'ibu_hamils';
 
     protected $fillable = [
-        'data_kesehatan_bulanan_id',
         'submission_batch_id',
         'penduduk_id',
         'desa_id',
@@ -65,11 +65,6 @@ class IbuHamil extends Model
         return UserScope::visibleTo($query);
     }
 
-    public function dataKesehatan(): BelongsTo
-    {
-        return $this->belongsTo(DataKesehatanBulanan::class);
-    }
-
     public function submissionBatch(): BelongsTo
     {
         return $this->belongsTo(SubmissionBatch::class);
@@ -95,7 +90,7 @@ class IbuHamil extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
-    public function bayis(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function bayis(): HasMany
     {
         return $this->hasMany(Bayi::class, 'ibu_id');
     }

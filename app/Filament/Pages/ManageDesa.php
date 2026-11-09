@@ -2,43 +2,38 @@
 
 namespace App\Filament\Pages;
 
-use App\Models\Desa;
-use App\Models\Kecamatan;
+use Filament\Forms\Contracts\HasForms;
+use Filament\Forms\Concerns\InteractsWithForms;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use App\Models\Wilayah;
+use App\Support\AdminKecamatan;
 use App\Support\PanelAccess;
 use Filament\Forms;
 use Filament\Pages\Page;
 
-class ManageDesa extends Page implements Forms\Contracts\HasForms
+class ManageDesa extends Page implements HasForms
 {
-    use Forms\Concerns\InteractsWithForms;
+    use InteractsWithForms;
 
-    protected static ?string $navigationIcon = 'heroicon-o-home';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-home';
     protected static ?string $navigationLabel = 'Manajemen Desa';
     protected static ?string $title = 'Manajemen Desa';
     protected static ?int $navigationSort = 6;
-    protected static string $view = 'filament.pages.manage-desa';
+    protected string $view = 'filament.pages.manage-desa';
 
     public ?array $data = [];
 
     public function mount(): void
     {
-        abort_unless(
-            PanelAccess::isAdminKecamatan() || 
-            PanelAccess::isKominfoKabupaten() || 
-            false || 
-            PanelAccess::isOperatorOpd(), 
-            403
-        );
+        abort_unless(PanelAccess::isSuperAdmin(), 403);
 
         $this->form->fill();
     }
 
     public static function shouldRegisterNavigation(): bool
     {
-        return PanelAccess::isAdminKecamatan() || 
-               PanelAccess::isKominfoKabupaten() || 
-               false || 
-               PanelAccess::isOperatorOpd();
+        return PanelAccess::isSuperAdmin();
     }
 
     public function getTitle(): string
@@ -56,17 +51,17 @@ class ManageDesa extends Page implements Forms\Contracts\HasForms
     protected function getFormSchema(): array
     {
         return [
-            Forms\Components\Select::make('kecamatan_id')
+            Select::make('kecamatan_id')
                 ->label('Kecamatan')
-                ->options(fn () => Kecamatan::query()->orderBy('nama')->pluck('nama', 'id'))
-                ->default(fn () => PanelAccess::user()?->kecamatan_id)
+                ->options(fn () => Wilayah::query()->where('tipe', Wilayah::TIPE_KECAMATAN)->orderBy('nama')->pluck('nama', 'id'))
+                ->default(fn () => AdminKecamatan::kecamatanId())
                 ->disabled(fn () => PanelAccess::isAdminKecamatan())
                 ->required(),
-            Forms\Components\TextInput::make('nama')
+            TextInput::make('nama')
                 ->label('Nama Desa')
                 ->required()
                 ->maxLength(255),
-            Forms\Components\TextInput::make('kode')
+            TextInput::make('kode')
                 ->label('Kode Desa')
                 ->required()
                 ->maxLength(32),
@@ -82,15 +77,15 @@ class ManageDesa extends Page implements Forms\Contracts\HasForms
     {
         $state = $this->form->getState();
 
-        $desa = Desa::firstOrCreate(
-            ['kecamatan_id' => $state['kecamatan_id'], 'nama' => $state['nama']],
-            ['kode' => $state['kode']]
+        $desa = Wilayah::firstOrCreate(
+            ['parent_id' => $state['kecamatan_id'], 'tipe' => Wilayah::TIPE_DESA, 'nama' => $state['nama']],
+            ['kode_bps' => $state['kode']]
         );
 
         if ($desa->wasRecentlyCreated) {
-            $this->notify('success', 'Desa baru berhasil ditambahkan.');
+            \Filament\Notifications\Notification::make()->success()->title('Desa baru berhasil ditambahkan.')->send();
         } else {
-            $this->notify('warning', 'Desa sudah ada untuk kecamatan ini.');
+            \Filament\Notifications\Notification::make()->warning()->title('Desa sudah ada untuk kecamatan ini.')->send();
         }
 
         $this->form->fill();
@@ -98,10 +93,11 @@ class ManageDesa extends Page implements Forms\Contracts\HasForms
 
     public function getDesasProperty()
     {
-        return Desa::query()
-            ->with('kecamatan')
+        return Wilayah::query()
+            ->where('tipe', Wilayah::TIPE_DESA)
+            ->with('parent')
             ->orderBy('nama')
-            ->where('kecamatan_id', PanelAccess::user()?->kecamatan_id)
+            ->when(AdminKecamatan::kecamatanId(), fn ($q) => $q->where('parent_id', AdminKecamatan::kecamatanId()))
             ->get();
     }
 }

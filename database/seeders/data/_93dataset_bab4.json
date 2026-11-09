@@ -1,0 +1,292 @@
+{
+    "KETPANGAN": [
+        "2.03",
+        {
+            "4.37": [
+                "Kecukupan Gizi",
+                "tahunan",
+                {
+                    "jenis_bahan_makanan": ["Jenis Bahan Makanan", "enum", true, {"Padi-padian": "Padi-padian", "Umbi-umbian": "Umbi-umbian", "Pangan Hewani": "Pangan Hewani", "Minyak/Lemak": "Minyak dan Lemak", "Buah/Biji": "Buah/Biji Berminyak", "Kacang-kacangan": "Kacang-kacangan", "Gula": "Gula", "Sayur/Buah": "Sayur dan Buah", "Lain-lain": "Lain-lain", "Total": "Total"}],
+                    "kkal_per_hari": ["Energi per Hari", "decimal", false, "Kkal/Kapita/Hari"],
+                    "persen_ake": ["% AKE", "decimal", false, "Persen"],
+                    "gram_protein_per_hari": ["Protein per Hari", "decimal", false, "Gram/Kapita/Hari"],
+                    "persen_akp": ["% AKP", "decimal", false, "Persen"]
+                }
+            ],
+            "4.38": [
+                "Skor Pola Pangan Harapan",
+                "tahunan",
+                {
+                    "kelompok_pangan": ["Kelompok Pangan", "enum", true, {"Padi-padian": "Padi-padian", "Umbi-umbian": "Umbi-umbian", "Pangan Hewani": "Pangan Hewani", "Minyak/Lemak": "Minyak dan Lemak", "Buah/Biji": "Buah/Biji Berminyak", "Kacang-kacangan": "Kacang-kacangan", "Gula": "Gula", "Sayur/Buah": "Sayur dan Buah", "Lain-lain": "Lain-lain", "Total": "Total"}],
+                    "berat_pangan": ["Berat Pangan", "decimal", false, "Gram/Kapita/Hari"],
+                    "kkal_per_hari": ["Energi", "decimal", false, "Kkal/Kapita/Hari"],
+                    "persen_energi": ["% Energi", "decimal", false, "Persen"],
+                    "skor_aktual": ["Skor Aktual", "decimal", false, "Skor"],
+                    "skor_ake": ["Skor AKE", "decimal", false, "Skor"],
+                    "skor_maksimal": ["Skor Maksimal", "decimal", false, "Skor"],
+                    "skor_pph": ["Skor PPH", "decimal", false, "Skor"]
+                }
+            ],
+            "4.39": [
+                "Resiko Rawan Pangan",
+                "tahunan",
+                {
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "status": [
+                        "Status",
+                        "enum",
+                        true,
+                        [
+                            "Aman",
+                            "Rawan",
+                            "Rawan Berat"
+                        ]
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Kampung"
+                    ]
+                }
+            ],
+            "4.40": [
+                "Lumbung Pangan Masyarakat",
+                "tahunan",
+                {
+                    "kampung": [
+                        "Kampung",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "kapasitas": [
+                        "Kapasitas",
+                        "decimal",
+                        false,
+                        "Ton"
+                    ]
+                }
+            ]
+        }
+    ],
+    "DISTAN": [
+        "3.03",
+        {
+            "4.41": [
+                "Ekonomi Sektor Pertanian",
+                "tahunan",
+                {
+                    "indikator": [
+                        "Indikator",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "tahun": [
+                        "Tahun",
+                        "integer",
+                        true,
+                        null
+                    ],
+                    "nilai": [
+                        "Nilai",
+                        "decimal",
+                        false,
+                        "Nilai"
+                    ]
+                }
+            ],
+            "4.42": [
+                "Tanaman Pangan",
+                "tahunan",
+                {
+                    "komoditas": [
+                        "Komoditas",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "luas_tanam": [
+                        "Luas Tanam",
+                        "decimal",
+                        false,
+                        "Ha"
+                    ],
+                    "luas_panen": [
+                        "Luas Panen",
+                        "decimal",
+                        false,
+                        "Ha"
+                    ],
+                    "produksi": [
+                        "Produksi",
+                        "decimal",
+                        false,
+                        "Ton"
+                    ],
+                    "produktivitas": [
+                        "Produktivitas",
+                        "decimal",
+                        false,
+                        "Ton\/Ha"
+                    ]
+                }
+            ],
+            "4.43": [
+                "Hortikultura",
+                "tahunan",
+                {
+                    "komoditas": [
+                        "Komoditas",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "luas_tanam": [
+                        "Luas Tanam",
+                        "decimal",
+                        false,
+                        "Ha"
+                    ],
+                    "produksi": [
+                        "Produksi",
+                        "decimal",
+                        false,
+                        "Ton"
+                    ]
+                }
+            ],
+            "4.44": [
+                "Perkebunan",
+                "tahunan",
+                {
+                    "komoditas": [
+                        "Komoditas",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "luas_areal": [
+                        "Luas Areal",
+                        "decimal",
+                        false,
+                        "Ha"
+                    ],
+                    "produksi": [
+                        "Produksi",
+                        "decimal",
+                        false,
+                        "Ton"
+                    ]
+                }
+            ]
+        }
+    ],
+    "PERIKANAN": [
+        "3.01",
+        {
+            "4.45": [
+                "Capaian Kinerja Perikanan",
+                "tahunan",
+                {
+                    "indikator": [
+                        "Indikator",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "target": [
+                        "Target",
+                        "decimal",
+                        false,
+                        "Nilai"
+                    ],
+                    "realisasi": [
+                        "Realisasi",
+                        "decimal",
+                        false,
+                        "Nilai"
+                    ]
+                }
+            ],
+            "4.46": [
+                "Produksi Perikanan Menurut Jenis",
+                "tahunan",
+                {
+                    "jenis_ikan": [
+                        "Jenis Ikan",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "volume": [
+                        "Volume",
+                        "decimal",
+                        false,
+                        "Ton"
+                    ]
+                }
+            ],
+            "4.47": [
+                "Produksi Perikanan Tangkap",
+                "tahunan",
+                {
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "jenis_alat": [
+                        "Alat Tangkap",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "volume": [
+                        "Volume",
+                        "decimal",
+                        false,
+                        "Ton"
+                    ]
+                }
+            ],
+            "4.48": [
+                "Armada Kapal",
+                "tahunan",
+                {
+                    "jenis_kapal": [
+                        "Jenis Kapal",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Unit"
+                    ],
+                    "gt": [
+                        "GT",
+                        "decimal",
+                        false,
+                        "GT"
+                    ]
+                }
+            ]
+        }
+    ]
+}

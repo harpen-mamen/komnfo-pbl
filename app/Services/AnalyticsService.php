@@ -9,7 +9,6 @@ use Carbon\Carbon;
 
 class AnalyticsService
 {
-    
     /**
      * Get demographic statistics
      * READ MODEL: Only reads from APPROVED batches (Arsitektur §4.3)
@@ -33,10 +32,14 @@ class AnalyticsService
             )->first()?->avg_age ?? 0),
             'ageGroups' => [
                 'balita' => (clone $query)->whereDate('tanggal_lahir', '>', $today->copy()->subYears(5))->count(),
-                'anak' => (clone $query)->whereBetween('tanggal_lahir', 
-                    [$today->copy()->subYears(17)->endOfDay(), $today->copy()->subYears(5)->startOfDay()])->count(),
-                'dewasa' => (clone $query)->whereBetween('tanggal_lahir',
-                    [$today->copy()->subYears(60)->endOfDay(), $today->copy()->subYears(18)->startOfDay()])->count(),
+                'anak' => (clone $query)->whereBetween(
+                    'tanggal_lahir',
+                    [$today->copy()->subYears(17)->endOfDay(), $today->copy()->subYears(5)->startOfDay()]
+                )->count(),
+                'dewasa' => (clone $query)->whereBetween(
+                    'tanggal_lahir',
+                    [$today->copy()->subYears(60)->endOfDay(), $today->copy()->subYears(18)->startOfDay()]
+                )->count(),
                 'lansia' => (clone $query)->whereDate('tanggal_lahir', '<=', $today->copy()->subYears(60))->count(),
             ],
         ];
@@ -177,7 +180,7 @@ class AnalyticsService
                 ->count();
         }
 
-        
+
         return $distribution;
     }
 

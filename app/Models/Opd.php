@@ -4,8 +4,8 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 
 class Opd extends Model
 {
@@ -55,6 +55,21 @@ class Opd extends Model
     public const KATEGORI_PERKEBUNAN = 'perkebunan';
     public const KATEGORI_LAINNYA = 'lainnya';
 
+    // FASE 1: 14 kategori tambahan (Prinsip 14)
+    public const KATEGORI_PEMERINTAHAN = 'pemerintahan';
+    public const KATEGORI_KETENAGAKERJAAN = 'ketenagakerjaan';
+    public const KATEGORI_KETAHANAN_PANGAN = 'ketahanan_pangan';
+    public const KATEGORI_PERIKANAN = 'perikanan';
+    public const KATEGORI_PERPUSTAKAAN = 'perpustakaan';
+    public const KATEGORI_PERUMAHAN = 'perumahan';
+    public const KATEGORI_KOPERASI = 'koperasi';
+    public const KATEGORI_PENGAWASAN = 'pengawasan';
+    public const KATEGORI_KESBANGPOL = 'kesbangpol';
+    public const KATEGORI_PERBATASAN = 'perbatasan';
+    public const KATEGORI_SATPOLPP = 'satpolpp';
+    public const KATEGORI_SETDA = 'setda';
+    public const KATEGORI_SETWAN = 'setwan';
+
     public static function kategoriOptions(): array
     {
         return [
@@ -76,6 +91,20 @@ class Opd extends Model
             self::KATEGORI_KOMINFO => 'Dinas Komunikasi & Informatika',
             self::KATEGORI_INVESTASI => 'Dinas Penanaman Modal & PTSP',
             self::KATEGORI_PERKEBUNAN => 'Dinas Perkebunan & Pertambangan',
+            // FASE 1: 14 kategori tambahan (Prinsip 14)
+            self::KATEGORI_PEMERINTAHAN => 'Bidang Pemerintahan',
+            self::KATEGORI_KETENAGAKERJAAN => 'Bidang Ketenagakerjaan',
+            self::KATEGORI_KETAHANAN_PANGAN => 'Bidang Ketahanan Pangan',
+            self::KATEGORI_PERIKANAN => 'Bidang Perikanan',
+            self::KATEGORI_PERPUSTAKAAN => 'Bidang Perpustakaan',
+            self::KATEGORI_PERUMAHAN => 'Bidang Perumahan & Permukiman',
+            self::KATEGORI_KOPERASI => 'Bidang Koperasi & UKM',
+            self::KATEGORI_PENGAWASAN => 'Bidang Pengawasan',
+            self::KATEGORI_KESBANGPOL => 'Bidang Kesbangpol',
+            self::KATEGORI_PERBATASAN => 'Bidang Pengelolaan Perbatasan',
+            self::KATEGORI_SATPOLPP => 'Bidang Satpol PP & Damkar',
+            self::KATEGORI_SETDA => 'Sekretariat Daerah',
+            self::KATEGORI_SETWAN => 'Sekretariat DPRD',
             self::KATEGORI_LAINNYA => 'Lainnya',
         ];
     }
@@ -85,116 +114,34 @@ class Opd extends Model
         return self::kategoriOptions()[$kategori] ?? $kategori;
     }
 
-    // Mapping kategori ke role admin
-    public static function getAdminRoleForKategori(string $kategori): string
-    {
-        return match ($kategori) {
-            self::KATEGORI_KESEHATAN => 'admin_dinkes',
-            self::KATEGORI_PENDIDIKAN => 'admin_dispend',
-            self::KATEGORI_PU => 'admin_dpu',
-            self::KATEGORI_SOSIAL => 'admin_dinsos',
-            self::KATEGORI_PERDAGANGAN => 'admin_disperindag',
-            self::KATEGORI_KEPENDUDUKAN => 'admin_dukcapil',
-            self::KATEGORI_LINGKUNGAN => 'admin_dlh',
-            self::KATEGORI_PERTANIAN => 'admin_distan',
-            self::KATEGORI_HUBUNGAN => 'admin_dishub',
-            self::KATEGORI_PARIWISATA => 'admin_distpar',
-            self::KATEGORI_PEMUDA => 'admin_dispora',
-            self::KATEGORI_KEPEGAWAIAN => 'admin_bkpsdmd',
-            self::KATEGORI_PERENCANAAN => 'admin_bappeda',
-            self::KATEGORI_KEUANGAN => 'admin_bapenda',
-            self::KATEGORI_BENCANA => 'admin_bpbd',
-            self::KATEGORI_KOMINFO => 'admin_diskominfo',
-            self::KATEGORI_INVESTASI => 'admin_dpmptsp',
-            self::KATEGORI_PERKEBUNAN => 'admin_distaman',
-            default => 'admin_opd',
-        };
-    }
-
-    public static function getOperatorRoleForKategori(string $kategori): string
-    {
-        $adminRole = self::getAdminRoleForKategori($kategori);
-        return str_replace('admin_', 'operator_', $adminRole);
-    }
-
     // Relasi
     public function users(): HasMany
     {
         return $this->hasMany(User::class);
     }
 
-    public function parent(): BelongsTo
+    public function datasets(): HasMany
     {
-        return $this->belongsTo(Opd::class, 'parent_id');
+        return $this->hasMany(Dataset::class);
     }
 
-    public function children(): HasMany
+    public function programBantuans(): HasMany
     {
-        return $this->hasMany(Opd::class, 'parent_id');
+        return $this->hasMany(ProgramBantuan::class);
+    }
+
+    /**
+     * FASE 1: Source attribution polymorphic
+     * (untuk data yang OPD ini menjadi source-nya)
+     */
+    public function sourceAttributions(): MorphMany
+    {
+        return $this->morphMany(SourceAttribution::class, 'sourceable');
     }
 
     // Scope untuk OPD aktif
     public function scopeAktif($query)
     {
         return $query->where('aktif', true);
-    }
-
-    // Scope berdasarkan kategori
-    public function scopeKategori($query, string $kategori)
-    {
-        return $query->where('kategori', $kategori);
-    }
-
-    // Check apakah OPD ini adalah verifikator untuk data tertentu
-    public function isVerifikator(): bool
-    {
-        return $this->is_verifikator ?? false;
-    }
-
-    // Check apakah OPD ini bisa memverifikasi data dari kategori tertentu
-    public function canVerifyData(string $dataCategory): bool
-    {
-        // Mapping kategori data dengan OPD verifikator
-        $verificationMap = [
-            'kesehatan' => [self::KATEGORI_KESEHATAN],
-            'pendidikan' => [self::KATEGORI_PENDIDIKAN],
-            'pu' => [self::KATEGORI_PU],
-            'sosial' => [self::KATEGORI_SOSIAL],
-            'perdagangan' => [self::KATEGORI_PERDAGANGAN],
-            'kependudukan' => [self::KATEGORI_KEPENDUDUKAN],
-            'lingkungan' => [self::KATEGORI_LINGKUNGAN],
-            'pertanian' => [self::KATEGORI_PERTANIAN],
-            'hubungan' => [self::KATEGORI_HUBUNGAN],
-            'bencana' => [self::KATEGORI_BENCANA],
-        ];
-
-        return in_array($this->kategori, $verificationMap[$dataCategory] ?? []);
-    }
-
-    // Get module name untuk batch submission
-    public function getModuleName(): string
-    {
-        return $this->kategori ?? self::KATEGORI_LAINNYA;
-    }
-
-    // Static untuk mendapatkan OPD berdasarkan kategori
-    public static function findByKategori(string $kategori): ?Opd
-    {
-        return self::where('kategori', $kategori)->aktif()->first();
-    }
-
-    // Get all verifikator OPDs
-    public static function getVerifikators(): \Illuminate\Database\Eloquent\Collection
-    {
-        return self::where('is_verifikator', true)->aktif()->get();
-    }
-
-    // Get OPD verifikator untuk kategori tertentu
-    public static function getVerifikatorForCategory(string $kategori): ?Opd
-    {
-        return self::where('kategori', $kategori)
-            ->where('is_verifikator', true)
-            ->aktif()
-            ->first();
     }
 }

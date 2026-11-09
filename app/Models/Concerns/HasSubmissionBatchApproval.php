@@ -58,6 +58,9 @@ trait HasSubmissionBatchApproval
                 ->whereColumn('sbi.entity_id', $qualifiedKey)
                 ->where('sbi.entity_type', $entityType)
                 ->where('sb.status', SubmissionBatch::STATUS_APPROVED)
+                ->whereNotNull('sb.verified_by')
+                ->whereNotNull('sb.verified_at')
+                ->where('sb.is_published', true)
                 ->whereNull('sb.deleted_at')
                 ->whereRaw(
                     'sb.id = (
@@ -67,7 +70,7 @@ trait HasSubmissionBatchApproval
                         where sbi_latest.entity_type = ?
                           and sbi_latest.entity_id = sbi.entity_id
                           and sb_latest.deleted_at is null
-                        order by coalesce(sb_latest.verified_at, sb_latest.submitted_at, sb_latest.created_at) desc, sb_latest.id desc
+                        order by sb_latest.created_at desc, sb_latest.id desc
                         limit 1
                     )',
                     [$entityType]

@@ -3,9 +3,6 @@
 namespace App\Services\Submission\Modules;
 
 use App\Models\FasilitasKesehatan;
-use App\Models\RekamMedis;
-use App\Models\StokObat;
-use App\Models\TenagaKesehatan;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
@@ -18,11 +15,26 @@ use Illuminate\Database\Eloquent\Builder;
  */
 class PuskesHandler extends BaseModuleHandler
 {
-    public function key(): string { return 'puskes'; }
-    public function label(): string { return 'Puskesmas/Puskes'; }
-    public function periodType(): string { return self::MONTHLY; }
-    public function entityType(): string { return FasilitasKesehatan::class; }
-    public function table(): string { return 'fasilitas_kesehatans'; }
+    public function key(): string
+    {
+        return 'puskes';
+    }
+    public function label(): string
+    {
+        return 'Puskesmas/Puskes';
+    }
+    public function periodType(): string
+    {
+        return self::MONTHLY;
+    }
+    public function entityType(): string
+    {
+        return FasilitasKesehatan::class;
+    }
+    public function table(): string
+    {
+        return 'fasilitas_kesehatans';
+    }
 
     public function context(?int $periodeBulan, ?string $semester, ?int $periodeTahun): array
     {

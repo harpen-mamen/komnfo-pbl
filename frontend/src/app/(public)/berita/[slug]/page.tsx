@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { fetchBeritaDetail } from "@/lib/api/berita";
@@ -22,7 +21,7 @@ export default async function BeritaDetailPage({ params }: Props) {
   try { data = await fetchBeritaDetail(slug); } catch { notFound(); }
   const article = data.data;
   const formatDate = (d: string | null) => d ? new Date(d).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }) : "";
-  const readTime = article.isi ? Math.max(1, Math.ceil(article.isi.replace(/<[^>]+>/g, "").split(" ").length / 200)) : 1;
+  const readTime = article.isi ? Math.max(1, Math.ceil(article.isi.split(" ").length / 200)) : 1;
 
   return (
     <div className="section-padding">
@@ -44,10 +43,10 @@ export default async function BeritaDetailPage({ params }: Props) {
           </div>
           {article.gambar && (
             <div className="relative mt-8 aspect-video overflow-hidden rounded-2xl">
-              <Image src={article.gambar} alt={article.judul} fill className="object-cover" sizes="(max-width: 768px) 100vw, 672px" priority />
+              <img src={article.gambar} alt={article.judul} className="absolute inset-0 h-full w-full object-cover" />
             </div>
           )}
-          <div className="mt-8 prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: article.isi }} />
+          <div className="mt-8 max-w-none whitespace-pre-line leading-8 text-slate-700">{article.isi}</div>
         </div>
       </div>
     </div>

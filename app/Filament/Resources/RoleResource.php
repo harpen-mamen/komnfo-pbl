@@ -2,37 +2,45 @@
 
 namespace App\Filament\Resources;
 
+use Filament\Schemas\Schema;
+use Filament\Forms\Components\TextInput;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Actions\EditAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use App\Filament\Resources\RoleResource\Pages\ListRoles;
+use App\Filament\Resources\RoleResource\Pages\CreateRole;
+use App\Filament\Resources\RoleResource\Pages\EditRole;
 use App\Filament\Resources\RoleResource\Pages;
 use App\Support\PanelAccess;
 use Filament\Forms;
-use Filament\Resources\Form;
 use Filament\Resources\Resource;
-use Filament\Resources\Table;
+use Filament\Tables\Table;
 use Filament\Tables;
 use Spatie\Permission\Models\Role;
 
 class RoleResource extends Resource
 {
     protected static ?string $model = Role::class;
-    protected static ?string $navigationIcon = 'heroicon-o-shield-check';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-shield-check';
     protected static ?string $navigationLabel = 'Role';
     protected static ?int $navigationSort = 11;
 
-    protected static function shouldRegisterNavigation(): bool
+    public static function shouldRegisterNavigation(): bool
     {
-        return PanelAccess::canAccessKabupatenPanel();
+        return PanelAccess::isSuperAdmin();
     }
 
     public static function canViewAny(): bool
     {
-        return PanelAccess::canAccessKabupatenPanel();
+        return PanelAccess::isSuperAdmin();
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form->schema([
-            Forms\Components\TextInput::make('name')->label('Nama Role')->required()->unique(ignoreRecord: true)->maxLength(255),
-            Forms\Components\TextInput::make('guard_name')->label('Guard')->default('web')->required()->maxLength(255),
+        return $schema->components([
+            TextInput::make('name')->label('Nama Role')->required()->unique(ignoreRecord: true)->maxLength(255),
+            TextInput::make('guard_name')->label('Guard')->default('web')->required()->maxLength(255),
         ]);
     }
 
@@ -40,25 +48,25 @@ class RoleResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')->label('Role')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('guard_name')->label('Guard'),
-                Tables\Columns\TextColumn::make('created_at')->label('Dibuat')->dateTime('d M Y H:i')->sortable(),
+                TextColumn::make('name')->label('Role')->searchable()->sortable(),
+                TextColumn::make('guard_name')->label('Guard'),
+                TextColumn::make('created_at')->label('Dibuat')->dateTime('d M Y H:i')->sortable(),
             ])
-            ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+            ->recordActions([
+                EditAction::make(),
+                DeleteAction::make(),
             ])
-            ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
+            ->toolbarActions([
+                DeleteBulkAction::make(),
             ]);
     }
 
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListRoles::route('/'),
-            'create' => Pages\CreateRole::route('/create'),
-            'edit' => Pages\EditRole::route('/{record}/edit'),
+            'index' => ListRoles::route('/'),
+            'create' => CreateRole::route('/create'),
+            'edit' => EditRole::route('/{record}/edit'),
         ];
     }
 }

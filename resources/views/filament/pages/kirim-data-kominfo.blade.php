@@ -1,158 +1,90 @@
-<x-filament::page>
-    @php
-        $moduleLookup = collect($modules ?? [])->keyBy('key');
-        $previewLookup = collect($preview['modules'] ?? [])->keyBy('key');
-    @endphp
-
+﻿<x-filament-panels::page>
     <div class="space-y-6">
-        <div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div class="border-b border-slate-200 bg-gradient-to-r from-slate-50 to-white px-5 py-4">
-                <h2 class="text-xl font-semibold text-slate-900">Kirim Data ke Kominfo</h2>
-                <p class="mt-1 text-sm text-slate-600">Pilih modul yang ingin dikirim. Setiap modul akan dibuat menjadi batch terpisah.</p>
+        <div class="rounded-2xl border border-slate-200 bg-white p-5">
+            <h2 class="text-lg font-semibold text-slate-900">Kiriman titik lapangan dari aplikasi mobile</h2>
+            <p class="mt-2 max-w-4xl text-sm leading-6 text-slate-600">
+                Petugas mengirim titik lokasi rumah atau infrastruktur beserta koordinatnya. Untuk titik rumah, keluarga dipilih dari data OPD yang sudah terbit untuk desa tersebut. Sistem menyimpan tautan ke data keluarga itu, bukan menyalin ulang data keluarganya.
+            </p>
+            <p class="mt-2 text-sm leading-6 text-slate-600">
+                Tinjau kiriman pada daftar batch. Kecamatan dapat memulai verifikasi dan meneruskannya ke Kominfo dari halaman detail batch.
+            </p>
+            @if ($kecamatan)
+                <p class="mt-3 text-xs font-medium text-slate-500">Wilayah tugas: {{ $kecamatan }}</p>
+            @endif
+        </div>
+
+        <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="rounded-xl border border-slate-200 bg-white p-4">
+                <p class="text-sm text-slate-500">Titik tersinkron</p>
+                <p class="mt-1 text-2xl font-bold text-slate-900">{{ $totalPoints }}</p>
             </div>
-
-            <div class="space-y-6 px-5 py-5">
-                <div class="grid gap-4 md:grid-cols-3">
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <div class="text-sm font-medium text-slate-500">Total Rumah</div>
-                        <div class="mt-2 text-3xl font-bold text-slate-900">{{ $total_rumah }}</div>
-                    </div>
-
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <div class="text-sm font-medium text-slate-500">Total KK</div>
-                        <div class="mt-2 text-3xl font-bold text-slate-900">{{ $total_keluarga }}</div>
-                    </div>
-
-                    <div class="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                        <div class="text-sm font-medium text-slate-500">Total Penduduk</div>
-                        <div class="mt-2 text-3xl font-bold text-slate-900">{{ $total_penduduk }}</div>
-                    </div>
-                </div>
-
-                <div class="rounded-2xl border border-slate-200 bg-white p-4">
-                    <div class="text-sm font-semibold text-slate-900">Pengiriman Terakhir</div>
-
-                    @if (($last_submissions ?? collect())->isNotEmpty())
-                        <div class="mt-3 space-y-3">
-                            @foreach ($last_submissions as $submission)
-                                <div class="rounded-xl border border-slate-100 bg-slate-50 p-4">
-                                    <div class="flex flex-wrap items-center justify-between gap-3">
-                                        <div>
-                                            <div class="text-sm font-semibold text-slate-900">{{ $submission->submission_number }}</div>
-                                            <div class="text-xs uppercase tracking-[0.18em] text-slate-500">{{ \App\Models\SubmissionBatch::moduleLabel($submission->module) }}</div>
-                                        </div>
-                                        <span class="rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate-700">
-                                            {{ \App\Models\SubmissionBatch::statusLabel($submission->status) }}
-                                        </span>
-                                    </div>
-                                    <div class="mt-3 grid gap-3 text-sm text-slate-700 md:grid-cols-3">
-                                        <div>
-                                            <div class="font-medium text-slate-500">Waktu</div>
-                                            <div>{{ $submission->submitted_at?->format('d M Y H:i') ?? '-' }}</div>
-                                        </div>
-                                        <div>
-                                            <div class="font-medium text-slate-500">Periode</div>
-                                            <div>
-                                                @if ($submission->module === \App\Models\SubmissionBatch::MODULE_KESEHATAN)
-                                                    Bulan {{ $submission->periode_bulan }}/{{ $submission->periode_tahun }}
-                                                @elseif ($submission->module === \App\Models\SubmissionBatch::MODULE_PENDIDIKAN)
-                                                    Semester {{ ucfirst($submission->semester) }} {{ $submission->periode_tahun }}
-                                                @else
-                                                    Master Data
-                                                @endif
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div class="font-medium text-slate-500">Catatan</div>
-                                            <div>{{ $submission->notes ?? '-' }}</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            @endforeach
-                        </div>
-                    @else
-                        <p class="mt-3 text-sm text-slate-600">Belum pernah mengirim data.</p>
-                    @endif
-                </div>
-
-                <form wire:submit.prevent="submit" class="space-y-6">
-                    <div class="grid gap-4 md:grid-cols-3">
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700">Bulan Kesehatan</label>
-                            <input wire:model.defer="periodeBulan" type="number" min="1" max="12" class="mt-1 block w-full rounded-xl border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm" />
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700">Semester Pendidikan</label>
-                            <select wire:model.defer="semester" class="mt-1 block w-full rounded-xl border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm">
-                                <option value="ganjil">Ganjil</option>
-                                <option value="genap">Genap</option>
-                            </select>
-                        </div>
-
-                        <div>
-                            <label class="block text-sm font-medium text-slate-700">Tahun Periode</label>
-                            <input wire:model.defer="periodeTahun" type="number" min="2000" max="2100" class="mt-1 block w-full rounded-xl border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm" />
-                        </div>
-                    </div>
-
-                    <div>
-                        <div class="mb-3 flex items-center justify-between gap-3">
-                            <div>
-                                <h3 class="text-base font-semibold text-slate-900">Modul Pengiriman</h3>
-                                <p class="text-sm text-slate-500">Centang modul yang ingin dikirim. Setiap modul akan menjadi batch sendiri.</p>
-                            </div>
-                        </div>
-
-                        <div class="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
-                            @foreach ($modules as $key => $module)
-                                @php($modulePreview = $previewLookup->get($key))
-                                <label class="group block cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-md">
-                                    <div class="flex items-start justify-between gap-3">
-                                        <div>
-                                            <div class="text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">{{ $module['badge'] }}</div>
-                                            <div class="mt-1 text-lg font-semibold text-slate-900">{{ $module['label'] }}</div>
-                                            <p class="mt-2 text-sm text-slate-600">{{ $module['description'] }}</p>
-                                        </div>
-                                        <input
-                                            type="checkbox"
-                                            wire:model.defer="selectedModules"
-                                            value="{{ $key }}"
-                                            class="mt-1 h-5 w-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-                                        />
-                                    </div>
-
-                                    <div class="mt-4 grid gap-2 rounded-xl bg-slate-50 p-3 text-sm text-slate-700">
-                                        <div class="flex items-center justify-between gap-3">
-                                            <span class="text-slate-500">Jumlah data</span>
-                                            <strong class="font-semibold text-slate-900">{{ number_format((int) ($modulePreview['count'] ?? 0), 0, ',', '.') }}</strong>
-                                        </div>
-                                        <div class="flex items-center justify-between gap-3">
-                                            <span class="text-slate-500">Status terakhir</span>
-                                            <strong class="font-semibold text-slate-900">{{ $modulePreview['latest_status_label'] ?? '-' }}</strong>
-                                        </div>
-                                        <div class="flex items-center justify-between gap-3">
-                                            <span class="text-slate-500">Pengiriman terakhir</span>
-                                            <strong class="font-semibold text-slate-900">{{ $modulePreview['latest_submission'] ?? '-' }}</strong>
-                                        </div>
-                                    </div>
-                                </label>
-                            @endforeach
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-sm font-medium text-slate-700">Catatan</label>
-                        <textarea wire:model.defer="notes" rows="4" class="mt-1 block w-full rounded-xl border-slate-300 shadow-sm focus:border-primary-500 focus:ring-primary-500 sm:text-sm" placeholder="Opsional: catatan untuk Kominfo."></textarea>
-                    </div>
-
-                    <div class="flex items-center gap-3">
-                        <x-filament::button type="submit" icon="heroicon-o-paper-airplane">
-                            Kirim Modul Terpilih
-                        </x-filament::button>
-                    </div>
-                </form>
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4">
+                <p class="text-sm text-amber-800">Menunggu tinjauan kecamatan</p>
+                <p class="mt-1 text-2xl font-bold text-amber-950">{{ $pendingBatches }}</p>
+            </div>
+            <div class="rounded-xl border border-blue-200 bg-blue-50 p-4">
+                <p class="text-sm text-blue-800">Sedang ditinjau</p>
+                <p class="mt-1 text-2xl font-bold text-blue-950">{{ $inReviewBatches }}</p>
+            </div>
+            <div class="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                <p class="text-sm text-emerald-800">Sudah diteruskan ke Kominfo</p>
+                <p class="mt-1 text-2xl font-bold text-emerald-950">{{ $forwardedBatches }}</p>
             </div>
         </div>
+
+        @if (! $hasVillages)
+            <div class="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+                Kecamatan ini belum memiliki daftar desa. Hubungkan desa ke kecamatan agar titik mobile dapat ditampilkan.
+            </div>
+        @else
+            <section class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <div class="border-b border-slate-200 px-5 py-4">
+                    <h3 class="font-semibold text-slate-900">Titik mobile terbaru</h3>
+                    <p class="mt-1 text-sm text-slate-500">Menampilkan paling banyak 50 titik terbaru di wilayah tugas Anda.</p>
+                </div>
+                @if ($points->isEmpty())
+                    <div class="p-6 text-sm text-slate-600">Belum ada titik mobile yang tersinkron dari desa di kecamatan ini.</div>
+                @else
+                    <div class="divide-y divide-slate-100">
+                        @foreach ($points as $point)
+                            @php
+                                $batch = $point->submissionBatch;
+                                $statusLabel = $batch?->forwarded_at
+                                    ? 'Diteruskan ke Kominfo'
+                                    : ($batch ? \App\Models\SubmissionBatch::statusLabel($batch->status) : 'Belum masuk batch');
+                                $typeLabel = match ($point->jenis) {
+                                    'rumah' => 'Rumah',
+                                    'jalan' => 'Jalan',
+                                    'jembatan' => 'Jembatan',
+                                    'drainase' => 'Drainase',
+                                    'lampu_jalan' => 'Lampu jalan',
+                                    'air_bersih' => 'Air bersih',
+                                    default => 'Infrastruktur lain',
+                                };
+                            @endphp
+                            <article class="flex flex-col gap-3 p-5 lg:flex-row lg:items-center lg:justify-between">
+                                <div class="min-w-0">
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <h4 class="font-semibold text-slate-900">{{ $point->nama }}</h4>
+                                        <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">{{ $typeLabel }}</span>
+                                        <span class="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-medium text-slate-700">{{ $statusLabel }}</span>
+                                    </div>
+                                    <p class="mt-1 text-sm text-slate-600">Desa {{ $point->desa?->nama ?? '-' }} · {{ $point->alamat ?: 'Alamat tidak dicantumkan' }}</p>
+                                    <p class="mt-1 text-xs text-slate-500">Koordinat: {{ $point->latitude }}, {{ $point->longitude }} · Keluarga tertaut dari data OPD: {{ count($point->keluarga_dataset_value_ids ?? []) }}</p>
+                                    <p class="mt-1 text-xs text-slate-500">Diterima {{ $batch?->submitted_at?->format('d M Y H:i') ?? $point->created_at?->format('d M Y H:i') ?? '-' }}</p>
+                                </div>
+                                @if ($point->submission_batch_id)
+                                    <a href="{{ \App\Filament\Resources\SubmissionBatchResource::getUrl('view', ['record' => $point->submission_batch_id]) }}" class="inline-flex shrink-0 items-center justify-center rounded-lg bg-brand-700 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-800">
+                                        Buka tinjauan batch
+                                    </a>
+                                @else
+                                    <span class="shrink-0 text-xs text-slate-500">Batch belum tersedia</span>
+                                @endif
+                            </article>
+                        @endforeach
+                    </div>
+                @endif
+            </section>
+        @endif
     </div>
-</x-filament::page>
+</x-filament-panels::page>

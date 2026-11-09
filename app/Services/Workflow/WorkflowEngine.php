@@ -60,7 +60,8 @@ class WorkflowEngine
     public function __construct(
         private readonly BatchNotificationDispatcher $notifier,
         private readonly SubmissionPublishService $publisher,
-    ) {}
+    ) {
+    }
 
     /**
      * Apply a state transition atomically.
@@ -146,10 +147,25 @@ class WorkflowEngine
         }
 
         // Submit: AdminKecamatan/AdminDesa can only submit batches for their own kecamatan.
-        if ($newStatus === SubmissionBatch::STATUS_PENDING && $actor->hasAnyRole(['admin_kecamatan', 'admin_desa'])) {
+        if ($newStatus === SubmissionBatch::STATUS_PENDING && $actor->hasAnyRole(['admin_kecamatan', 'admin_desa', 'admin_lapangan'])) {
             $actorKecamatanId = $actor->kecamatan_id ?: $actor->desa?->kecamatan_id;
             if ((int) $actorKecamatanId !== (int) $batch->kecamatan_id) {
                 throw new AuthorizationException('Admin Kecamatan/Desa tidak dapat mengirim batch kecamatan lain.');
+            }
+
+            return;
+        }
+
+        if ($newStatus === SubmissionBatch::STATUS_PENDING && $this->isSupportedOpdSubmitter($actor)) {
+            $allowedModules = $actor->hasAnyRole(['admin_dinkes', 'operator_dinkes'])
+                ? [SubmissionBatch::MODULE_KESEHATAN]
+                : [SubmissionBatch::MODULE_PENDIDIKAN];
+            $batchModules = array_unique(array_merge([$batch->module], $batch->package_keys ?? []));
+
+            if ((int) $batch->created_by !== (int) $actor->id
+                || array_diff($batchModules, $allowedModules) !== []
+                || ($actor->kecamatan_id && (int) $actor->kecamatan_id !== (int) $batch->kecamatan_id)) {
+                throw new AuthorizationException('OPD hanya dapat mengirim laporan sektoral miliknya sendiri sesuai wilayah kewenangannya.');
             }
 
             return;
@@ -160,6 +176,9 @@ class WorkflowEngine
             if ($batch->status === SubmissionBatch::STATUS_PENDING) {
                 // Mulai review - Admin Kecamatan atau Admin Kominfo
                 if ($actor->hasRole('admin_kecamatan')) {
+                    if (! $batch->requiresKecamatanGate()) {
+                        throw new AuthorizationException('Batch OPD dikirim langsung kepada Walidata untuk direview.');
+                    }
                     $actorKecamatanId = $actor->kecamatan_id ?: $actor->desa?->kecamatan_id;
                     if ((int) $actorKecamatanId !== (int) $batch->kecamatan_id) {
                         throw new AuthorizationException('Admin Kecamatan hanya dapat mereview batch dari wilayahnya.');
@@ -167,7 +186,10 @@ class WorkflowEngine
                     return;
                 }
 
-                if ($actor->hasAnyRole(['admin', 'admin_kominfo', 'super_admin'])) {
+                if ($actor->hasAnyRole(['admin', 'admin_kominfo', 'walidata', 'super_admin'])) {
+                    if ($batch->requiresKecamatanGate()) {
+                        throw new AuthorizationException('Batch ini harus direview Kecamatan terlebih dahulu.');
+                    }
                     return;
                 }
 
@@ -183,11 +205,11 @@ class WorkflowEngine
         //   They may ONLY forward them. Kominfo is the mandatory final gate.
         if (in_array($newStatus, [SubmissionBatch::STATUS_APPROVED, SubmissionBatch::STATUS_REJECTED], true)) {
             // Admin Kominfo (and super_admin/admin) can approve/reject all batches
-            if ($actor->hasAnyRole(['admin', 'admin_kominfo', 'super_admin'])) {
-                // For master-data batches, also require that the batch was forwarded to Kominfo
-                if ($newStatus === SubmissionBatch::STATUS_APPROVED && $batch->isMasterData() && ! $batch->isForwarded()) {
+            if ($actor->hasAnyRole(['admin', 'admin_kominfo', 'walidata', 'super_admin'])) {
+                // District-gated data can only be processed by Kominfo after Kecamatan forwards it.
+                if ($batch->requiresKecamatanGate() && ! $batch->isForwarded()) {
                     throw new AuthorizationException(
-                        'Batch data master harus diteruskan ke Kominfo terlebih dahulu sebelum dapat disetujui.'
+                        'Batch harus ditinjau dan diteruskan oleh Kecamatan sebelum diproses Kominfo.'
                     );
                 }
 
@@ -202,20 +224,14 @@ class WorkflowEngine
                     throw new AuthorizationException('Admin Kecamatan hanya dapat memproses batch dari wilayahnya.');
                 }
 
-                // For master data, Admin Kecamatan can ONLY forward — not approve.
-                if ($newStatus === SubmissionBatch::STATUS_APPROVED && $batch->isMasterData()) {
+                // Kecamatan is a quality gate, not the final approver.
+                if ($newStatus === SubmissionBatch::STATUS_APPROVED) {
                     throw new AuthorizationException(
-                        'Admin Kecamatan tidak dapat menyetujui batch data master secara langsung. '
-                        .'Teruskan batch ke Kominfo terlebih dahulu.'
+                        'Admin Kecamatan tidak dapat memberi persetujuan akhir. Teruskan batch ke Kominfo.'
                     );
                 }
 
                 // Admin Kecamatan can reject/request-revision for any batch in their wilayah.
-                return;
-            }
-
-            // OPD Admin can approve their own OPD batches
-            if ($this->canOpdApprove($actor, $batch)) {
                 return;
             }
 
@@ -234,7 +250,10 @@ class WorkflowEngine
             }
 
             // Admin Kominfo bisa minta revisi
-            if ($actor->hasAnyRole(['admin', 'admin_kominfo', 'super_admin'])) {
+            if ($actor->hasAnyRole(['admin', 'admin_kominfo', 'walidata', 'super_admin'])) {
+                if ($batch->requiresKecamatanGate() && ! $batch->isForwarded()) {
+                    throw new AuthorizationException('Batch harus diteruskan Kecamatan sebelum dapat diminta revisi oleh Kominfo.');
+                }
                 return;
             }
 
@@ -243,35 +262,13 @@ class WorkflowEngine
 
         // Archive: APPROVED/REJECTED → ARCHIVED - hanya Admin Kominfo
         if ($newStatus === SubmissionBatch::STATUS_ARCHIVED) {
-            if (! $actor->hasAnyRole(['admin', 'admin_kominfo', 'super_admin'])) {
+            if (! $actor->hasAnyRole(['admin', 'admin_kominfo', 'walidata', 'super_admin'])) {
                 throw new AuthorizationException('Hanya Admin Kominfo yang dapat mengarsipkan batch.');
             }
             return;
         }
 
         throw new AuthorizationException('Transisi batch tidak diizinkan untuk role ini.');
-    }
-
-    /**
-     * Check if OPD user can approve this batch.
-     */
-    private function canOpdApprove(User $actor, SubmissionBatch $batch): bool
-    {
-        $module = $batch->module;
-
-        if (in_array($module, [SubmissionBatch::MODULE_KESEHATAN, SubmissionBatch::MODULE_PUSKES], true)) {
-            return $actor->hasAnyRole([
-                'admin_kesehatan', 'admin_dinkes', 'admin_puskesmas',
-            ]);
-        }
-
-        if (in_array($module, [SubmissionBatch::MODULE_PENDIDIKAN, SubmissionBatch::MODULE_SEKOLAH], true)) {
-            return $actor->hasAnyRole([
-                'admin_pendidikan', 'admin_dispend', 'admin_sekolah',
-            ]);
-        }
-
-        return false;
     }
 
     /**
@@ -286,30 +283,18 @@ class WorkflowEngine
      */
     public function isReadyForKominfoVerification(SubmissionBatch $batch): bool
     {
-        // Admin Kecamatan's own batches (not from Admin Desa) skip forward requirement.
-        if (! $this->wasCreatedByAdminDesa($batch)) {
-            return true;
-        }
-
-        // Master-data batch from Admin Desa requires explicit forward.
-        // OPD batches follow their own approval path.
-        if ($batch->isMasterData()) {
-            return $batch->isForwarded();
-        }
-
-        return false;
-    }
-
-    private function wasCreatedByAdminDesa(SubmissionBatch $batch): bool
-    {
-        $batch->loadMissing('createdBy.roles');
-
-        return $batch->createdBy?->hasRole('admin_desa') ?? false;
+        return ! $batch->requiresKecamatanGate() || $batch->isForwarded();
     }
 
     private function assertForwardAllowed(User $actor, SubmissionBatch $batch): void
     {
-        if ((int) $actor->kecamatan_id !== (int) $batch->kecamatan_id) {
+        if (! $batch->requiresKecamatanGate()) {
+            throw new AuthorizationException('Hanya batch pendataan lapangan yang dapat diteruskan oleh Kecamatan.');
+        }
+
+        $actorKecamatanId = $actor->kecamatan_id ?: $actor->desa?->kecamatan_id;
+
+        if ((int) $actorKecamatanId !== (int) $batch->kecamatan_id) {
             throw new AuthorizationException('Admin Kecamatan hanya dapat meneruskan batch dari wilayahnya.');
         }
     }
@@ -348,6 +333,28 @@ class WorkflowEngine
 
     private function recordWorkflowHistory(SubmissionBatch $batch, string $oldStatus, string $newStatus, User $actor, ?string $catatan, bool $isForward = false): void
     {
+        // The normalized batch/value workflow log replaced the legacy
+        // workflow_status + workflow_instances + workflow_histories tables.
+        if (! \Illuminate\Support\Facades\Schema::hasTable('workflow_status')
+            || ! \Illuminate\Support\Facades\Schema::hasTable('workflow_histories')) {
+            DB::table('workflow_logs')->insert([
+                'batch_id' => $batch->id,
+                'from_status' => $oldStatus,
+                'to_status' => $newStatus,
+                'actor_id' => $actor->id,
+                'notes' => $catatan,
+                'workflow_stage' => match ($newStatus) {
+                    SubmissionBatch::STATUS_PENDING => 'collect',
+                    SubmissionBatch::STATUS_IN_REVIEW => 'verify',
+                    SubmissionBatch::STATUS_APPROVED => 'publish',
+                    default => null,
+                },
+                'reason' => in_array($newStatus, [SubmissionBatch::STATUS_REJECTED, SubmissionBatch::STATUS_REVISION], true) ? $catatan : null,
+                'created_at' => now(),
+            ]);
+            return;
+        }
+
         $workflowInstanceId = $this->getOrCreateWorkflowInstance($batch, $actor);
 
         DB::table('workflow_instances')
@@ -429,7 +436,7 @@ class WorkflowEngine
     {
         match ($notificationType) {
             // Submit oleh Admin Desa → notify Admin Kecamatan
-            'submit' => $actor->hasRole('admin_desa')
+            'submit' => $actor->hasAnyRole(['admin_desa', 'admin_lapangan'])
                 ? $this->notifier->notifyKecamatanAboutDesaBatch($batch, $actor)
                 : $this->notifier->notifyKominfoAwaitingVerification($batch, $actor),
 
@@ -466,5 +473,10 @@ class WorkflowEngine
 
         // Notify Admin Kominfo tentang batch yang disetujui (agar mereka tahu ada batch baru yang disetujui kecamatan)
         $this->notifier->notifyKominfoBatchApproved($batch, $actor);
+    }
+
+    private function isSupportedOpdSubmitter(User $actor): bool
+    {
+        return $actor->hasAnyRole(['admin_dinkes', 'operator_dinkes', 'admin_dispend', 'operator_dispend']);
     }
 }

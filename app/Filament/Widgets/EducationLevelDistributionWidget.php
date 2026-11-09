@@ -8,7 +8,7 @@ use Filament\Widgets\ChartWidget;
 
 class EducationLevelDistributionWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Distribusi Tingkat Pendidikan';
+    protected ?string $heading = 'Distribusi Tingkat Pendidikan';
     protected static ?int $sort = 3;
 
     public static function canView(): bool
@@ -32,7 +32,7 @@ class EducationLevelDistributionWidget extends ChartWidget
                     'label' => 'Jumlah Penduduk',
                     'data' => $education->pluck('count')->toArray(),
                     'backgroundColor' => [
-                        '#3b82f6', '#10b981', '#f59e0b', '#ef4444', 
+                        '#3b82f6', '#10b981', '#f59e0b', '#ef4444',
                         '#8b5cf6', '#ec4899', '#06b6d4', '#f97316',
                         '#14b8a6', '#6366f1'
                     ],

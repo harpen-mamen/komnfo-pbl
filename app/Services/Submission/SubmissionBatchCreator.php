@@ -5,7 +5,6 @@ namespace App\Services\Submission;
 use App\Models\SubmissionBatch;
 use App\Models\SubmissionBatchItem;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Sprint 5: Extracted from SubmissionBatchService — handles batch creation logic.

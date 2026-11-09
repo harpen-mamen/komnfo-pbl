@@ -33,7 +33,7 @@ export default async function OpdSection() {
             href={'/tentang-daerah/opd/' + opd.slug}
             className="group flex items-center gap-4 rounded-xl border border-slate-200 bg-white p-4 transition hover:border-primary-300 hover:shadow-md"
           >
-            <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-primary-100 to-primary-200 text-primary-700">
+            <div className="flex h-14 w-14 flex-shrink-0 items-center justify-center rounded-lg bg-linear-to-br from-primary-100 to-primary-200 text-primary-700">
               {opd.logo ? (
                 <Image src={`${API_BASE}/storage/${opd.logo}`} alt={opd.nama_instansi} width={48} height={48} className="object-contain" />
               ) : (

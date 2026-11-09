@@ -16,13 +16,13 @@ use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Response;
 use Illuminate\Support\Str;
 
-class AIAssistant extends Page
+abstract class AIAssistant extends Page
 {
-    protected static ?string $navigationIcon = 'heroicon-o-sparkles';
+    protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-sparkles';
     protected static ?string $navigationLabel = 'AI Assistant';
     protected static ?string $title = 'AI Assistant';
     protected static ?int $navigationSort = 11;
-    protected static string $view = 'filament.pages.ai-assistant';
+    protected string $view = 'filament.pages.ai-assistant';
 
     public string $message = '';
     public string $search = '';

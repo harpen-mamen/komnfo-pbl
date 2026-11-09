@@ -6,8 +6,7 @@ use Tests\TestCase;
 
 class UserResourceRoleFieldTest extends TestCase
 {
-    /** @test */
-    public function role_field_is_not_dehydrated()
+    public function test_role_field_is_not_dehydrated(): void
     {
         $path = base_path('app/Filament/Resources/UserResource.php');
         $this->assertFileExists($path, 'UserResource file missing');

@@ -2,15 +2,12 @@
 
 namespace App\Services;
 
-use App\Enums\AppRole;
+use Illuminate\Support\Facades\DB;
 use App\Models\SubmissionBatch;
 use App\Models\User;
 use App\Services\Notification\BatchNotificationDispatcher;
 use App\Services\Workflow\WorkflowEngine;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\DB;
 
 /**
  * Sprint 5: Facade over the WorkflowEngine + BatchNotificationDispatcher.
@@ -37,7 +34,8 @@ class BatchApprovalService
     public function __construct(
         private readonly WorkflowEngine $engine,
         private readonly BatchNotificationDispatcher $notifier,
-    ) {}
+    ) {
+    }
 
     /**
      * Submit batch - oleh Admin Desa atau Admin Kecamatan.
@@ -188,40 +186,13 @@ class BatchApprovalService
      */
     public function canApprove(User $user, SubmissionBatch $batch): bool
     {
-        $module = $batch->module;
-
-        // Kabupaten level: can approve all batches
-        if ($user->hasAnyRole(['super_admin', 'admin', 'admin_kominfo'])) {
-            // For master-data batches, also require that the batch was forwarded to Kominfo.
-            // (defense-in-depth; the WorkflowEngine also enforces this)
-            if ($batch->isMasterData() && ! $batch->isForwarded()) {
+        // Only Kabupaten-level reviewers make the final approval.
+        if ($user->hasAnyRole(['super_admin', 'admin', 'admin_kominfo', 'walidata'])) {
+            if ($batch->requiresKecamatanGate() && ! $batch->isForwarded()) {
                 return false;
             }
 
             return true;
-        }
-
-        // Admin Kecamatan CANNOT approve master data — they can only forward.
-        // OPD module approvals are handled by OPD admins.
-        if ($user->hasRole('admin_kecamatan')) {
-            return false;
-        }
-
-        // OPD module approvals — oleh OPD admin terkait
-        if (in_array($module, [SubmissionBatch::MODULE_KESEHATAN, SubmissionBatch::MODULE_PUSKES], true)) {
-            return $user->hasAnyRole([
-                AppRole::ADMIN_KESEHATAN->value,
-                AppRole::ADMIN_DINKES->value,
-                AppRole::ADMIN_PUSKESMAS->value,
-            ]);
-        }
-
-        if (in_array($module, [SubmissionBatch::MODULE_PENDIDIKAN, SubmissionBatch::MODULE_SEKOLAH], true)) {
-            return $user->hasAnyRole([
-                AppRole::ADMIN_PENDIDIKAN->value,
-                AppRole::ADMIN_DISPEND->value,
-                AppRole::ADMIN_SEKOLAH->value,
-            ]);
         }
 
         return false;
@@ -238,13 +209,16 @@ class BatchApprovalService
         }
 
         // Admin Kominfo can start review on any batch
-        if ($user->hasAnyRole(['super_admin', 'admin', 'admin_kominfo'])) {
-            return true;
+        if ($user->hasAnyRole(['super_admin', 'admin', 'admin_kominfo', 'walidata'])) {
+            return ! $batch->requiresKecamatanGate();
         }
 
         // Admin Kecamatan can start review on batches in their wilayah
         if ($user->hasRole('admin_kecamatan')) {
-            $userKecamatanId = $user->kecamatan_id ?? $user->desa?->kecamatan_id;
+            if (! $batch->requiresKecamatanGate()) {
+                return false;
+            }
+            $userKecamatanId = $user->kecamatan_id ?: $user->desa?->parent_id;
             return (int) $userKecamatanId === (int) $batch->kecamatan_id;
         }
 
@@ -266,8 +240,12 @@ class BatchApprovalService
             return false;
         }
 
+        if (! $batch->requiresKecamatanGate()) {
+            return false;
+        }
+
         if ($user->hasRole('admin_kecamatan')) {
-            $userKecamatanId = $user->kecamatan_id ?? $user->desa?->kecamatan_id;
+            $userKecamatanId = $user->kecamatan_id ?: $user->desa?->parent_id;
             return (int) $userKecamatanId === (int) $batch->kecamatan_id;
         }
 
@@ -285,28 +263,7 @@ class BatchApprovalService
      */
     public function isReadyForKominfoVerification(SubmissionBatch $batch): bool
     {
-        // Batches created directly by Admin Kecamatan (not from Admin Desa) skip forward.
-        if (! $this->wasCreatedByAdminDesa($batch)) {
-            return true;
-        }
-
-        // Master-data batches from Admin Desa require explicit forward.
-        // OPD batches follow their own approval path.
-        if ($batch->isMasterData()) {
-            return $batch->isForwarded();
-        }
-
-        return false;
-    }
-
-    /**
-     * Check if batch was created by Admin Desa.
-     */
-    private function wasCreatedByAdminDesa(SubmissionBatch $batch): bool
-    {
-        $batch->loadMissing('createdBy.roles');
-
-        return $batch->createdBy?->hasRole('admin_desa') ?? false;
+        return ! $batch->requiresKecamatanGate() || $batch->isForwarded();
     }
 
     /**
@@ -356,7 +313,7 @@ class BatchApprovalService
      */
     private function getWorkflowStatusId(string $status): ?int
     {
-        return \Illuminate\Support\Facades\DB::table('workflow_status')
+        return DB::table('workflow_status')
             ->where('kode', $status)
             ->value('id');
     }

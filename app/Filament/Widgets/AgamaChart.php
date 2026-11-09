@@ -8,7 +8,7 @@ use Filament\Widgets\ChartWidget;
 
 class AgamaChart extends ChartWidget
 {
-    protected static ?string $heading = 'Grafik Agama';
+    protected ?string $heading = 'Grafik Agama';
 
     public static function canView(): bool
     {

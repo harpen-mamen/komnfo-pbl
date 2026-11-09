@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1800 1000" fill="none">
+  <defs>
+    <linearGradient id="sky" x1="900" y1="0" x2="900" y2="1000" gradientUnits="userSpaceOnUse"><stop stop-color="#416b70"/><stop offset=".48" stop-color="#1f545d"/><stop offset="1" stop-color="#102e36"/></linearGradient>
+    <linearGradient id="sea" x1="900" y1="500" x2="900" y2="1000" gradientUnits="userSpaceOnUse"><stop stop-color="#34717a"/><stop offset="1" stop-color="#102e36"/></linearGradient>
+    <linearGradient id="island" x1="1100" y1="420" x2="1100" y2="680" gradientUnits="userSpaceOnUse"><stop stop-color="#496a58"/><stop offset="1" stop-color="#172f35"/></linearGradient>
+    <radialGradient id="sun" cx="0" cy="0" r="1" gradientTransform="matrix(310 0 0 310 1310 290)" gradientUnits="userSpaceOnUse"><stop stop-color="#d7bd79" stop-opacity=".48"/><stop offset="1" stop-color="#d7bd79" stop-opacity="0"/></radialGradient>
+    <pattern id="grain" width="120" height="120" patternUnits="userSpaceOnUse"><circle cx="10" cy="16" r="1" fill="#fff" fill-opacity=".09"/><circle cx="72" cy="43" r="1" fill="#fff" fill-opacity=".08"/><circle cx="38" cy="91" r="1" fill="#fff" fill-opacity=".07"/><circle cx="106" cy="109" r="1" fill="#fff" fill-opacity=".06"/></pattern>
+  </defs>
+  <path fill="url(#sky)" d="M0 0h1800v1000H0z"/><circle cx="1310" cy="290" r="310" fill="url(#sun)"/><circle cx="1310" cy="289" r="28" fill="#e0c987" fill-opacity=".72"/>
+  <path fill="#31575b" fill-opacity=".8" d="m0 415 90-54 88 32 88-80 100 63 96-31 89 48 111-70 93 62 80-35 93 64 94-50 85 36 90-81 84 47 97-39 89 60 92-32 91 43v172H0V415Z"/>
+  <path fill="url(#island)" d="m492 566 92-63 58-18 78-76 57-18 86-78 72 25 57 67 65 37 92 13 80 53 112 58 79 68H384l108-68Z"/>
+  <path fill="#304e48" d="m582 503 58-18 78-76 57-18 86-78 72 25-41 42-47-7-64 63-66 9-45 57-65 15-54 44-71 1 62-59Z"/>
+  <path fill="url(#sea)" d="M0 632c230-40 359 26 566 0 252-32 354 1 566-14 235-17 405 41 668 5v377H0V632Z"/>
+  <g stroke="#9bb5ad" stroke-opacity=".25" stroke-width="2"><path d="M0 705c223-28 373 30 585 4 213-26 420 12 611-3 222-18 394 15 604-5"/><path d="M0 785c246-20 396 27 629 2 231-25 403 8 623-5 207-13 371 20 548 4"/><path d="M0 873c209-18 386 16 576 1 239-20 407 15 633-1 219-15 377 14 591-2"/></g>
+  <path fill="#0b2024" fill-opacity=".18" d="M0 0h1800v1000H0z"/><path fill="url(#grain)" d="M0 0h1800v1000H0z"/>
+</svg>

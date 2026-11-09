@@ -41,10 +41,10 @@ class UserRegistration extends Model
     ];
 
     // Status constants
-    const STATUS_PENDING = 'pending';
-    const STATUS_APPROVED = 'approved';
-    const STATUS_REJECTED = 'rejected';
-    const STATUS_REVISION = 'revision';
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_APPROVED = 'approved';
+    public const STATUS_REJECTED = 'rejected';
+    public const STATUS_REVISION = 'revision';
 
     // Available roles — SPEC-005: delegate to AppRole enum (single source of truth).
     public const AVAILABLE_ROLES = [
@@ -102,12 +102,12 @@ class UserRegistration extends Model
     // Relations
     public function kecamatan(): BelongsTo
     {
-        return $this->belongsTo(Kecamatan::class);
+        return $this->belongsTo(Wilayah::class, 'kecamatan_id');
     }
 
     public function desa(): BelongsTo
     {
-        return $this->belongsTo(Desa::class);
+        return $this->belongsTo(Wilayah::class, 'desa_id');
     }
 
     public function opd(): BelongsTo

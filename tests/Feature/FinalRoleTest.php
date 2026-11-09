@@ -2,10 +2,9 @@
 
 namespace Tests\Feature;
 
-use App\Models\Desa;
-use App\Models\Kecamatan;
 use App\Models\Opd;
 use App\Models\User;
+use App\Models\Wilayah;
 use Database\Seeders\RolePermissionSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -19,9 +18,10 @@ class FinalRoleTest extends TestCase
     {
         $this->seed(RolePermissionSeeder::class);
 
-        $this->assertEqualsCanonicalizing([
-            'super_admin', 'admin_kominfo', 'admin_opd', 'admin_kecamatan', 'admin_desa', 'public', 'admin',
-        ], Role::query()->pluck('name')->all());
+        $this->assertEqualsCanonicalizing(
+            array_map(fn ($role) => $role->value, \App\Enums\AppRole::cases()),
+            Role::query()->pluck('name')->all()
+        );
 
         $this->assertTrue(Role::findByName('admin_desa')->hasPermissionTo('submission.submit'));
         $this->assertTrue(Role::findByName('admin_kecamatan')->hasPermissionTo('submission.review'));
@@ -30,8 +30,9 @@ class FinalRoleTest extends TestCase
 
     public function test_users_can_hold_desa_and_opd_scope(): void
     {
-        $kecamatan = Kecamatan::factory()->create();
-        $desa = Desa::factory()->create(['kecamatan_id' => $kecamatan->id]);
+        $kabupaten = Wilayah::query()->create(['tipe' => Wilayah::TIPE_KABUPATEN, 'nama' => 'Kabupaten Uji']);
+        $kecamatan = Wilayah::query()->create(['parent_id' => $kabupaten->id, 'tipe' => Wilayah::TIPE_KECAMATAN, 'nama' => 'Kecamatan Uji']);
+        $desa = Wilayah::query()->create(['parent_id' => $kecamatan->id, 'tipe' => Wilayah::TIPE_DESA, 'nama' => 'Desa Uji']);
         $opd = Opd::query()->create(['kode' => 'DINKES', 'nama' => 'Dinas Kesehatan']);
 
         $desaUser = User::factory()->create(['kecamatan_id' => $kecamatan->id, 'desa_id' => $desa->id]);

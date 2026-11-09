@@ -1,4 +1,4 @@
-﻿<x-filament::page>
+﻿<x-filament-panels::page>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
@@ -35,8 +35,8 @@
         .pp-meta-badge svg { width: 12px; height: 12px; }
 
         /* CONTROLS */
-        .pp-controls { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 0.875rem; align-items: end; }
-        @media(max-width:1280px){.pp-controls{grid-template-columns:1fr 1fr 1fr}}
+        .pp-controls { display: grid; grid-template-columns: 1.5fr repeat(4,1fr) 1.2fr; gap: 0.875rem; align-items: stretch; }
+        @media(max-width:1440px){.pp-controls{grid-template-columns:repeat(3,minmax(0,1fr))}}
         @media(max-width:768px){.pp-controls{grid-template-columns:1fr}}
         .pp-control-card { background: var(--pp-bg); border: 1px solid var(--pp-border); border-radius: var(--pp-radius); padding: 1rem 1.125rem; box-shadow: var(--pp-shadow); transition: box-shadow 0.2s ease,border-color 0.2s ease; }
         .pp-control-card:hover { box-shadow: var(--pp-shadow-md); border-color: rgba(5,150,105,0.2); }
@@ -75,6 +75,49 @@
         .pp-map-btn { width: 36px; height: 36px; background: var(--pp-bg); border: 1px solid var(--pp-border); border-radius: 8px; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: var(--pp-shadow-md); transition: all 0.15s; color: var(--pp-muted); }
         .pp-map-btn:hover { background: var(--pp-surface); border-color: var(--pp-accent); color: var(--pp-accent); }
         .pp-map-btn svg { width: 16px; height: 16px; }
+        .pp-map-btn { position:relative; }
+        .pp-map-btn[data-tip]:hover::after { content:attr(data-tip); position:absolute; right:calc(100% + 8px); white-space:nowrap; background:#0f172a; color:white; border-radius:6px; padding:.35rem .55rem; font-size:.7rem; font-weight:700; }
+        .pp-feature-pin { background:transparent!important; border:0!important; }
+        .pp-feature-pin svg { display:block; filter:drop-shadow(0 2px 3px rgba(15,23,42,.38)); transform-origin:50% 90%; transition:transform .16s ease,filter .16s ease; }
+        .pp-feature-pin:hover svg { transform:translateY(-2px) scale(1.1); filter:drop-shadow(0 4px 5px rgba(15,23,42,.38)); }
+        .pp-feature-popup { width:min(360px,calc(100vw - 64px)); max-height:min(58vh,440px); overflow:auto; background:#fff; color:#0f172a; font-family:Inter,ui-sans-serif,system-ui,sans-serif; }
+        .pp-feature-popup__header { padding:15px 44px 13px 16px; background:linear-gradient(135deg,#0f172a,#164e63); color:#fff; }
+        .pp-feature-popup__eyebrow { margin-bottom:4px; color:#99f6e4; font-size:9px; font-weight:800; letter-spacing:.1em; text-transform:uppercase; }
+        .pp-feature-popup__title { display:block; font-size:15px; font-weight:800; line-height:1.35; overflow-wrap:anywhere; }
+        .pp-feature-popup__meta { margin-top:5px; color:#cbd5e1; font-size:11px; line-height:1.45; }
+        .pp-feature-popup__notice { margin:10px 12px 0; padding:8px 10px; border:1px solid #e9d5ff; border-radius:8px; background:#faf5ff; color:#6b21a8; font-size:10px; font-weight:800; line-height:1.4; }
+        .pp-feature-popup__rows { padding:6px 14px 12px; }
+        .pp-feature-row { display:grid; grid-template-columns:minmax(90px,.8fr) minmax(0,1.2fr); gap:12px; padding:9px 2px; border-bottom:1px solid #e9eef5; font-size:12px; line-height:1.45; }
+        .pp-feature-row:last-child { border-bottom:0; }
+        .pp-feature-row span { color:#64748b; overflow-wrap:anywhere; }
+        .pp-feature-row strong { color:#0f172a; font-weight:700; text-align:right; overflow-wrap:anywhere; }
+        .pp-feature-popup__empty { padding:16px; color:#64748b; font-size:12px; }
+        .pp-district-popup { width:min(390px,calc(100vw - 64px)); max-height:min(62vh,500px); overflow:auto; background:#fff; color:#0f172a; font-family:Inter,ui-sans-serif,system-ui,sans-serif; }
+        .pp-district-popup__header { padding:16px 48px 14px 16px; color:#fff; background:linear-gradient(135deg,#0f172a,#115e59); }
+        .pp-district-popup__eyebrow { color:#99f6e4; font-size:9px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+        .pp-district-popup__title { display:block; margin-top:3px; font-size:19px; font-weight:850; line-height:1.25; }
+        .pp-district-popup__meta { margin-top:5px; color:#cbd5e1; font-size:11px; }
+        .pp-district-popup__content { padding:12px 14px 16px; }
+        .pp-district-kpis { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:13px; }
+        .pp-district-kpi { padding:10px; border:1px solid #e2e8f0; border-radius:9px; background:#f8fafc; }
+        .pp-district-kpi strong { display:block; color:#0f172a; font-size:18px; font-weight:850; line-height:1.2; }
+        .pp-district-kpi span { display:block; margin-top:3px; color:#64748b; font-size:10px; font-weight:700; }
+        .pp-district-section { margin-top:12px; }
+        .pp-district-section__title { margin-bottom:6px; color:#0f766e; font-size:10px; font-weight:850; letter-spacing:.08em; text-transform:uppercase; }
+        .pp-district-list { border:1px solid #e7edf4; border-radius:9px; overflow:hidden; }
+        .pp-district-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:10px; padding:9px 10px; border-bottom:1px solid #e7edf4; }
+        .pp-district-row:last-child { border-bottom:0; }
+        .pp-district-row__name { color:#1e293b; font-size:11px; font-weight:750; line-height:1.35; }
+        .pp-district-row__meta { margin-top:3px; color:#64748b; font-size:9px; line-height:1.35; }
+        .pp-district-row__value { align-self:center; color:#0f172a; font-size:12px; font-weight:850; text-align:right; white-space:nowrap; }
+        .pp-district-empty { padding:11px; border:1px dashed #cbd5e1; border-radius:8px; color:#64748b; font-size:11px; line-height:1.5; }
+        .leaflet-interactive.pp-route-demo { stroke-dasharray:7 7; stroke-linecap:round; stroke-linejoin:round; }
+        .leaflet-interactive.pp-route-published { stroke-linecap:round; stroke-linejoin:round; }
+        .pp-thematic-legend { display:none; position:absolute; z-index:500; left:1rem; bottom:1rem; width:min(300px,calc(100% - 2rem)); padding:.85rem 1rem; background:rgba(255,255,255,.96); border:1px solid #dbe4ee; border-radius:12px; box-shadow:0 8px 24px rgba(15,23,42,.16); color:#0f172a; }
+        .pp-thematic-legend.is-visible { display:block; }
+        .pp-thematic-gradient { height:12px; margin:.6rem 0 .3rem; border-radius:999px; background:linear-gradient(90deg,#dbeafe,#60a5fa,#1d4ed8,#1e3a8a); }
+        .pp-thematic-range { display:flex; justify-content:space-between; color:#64748b; font-size:.7rem; }
+        .pp-theme-caption { color:var(--pp-muted); font-size:.72rem; margin-top:.5rem; line-height:1.4; }
 
         /* STATS */
         .pp-stats-panel { display: flex; flex-direction: column; gap: 0.75rem; }
@@ -116,6 +159,7 @@
 
         /* LEGEND */
         .pp-legend { background: var(--pp-bg); border: 1px solid var(--pp-border); border-radius: var(--pp-radius-lg); padding: 1.25rem 1.5rem; box-shadow: var(--pp-shadow); }
+        .pp-legend-grid { display: none; }
         .pp-legend-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; padding-bottom: 0.75rem; border-bottom: 1px solid var(--pp-border); }
         .pp-legend-icon { width: 28px; height: 28px; background: linear-gradient(135deg,#0f172a,#1e3a5f); border-radius: 8px; display: flex; align-items: center; justify-content: center; }
         .pp-legend-icon svg { width: 14px; height: 14px; color: #34d399; }
@@ -124,12 +168,12 @@
         .pp-legend-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 0.75rem; }
         @media(max-width:640px){.pp-legend-grid{grid-template-columns:repeat(2,1fr)}}
         .pp-legend-item { display: flex; align-items: center; gap: 0.625rem; }
-        .pp-legend-marker { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 2px 6px rgba(0,0,0,0.15); }
-        .pp-legend-marker svg { width: 14px; height: 14px; color: white; }
-        .pp-legend-marker--high { background: linear-gradient(135deg,#ef4444,#b91c1c); }
-        .pp-legend-marker--medium { background: linear-gradient(135deg,#f97316,#c2410c); }
-        .pp-legend-marker--low { background: linear-gradient(135deg,#22c55e,#15803d); }
-        .pp-legend-marker--cluster { background: linear-gradient(135deg,#3b82f6,#1d4ed8); }
+        .pp-legend-marker { width: 32px; height: 22px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; box-shadow: 0 1px 3px rgba(15,23,42,0.16); }
+        .pp-legend-marker svg { display:none; }
+        .pp-legend-marker--high { background: #1e3a8a; }
+        .pp-legend-marker--medium { background: #93c5fd; }
+        .pp-legend-marker--low { background: #cbd5e1; }
+        .pp-legend-marker--cluster { width: 16px; height: 16px; margin: 3px 8px; border-radius: 50%; background: #f97316; }
         .pp-legend-text-primary { font-size: 0.8125rem; font-weight: 700; color: var(--pp-text); line-height: 1.2; }
         .pp-legend-text-secondary { font-size: 0.6875rem; color: var(--pp-muted); margin-top: 0.1rem; }
 
@@ -187,7 +231,7 @@
                     </div>
                     <h1>{{ $this->getTitle() }}</h1>
                 </div>
-                <p class="pp-header-subtitle">Visualisasi geografis data rumah, keluarga &amp; penduduk dengan peta interaktif real-time</p>
+                <p class="pp-header-subtitle">Peta tematik per kecamatan dan sebaran lokasi sektoral dari data yang sudah diterbitkan.</p>
                 <div class="pp-header-meta">
                     <span class="pp-meta-badge">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
@@ -195,11 +239,11 @@
                     </span>
                     <span class="pp-meta-badge">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5" /></svg>
-                        Data Real-Time
+                        Data OPD Terbit
                     </span>
                     <span class="pp-meta-badge">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z" /></svg>
-                        Analisis Kepadatan
+                        Filter OPD dan dataset
                     </span>
                 </div>
             </div>
@@ -210,50 +254,52 @@
             <div class="pp-control-card">
                 <label class="pp-control-label">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
-                    Cari Keluarga
+                    Cari lokasi atau data
                 </label>
                 <div class="pp-search-wrapper">
                     <svg class="pp-search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" /></svg>
-                    <input type="text" id="pp-search" class="pp-search-input" placeholder="Nama kepala keluarga..." autocomplete="off">
+                    <input type="text" id="pp-search" class="pp-search-input" placeholder="Nama objek, OPD, atau dataset..." autocomplete="off">
                     <div id="pp-search-results" class="pp-search-results"></div>
                 </div>
             </div>
             <div class="pp-control-card">
                 <label class="pp-control-label">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
-                    Filter Desa
+                    OPD
                 </label>
                 <select id="pp-filter-desa" class="pp-control-select">
-                    <option value="">Semua Desa</option>
-                    @foreach($this->desas as $id => $nama)
-                        <option value="{{ $nama }}">{{ $nama }}</option>
-                    @endforeach
+                    <option value="">Semua OPD</option>
                 </select>
             </div>
             <div class="pp-control-card">
                 <label class="pp-control-label">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" /></svg>
-                    Kepadatan
+                    Dataset lokasi
                 </label>
                 <select id="pp-filter-density" class="pp-control-select">
-                    <option value="">Semua</option>
-                    <option value="high">Tinggi (&gt;5 KK)</option>
-                    <option value="medium">Sedang (3-5 KK)</option>
-                    <option value="low">Rendah (&lt;3 KK)</option>
+                    <option value="">Semua dataset</option>
                 </select>
             </div>
             <div class="pp-control-card">
                 <label class="pp-control-label">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v6m3-3H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    Sebaran Penyakit
+                    Status
                 </label>
                 <select id="pp-filter-disease" class="pp-control-select">
-                    <option value="">Nonaktif</option>
-                    <option value="all">Semua Penyakit</option>
-                    <option value="ispa">ISPA</option><option value="dbd">DBD</option><option value="malaria">Malaria</option>
-                    <option value="tbc">TBC</option><option value="hipertensi">Hipertensi</option><option value="diabetes">Diabetes</option>
-                    <option value="covid">Covid</option><option value="stunting">Stunting</option><option value="gizi_buruk">Gizi Buruk</option>
+                    <option value="all">Semua data</option>
+                    <option value="published">Data terbit</option>
+                    <option value="demo">Data demo</option>
                 </select>
+            </div>
+            <div class="pp-control-card">
+                <label class="pp-control-label" for="pp-indicator">
+                    <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.3" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M7 14l4-4 3 3 6-7" /></svg>
+                    Indikator per kecamatan
+                </label>
+                <select id="pp-indicator" class="pp-control-select">
+                    <option value="">Pilih indikator terbit</option>
+                </select>
+                <div class="pp-theme-caption">Warna poligon mengikuti jumlah nilai indikator yang diterbitkan.</div>
             </div>
             <div class="pp-control-card">
                 <label class="pp-control-label">
@@ -268,9 +314,9 @@
                 <div class="pp-action-row" style="margin-top:0.625rem;">
                     <button type="button" id="pp-fit-bounds" class="pp-btn">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3.75v4.5m0-4.5h4.5m-4.5 0L9 9M3.75 20.25v-4.5m0 4.5h4.5m-4.5 0L9 15M20.25 3.75h-4.5m4.5 0v4.5m0-4.5L15 9m5.25 11.25h-4.5m4.5 0v-4.5m0 4.5L15 15" /></svg>
-                        View All
+                        <span>Fokus peta</span>
                     </button>
-                    <button type="button" id="pp-clear" class="pp-btn pp-btn-sm">
+                    <button type="button" id="pp-clear" class="pp-btn pp-btn-sm" aria-label="Atur ulang filter peta" title="Atur ulang filter peta">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9.75 9.75l4.5 4.5m0-4.5l-4.5 4.5M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     </button>
                 </div>
@@ -279,14 +325,20 @@
         <div class="pp-main">
             <div class="pp-map-container">
                 <div id="peta-pintar"></div>
+                <div id="pp-thematic-legend" class="pp-thematic-legend" aria-live="polite">
+                    <div id="pp-legend-title" style="font-size:.8rem;font-weight:800;">Sebaran indikator</div>
+                    <div id="pp-legend-description" class="pp-theme-caption"></div>
+                    <div class="pp-thematic-gradient"></div>
+                    <div class="pp-thematic-range"><span id="pp-legend-min">0</span><span id="pp-legend-max">0</span></div>
+                </div>
                 <div class="pp-map-overlay">
-                    <button class="pp-map-btn" id="pp-zoom-in" title="Zoom In">
+                    <button class="pp-map-btn" id="pp-zoom-in" data-tip="Perbesar peta" aria-label="Perbesar peta">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
                     </button>
-                    <button class="pp-map-btn" id="pp-zoom-out" title="Zoom Out">
+                    <button class="pp-map-btn" id="pp-zoom-out" data-tip="Perkecil peta" aria-label="Perkecil peta">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 12h-15" /></svg>
                     </button>
-                    <button class="pp-map-btn" id="pp-locate" title="Lokasi Saya">
+                    <button class="pp-map-btn" id="pp-locate" data-tip="Lokasi saya" aria-label="Lokasi saya">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
                     </button>
                 </div>
@@ -295,49 +347,45 @@
                 <div class="pp-stat-card">
                     <div class="pp-stat-card-title">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 3v11.25A2.25 2.25 0 006 16.5h2.25M3.75 3h-1.5m1.5 0h16.5m0 0h1.5m-1.5 0v11.25A2.25 2.25 0 0118 16.5h-2.25m-7.5 0h7.5m-7.5 0l-1 3m8.5-3l1 3m0 0l.5 1.5m-.5-1.5h-9.5m0 0l-.5 1.5" /></svg>
-                        Statistik Wilayah
+                        Ringkasan layer peta
                     </div>
                     <div class="pp-stat-items">
                         <div class="pp-stat-item">
                             <div class="pp-stat-dot pp-stat-dot--houses">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21s7-4.4 7-11a7 7 0 10-14 0c0 6.6 7 11 7 11z"/><circle cx="12" cy="10" r="2.2"/></svg>
                             </div>
                             <div class="pp-stat-right">
                                 <div class="pp-stat-num" id="pp-total-rumah">0</div>
-                                <div class="pp-stat-label">Rumah</div>
+                                <div class="pp-stat-label">Fitur pada peta</div>
                             </div>
                         </div>
                         <div class="pp-stat-item">
                             <div class="pp-stat-dot pp-stat-dot--families">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"/><circle cx="7" cy="6" r="1" fill="currentColor"/><circle cx="7" cy="12" r="1" fill="currentColor"/><circle cx="7" cy="18" r="1" fill="currentColor"/></svg>
                             </div>
                             <div class="pp-stat-right">
                                 <div class="pp-stat-num" id="pp-total-kk">0</div>
-                                <div class="pp-stat-label">Keluarga</div>
+                                <div class="pp-stat-label">Dataset tampil</div>
                             </div>
                         </div>
                         <div class="pp-stat-item">
                             <div class="pp-stat-dot pp-stat-dot--people">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 21h18M5 21V6l7-3 7 3v15M9 9h.01M15 9h.01M9 13h.01M15 13h.01M10 21v-4h4v4"/></svg>
                             </div>
                             <div class="pp-stat-right">
                                 <div class="pp-stat-num" id="pp-total-penduduk">0</div>
-                                <div class="pp-stat-label">Penduduk</div>
+                                <div class="pp-stat-label">OPD tampil</div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="pp-detail-card" id="pp-detail-card">
+                <div class="pp-detail-card is-visible" id="pp-detail-card" style="display:block">
                     <div class="pp-detail-header">
                         <div class="pp-detail-title">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
-                            Detail Keluarga
+                            Data peta
                         </div>
-                        <button class="pp-detail-close" id="pp-detail-close" type="button">
-                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
-                        </button>
                     </div>
-                    <div id="pp-detail-content"></div>
+                    <div id="pp-detail-content">Klik titik, garis, atau area pada peta untuk melihat OPD, dataset, periode, dan ringkasan nilainya. Gunakan filter untuk mempersempit tampilan.</div>
                 </div>
             </div>
         </div>
@@ -349,8 +397,8 @@
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503 3.498l4.875-2.437c.381-.19.622-.58.622-1.006V4.82c0-.836-.88-1.38-1.628-1.006l-3.869 1.934c-.317.159-.69.159-1.006 0L9.503 3.252a1.125 1.125 0 00-1.006 0L3.622 5.689C3.24 5.88 3 6.27 3 6.695V19.18c0 .836.88 1.38 1.628 1.006l3.869-1.934c.317-.159.69-.159 1.006 0l4.994 2.497c.317.158.69.158 1.006 0z" /></svg>
                 </div>
                 <div>
-                    <div class="pp-legend-title">Legenda Kepadatan</div>
-                    <div class="pp-legend-subtitle">Klasifikasi marker berdasarkan jumlah kepala keluarga</div>
+                    <div class="pp-legend-title">Cara membaca peta</div>
+                    <div class="pp-legend-subtitle">Batas kecamatan dipadukan dengan nilai indikator terbit dan lokasi sektoral.</div>
                 </div>
             </div>
             <div class="pp-legend-grid">
@@ -358,25 +406,25 @@
                     <div class="pp-legend-marker pp-legend-marker--high">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
                     </div>
-                    <div><div class="pp-legend-text-primary">Tinggi</div><div class="pp-legend-text-secondary">&gt;5 KK per rumah</div></div>
+                    <div><div class="pp-legend-text-primary">Nilai tinggi</div><div class="pp-legend-text-secondary">Warna biru tua</div></div>
                 </div>
                 <div class="pp-legend-item">
                     <div class="pp-legend-marker pp-legend-marker--medium">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
                     </div>
-                    <div><div class="pp-legend-text-primary">Sedang</div><div class="pp-legend-text-secondary">3-5 KK per rumah</div></div>
+                    <div><div class="pp-legend-text-primary">Nilai lebih rendah</div><div class="pp-legend-text-secondary">Warna biru muda</div></div>
                 </div>
                 <div class="pp-legend-item">
                     <div class="pp-legend-marker pp-legend-marker--low">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 12l8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" /></svg>
                     </div>
-                    <div><div class="pp-legend-text-primary">Rendah</div><div class="pp-legend-text-secondary">&lt;3 KK per rumah</div></div>
+                    <div><div class="pp-legend-text-primary">Belum ada nilai</div><div class="pp-legend-text-secondary">Warna abu-abu</div></div>
                 </div>
                 <div class="pp-legend-item">
                     <div class="pp-legend-marker pp-legend-marker--cluster">
                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M18 18.72a9.094 9.094 0 003.741-.479 3 3 0 00-4.682-2.72m.94 3.198l.001.031c0 .225-.012.447-.037.666A11.944 11.944 0 0112 21c-2.17 0-4.207-.576-5.963-1.584A6.062 6.062 0 016 18.719m12 0a5.971 5.971 0 00-.941-3.197m0 0A5.995 5.995 0 0012 12.75a5.995 5.995 0 00-5.058 2.772m0 0a3 3 0 00-4.681 2.72 8.986 8.986 0 003.74.477m.94-3.197a5.971 5.971 0 00-.94 3.197M15 6.75a3 3 0 11-6 0 3 3 0 016 0zm6 3a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0zm-13.5 0a2.25 2.25 0 11-4.5 0 2.25 2.25 0 014.5 0z" /></svg>
                     </div>
-                    <div><div class="pp-legend-text-primary">Cluster</div><div class="pp-legend-text-secondary">Grup marker</div></div>
+                    <div><div class="pp-legend-text-primary">Lokasi sektoral</div><div class="pp-legend-text-secondary">Titik dan jalur infrastruktur</div></div>
                 </div>
             </div>
         </div>
@@ -389,8 +437,8 @@
         'use strict';
 
         const markersData = @json($this->markers);
-        const pendudukData = @json($this->penduduk_search);
-        const diseaseData = @json($this->disease_distribution);
+        const spatialData = @json($this->dataset_spatial_features);
+        const thematicData = @json($this->thematic_map_data);
         const first = markersData[0] || { latitude: 3.6247, longitude: 125.5000 };
 
         // MAP INIT
@@ -508,34 +556,196 @@
         });
 
         map.addLayer(mcg);
+        const spatialFeatures = spatialData.features || [];
+        let visibleSpatialFeatures = spatialFeatures;
+        const spatialStyle = {
+            style: feature => {
+                const isDemo = Boolean(feature?.properties?.is_demo);
+                const isRoute = feature?.geometry?.type === 'LineString';
+                return {
+                    color: isDemo ? '#7c3aed' : '#0284c7',
+                    weight: isRoute ? (isDemo ? 3 : 4) : 2,
+                    opacity: isDemo ? .78 : .92,
+                    dashArray: isDemo && isRoute ? '7 7' : null,
+                    lineCap: 'round',
+                    lineJoin: 'round',
+                    className: isRoute ? (isDemo ? 'pp-route-demo' : 'pp-route-published') : '',
+                    fillColor: isDemo ? '#a78bfa' : '#38bdf8',
+                    fillOpacity: isDemo ? .13 : .2,
+                };
+            },
+            pointToLayer: (feature, latlng) => {
+                const color = feature?.properties?.is_demo ? '#7c3aed' : '#0284c7';
+                const icon = L.divIcon({
+                    className: 'pp-feature-pin',
+                    html: `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="36" viewBox="0 0 28 36" aria-hidden="true"><path d="M14 1.5C7.1 1.5 2 6.6 2 13.2c0 8.2 12 21.2 12 21.2s12-13 12-21.2C26 6.6 20.9 1.5 14 1.5Z" fill="${color}" stroke="white" stroke-width="2.2"/><circle cx="14" cy="13" r="5.2" fill="white"/><circle cx="14" cy="13" r="2.2" fill="${color}"/></svg>`,
+                    iconSize: [28, 36],
+                    iconAnchor: [14, 35],
+                    popupAnchor: [0, -32],
+                });
+                return L.marker(latlng, {icon, keyboard: true, riseOnHover: true});
+            },
+            onEachFeature: (feature, layer) => {
+                const props = feature.properties || {};
+                const attributes = Object.entries(props.attributes || {}).filter(([, value]) => value !== null && value !== '');
+                const rows = attributes.length
+                    ? attributes.map(([key, value]) => `<div class="pp-feature-row"><span>${esc(key)}</span><strong>${esc(value)}</strong></div>`).join('')
+                    : '<div class="pp-feature-popup__empty">Belum ada atribut tambahan pada data ini.</div>';
+                const demoNotice = props.is_demo ? '<div class="pp-feature-popup__notice">DATA DEMO · BUKAN DATA RESMI · BELUM DITERBITKAN</div>' : '';
+                const popup = `<article class="pp-feature-popup"><header class="pp-feature-popup__header"><div class="pp-feature-popup__eyebrow">${esc(props.dataset || 'Data sektoral')}</div><strong class="pp-feature-popup__title">${esc(props.name || 'Lokasi')}</strong><div class="pp-feature-popup__meta">${esc(props.opd || 'OPD')} · ${esc(props.year || 'Tahun tidak dicantumkan')}${props.period ? ' · ' + esc(props.period) : ''}</div></header>${demoNotice}<div class="pp-feature-popup__rows">${rows}</div></article>`;
+                const popupWidth = Math.max(250, Math.min(390, window.innerWidth - 56));
+                layer.bindPopup(popup, {maxWidth:popupWidth,minWidth:Math.min(300,popupWidth),autoPanPadding:[24,32],keepInView:true,className:'pp-feature-popup-container'});
+                layer.on('popupopen', () => layer.closeTooltip());
+                const title = props.name || props.dataset;
+                if (title) layer.bindTooltip(esc(title), {sticky: true});
+            }
+        };
+        const spatialLayer = L.geoJSON([], spatialStyle).addTo(map);
+        const opdFilter = document.getElementById('pp-filter-desa');
+        const datasetFilter = document.getElementById('pp-filter-density');
+        const statusFilter = document.getElementById('pp-filter-disease');
+        [...new Set(spatialFeatures.map(feature => feature.properties?.opd).filter(Boolean))].sort().forEach(name => opdFilter.add(new Option(name, name)));
+        [...new Set(spatialFeatures.map(feature => feature.properties?.dataset).filter(Boolean))].sort().forEach(name => datasetFilter.add(new Option(name, name)));
+        const renderSpatialFeatures = (fit = false) => {
+            const selectedOpd = opdFilter.value;
+            const selectedDataset = datasetFilter.value;
+            visibleSpatialFeatures = spatialFeatures.filter(feature =>
+                (!selectedOpd || feature.properties?.opd === selectedOpd) &&
+                (!selectedDataset || feature.properties?.dataset === selectedDataset) &&
+                (statusFilter.value === 'all' || (statusFilter.value === 'demo') === Boolean(feature.properties?.is_demo))
+            );
+            spatialLayer.clearLayers();
+            spatialLayer.addData(visibleSpatialFeatures);
+            if (fit && spatialLayer.getBounds().isValid()) map.fitBounds(spatialLayer.getBounds(), {padding: [40, 40], maxZoom: 15});
+            updateStats();
+        };
+        opdFilter.addEventListener('change', () => renderSpatialFeatures(true));
+        datasetFilter.addEventListener('change', () => renderSpatialFeatures(true));
+        statusFilter.addEventListener('change', () => renderSpatialFeatures(true));
+        if (spatialLayer.getBounds().isValid()) bounds.extend(spatialLayer.getBounds());
         if (bounds.isValid()) map.fitBounds(bounds, { padding: [50, 50], maxZoom: 16 });
 
-        // BOUNDARY
-        const bf = [];
-        fetch('{{ asset('data/batas_wilayah.geojson') }}').then(r=>r.ok?r.json():null).then(g=>{
-            if(!g)return;
-            L.geoJSON(g,{
-                style: f=>({ color: f?.properties?.level==='desa'?'#059669':'#3b82f6', weight:2, fillColor:'#38bdf8', fillOpacity:0.06, dashArray: f?.properties?.level==='desa'?'6 4':'none' }),
-                onEachFeature:(f,l)=>{bf.push({f,l});const n=f?.properties?.nama||f?.properties?.name||f?.properties?.NAMOBJ||f?.properties?.WADMKC;if(n)l.bindTooltip(n,{sticky:true});}
-            }).addTo(map);
-
-            document.getElementById('pp-filter-disease')?.addEventListener('change',e=>{
-                const ad=e.target.value;
-                const pal={ispa:'#2563eb',dbd:'#dc2626',malaria:'#7c3aed',tbc:'#ea580c',hipertensi:'#0891b2',diabetes:'#16a34a',covid:'#db2777',stunting:'#ca8a04',gizi_buruk:'#92400e'};
-                const lbl={ispa:'ISPA',dbd:'DBD',malaria:'Malaria',tbc:'TBC',hipertensi:'Hipertensi',diabetes:'Diabetes',covid:'Covid',stunting:'Stunting',gizi_buruk:'Gizi Buruk'};
-                bf.forEach(({f,l})=>{
-                    const n=String(f?.properties?.WADMKC||f?.properties?.NAMOBJ||'Tidak Diketahui');
-                    const d=diseaseData['kecamatan:'+n.toLowerCase()]||{};
-                    const dis=ad==='all'?Object.entries(d).sort((a,b)=>b[1]-a[1])[0]?.[0]:ad;
-                    const val=ad==='all'?(dis?d[dis]:0):(d[ad]||0);
-                    const c=ad==='all'?(pal[dis]||'#94a3b8'):(pal[ad]||'#38bdf8');
-                    const tot=Object.values(d).reduce((a,b)=>a+Number(b||0),0);
-                    const rows=Object.entries(d).filter(([k,v])=>Number(v)>0).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([k,v])=>`<li><span>${lbl[k]||k}</span><strong>${v}</strong></li>`).join('');
-                    l.setStyle({fillColor:ad?c:'#38bdf8',fillOpacity:ad?0.5:0.06,color:ad?c:(f?.properties?.level==='desa'?'#059669':'#3b82f6'),weight:ad?2:(f?.properties?.level==='desa'?1.5:2),dashArray:f?.properties?.level==='desa'&&!ad?'6 4':'none'});
-                    l.bindPopup(`<div style="min-width:220px;font-family:system-ui,-apple-system,sans-serif;"><h4 style="margin:0;padding:14px 16px 12px;color:#fff;font-size:14px;font-weight:800;letter-spacing:-0.01em;background:linear-gradient(135deg,#0f172a,#1e3a5f);"><span style="display:block;margin-bottom:3px;color:#34d399;font-size:9px;letter-spacing:0.12em;font-weight:700;">SEBARAN PENYAKIT</span>${n}</h4><div style="margin:10px 14px 8px;padding:8px 11px;border-radius:8px;background:#f0fdf4;border:1px solid #bbf7d0;color:#065f46;font-size:12px;font-weight:700;">${ad==='all'?'Penyakit dominan':'Filter '+(lbl[ad]||ad)}: ${lbl[dis]||'-'} &middot; ${val} kasus</div><ul style="margin:0;padding:4px 14px 14px;list-style:none;"><li style="display:flex;justify-content:space-between;gap:18px;padding:6px 3px;border-bottom:1px solid #f1f5f9;font-size:12px;"><span style="font-size:11px;font-weight:600;color:#94a3b8;text-transform:uppercase;letter-spacing:0.04em;">Total kasus</span><strong style="color:#0f172a;font-size:13px;">${tot}</strong></li>${rows}</ul></div>`);
-                });
+        // District boundary and published-data choropleth from the converted SHP GeoJSON.
+        const districtIds = new Map((thematicData.kecamatans || []).map(item => [String(item.name || '').toLocaleLowerCase('id-ID').replace(/[^\p{L}\p{N}]/gu, ''), String(item.id)]));
+        const indicatorSelect = document.getElementById('pp-indicator');
+        const thematicLegend = document.getElementById('pp-thematic-legend');
+        const indicatorById = new Map((thematicData.indicators || []).map(indicator => [indicator.id, indicator]));
+        const normalizeDistrictName = name => String(name || '').toLocaleLowerCase('id-ID').replace(/[^\p{L}\p{N}]/gu, '');
+        const districtNameFor = feature => feature?.properties?.WADMKC || feature?.properties?.NAMOBJ || feature?.properties?.nama || feature?.properties?.name || '';
+        const districtById = new Map((thematicData.kecamatans || []).map(item => [String(item.id), item]));
+        (thematicData.indicators || []).forEach(indicator => {
+            const option = new Option(`${indicator.opd} · ${indicator.dataset} · ${indicator.label} (${indicator.year})`, indicator.id);
+            indicatorSelect.add(option);
+        });
+        let districtFeatures = [];
+        const districtPopupOptions = () => {
+            const width = Math.max(250, Math.min(420, window.innerWidth - 56));
+            return {maxWidth:width,minWidth:Math.min(300,width),autoPanPadding:[24,32],keepInView:true,className:'pp-feature-popup-container'};
+        };
+        const buildDistrictPopup = (districtName, districtId, selectedIndicator = null, selectedValue = null) => {
+            const profile = districtId ? (thematicData.profiles || {})[String(districtId)] || {} : {};
+            const diseases = profile.diseases || [];
+            const diseaseCases = diseases.reduce((sum, disease) => sum + Number(disease.cases || 0), 0);
+            const diseaseDeaths = diseases.reduce((sum, disease) => sum + Number(disease.deaths || 0), 0);
+            const source = profile.disease_source || {};
+            const metrics = (profile.indicators || [])
+                .filter(metric => metric.dataset_code !== 'SURVEILANS_PENYAKIT')
+                .sort((a, b) => {
+                    const rank = metric => /penduduk|sekolah|murid|puskesmas|stunting|jalan|jembatan|produksi|fasilitas/i.test(`${metric.label} ${metric.dataset}`) ? 0 : 1;
+                    return rank(a) - rank(b) || a.dataset.localeCompare(b.dataset);
+                }).slice(0, 6);
+            const diseaseRows = diseases.slice(0, 6).map(disease => `<div class="pp-district-row"><div><div class="pp-district-row__name">${esc(disease.name)}${disease.code ? ` <span style="color:#64748b;font-weight:600">(${esc(disease.code)})</span>` : ''}</div><div class="pp-district-row__meta">${Number(disease.deaths || 0).toLocaleString('id-ID')} meninggal · ${Number(disease.hospitalized || 0).toLocaleString('id-ID')} dirawat</div></div><div class="pp-district-row__value">${Number(disease.cases || 0).toLocaleString('id-ID')} kasus</div></div>`).join('');
+            const metricRows = metrics.map(metric => `<div class="pp-district-row"><div><div class="pp-district-row__name">${esc(metric.label)}</div><div class="pp-district-row__meta">${esc(metric.dataset)} · ${esc(metric.opd)} · ${esc(metric.year)}</div></div><div class="pp-district-row__value">${Number(metric.value).toLocaleString('id-ID', {maximumFractionDigits:2})}${metric.unit ? ' ' + esc(metric.unit) : ''}</div></div>`).join('');
+            const selected = selectedIndicator
+                ? `<section class="pp-district-section"><div class="pp-district-section__title">Indikator peta yang dipilih</div><div class="pp-district-empty"><strong>${esc(selectedIndicator.label)}:</strong> ${selectedValue === null || selectedValue === undefined ? 'belum ada data terbit di kecamatan ini' : `${Number(selectedValue).toLocaleString('id-ID', {maximumFractionDigits:2})}${selectedIndicator.unit ? ' ' + esc(selectedIndicator.unit) : ''}`}<br>${esc(selectedIndicator.dataset)} · ${esc(selectedIndicator.opd)} · ${esc(selectedIndicator.year)}</div></section>`
+                : '';
+            const diseaseContent = diseases.length
+                ? `<div class="pp-district-list">${diseaseRows}</div><div class="pp-district-row__meta" style="padding:5px 2px">Sumber: ${esc(source.dataset || 'Surveilans Penyakit')} · ${esc(source.opd || 'Dinas Kesehatan')} · ${esc(source.year || '')} · data terbit</div>`
+                : '<div class="pp-district-empty">Belum ada data penyakit terbit untuk kecamatan ini.</div>';
+            const metricContent = metrics.length
+                ? `<div class="pp-district-list">${metricRows}</div>`
+                : '<div class="pp-district-empty">Belum ada indikator sektoral terbit lain untuk kecamatan ini.</div>';
+            const districtCode = districtId ? districtById.get(String(districtId))?.code : null;
+            return `<article class="pp-district-popup"><header class="pp-district-popup__header"><div class="pp-district-popup__eyebrow">Ringkasan wilayah</div><strong class="pp-district-popup__title">${esc(districtName || 'Kecamatan')}</strong><div class="pp-district-popup__meta">${districtCode ? `Kode BPS ${esc(districtCode)} · ` : ''}Kabupaten Kepulauan Sangihe · data terbit</div></header><div class="pp-district-popup__content"><div class="pp-district-kpis"><div class="pp-district-kpi"><strong>${diseases.length ? diseaseCases.toLocaleString('id-ID') : '—'}</strong><span>Total kasus penyakit${source.year ? ` · ${esc(source.year)}` : ''}</span></div><div class="pp-district-kpi"><strong>${diseases.length ? diseaseDeaths.toLocaleString('id-ID') : metrics.length.toLocaleString('id-ID')}</strong><span>${diseases.length ? 'Kematian tercatat' : 'Indikator sektoral tersedia'}</span></div></div>${selected}<section class="pp-district-section"><div class="pp-district-section__title">Penyakit terlapor</div>${diseaseContent}</section><section class="pp-district-section"><div class="pp-district-section__title">Informasi sektoral lain</div>${metricContent}</section></div></article>`;
+        };
+        let choroplethLayer = L.geoJSON([], {
+            style: feature => feature.properties?.themeValue === null
+                ? {color:'#64748b',weight:1.5,fillColor:'#cbd5e1',fillOpacity:.38}
+                : {color:'#fff',weight:1.5,fillColor:feature.properties?.themeColor || '#60a5fa',fillOpacity:.76},
+            onEachFeature: (feature, layer) => {
+                const props = feature.properties || {};
+                const indicator = props.themeIndicator;
+                const districtName = props.districtName || districtNameFor(feature);
+                const districtId = districtIds.get(normalizeDistrictName(districtName));
+                layer.bindPopup(buildDistrictPopup(districtName, districtId, indicator, props.themeValue), districtPopupOptions());
+                layer.on('click', event => L.DomEvent.stopPropagation(event));
+                layer.on('popupopen', () => layer.closeTooltip());
+                if (districtName) layer.bindTooltip(esc(districtName), {sticky:true});
+            }
+        }).addTo(map);
+        const boundaryLayer = L.geoJSON([], {
+            style: () => ({color:'#0f766e',weight:1.4,fillColor:'#ccfbf1',fillOpacity:.18}),
+            onEachFeature: (feature, layer) => {
+                const name = districtNameFor(feature);
+                const districtId = districtIds.get(normalizeDistrictName(name));
+                if (name) {
+                    layer.bindPopup(buildDistrictPopup(name, districtId), districtPopupOptions());
+                    layer.on('click', event => L.DomEvent.stopPropagation(event));
+                    layer.on('popupopen', () => layer.closeTooltip());
+                    layer.bindTooltip(String(name), {sticky:true});
+                }
+            }
+        }).addTo(map);
+        const indicatorColor = (value, min, max) => {
+            if (max <= min) return '#2563eb';
+            const ratio = (value - min) / (max - min);
+            if (ratio <= .2) return '#dbeafe';
+            if (ratio <= .4) return '#93c5fd';
+            if (ratio <= .6) return '#60a5fa';
+            if (ratio <= .8) return '#2563eb';
+            return '#1e3a8a';
+        };
+        const numberLabel = value => Number(value).toLocaleString('id-ID', {maximumFractionDigits:2});
+        const renderChoropleth = () => {
+            const indicator = indicatorById.get(indicatorSelect.value);
+            if (!indicator || districtFeatures.length === 0) {
+                choroplethLayer.clearLayers();
+                thematicLegend.classList.remove('is-visible');
+                return;
+            }
+            const numbers = Object.values(indicator.values || {}).map(Number).filter(Number.isFinite);
+            const min = numbers.length ? Math.min(...numbers) : 0;
+            const max = numbers.length ? Math.max(...numbers) : 0;
+            const features = districtFeatures.map(feature => {
+                const districtName = districtNameFor(feature);
+                const districtId = districtIds.get(String(districtName).toLocaleLowerCase('id-ID').replace(/[^\p{L}\p{N}]/gu, ''));
+                const value = districtId ? indicator.values?.[districtId] : undefined;
+                const hasValue = value !== undefined && value !== null && Number.isFinite(Number(value));
+                return {...feature, properties:{...feature.properties, districtName, themeIndicator:indicator, themeValue:hasValue ? Number(value) : null, themePeriod:districtId ? indicator.periods?.[districtId] : null, themeColor:!hasValue ? null : indicatorColor(Number(value),min,max)}};
             });
-        }).catch(()=>{});
+            choroplethLayer.clearLayers();
+            choroplethLayer.addData(features);
+            choroplethLayer.bringToFront();
+            thematicLegend.classList.add('is-visible');
+            document.getElementById('pp-legend-title').textContent = `${indicator.label} · ${indicator.year}`;
+            document.getElementById('pp-legend-description').textContent = `${indicator.dataset} — ${indicator.opd}; nilai ${indicator.aggregation === 'average' ? 'dirata-ratakan' : 'dijumlahkan'} dari data terbit tahun ${indicator.year}.`;
+            document.getElementById('pp-legend-min').textContent = `${numberLabel(min)}${indicator.unit ? ' ' + indicator.unit : ''}`;
+            document.getElementById('pp-legend-max').textContent = `${numberLabel(max)}${indicator.unit ? ' ' + indicator.unit : ''}`;
+        };
+        indicatorSelect.addEventListener('change', renderChoropleth);
+        fetch('{{ asset('data/batas_wilayah.geojson') }}')
+            .then(response => response.ok ? response.json() : null)
+            .then(geojson => {
+                if (!geojson) return;
+                districtFeatures = (geojson.features || []).filter(feature => districtNameFor(feature));
+                boundaryLayer.addData(districtFeatures);
+                renderChoropleth();
+                const districtBounds = boundaryLayer.getBounds();
+                if (districtBounds.isValid()) {
+                    bounds.extend(districtBounds);
+                    if (!spatialLayer.getBounds().isValid() && markersData.length === 0) map.fitBounds(districtBounds, {padding:[36,36],maxZoom:11});
+                }
+            }).catch(() => {});
 
         // MAP CONTROLS
         document.getElementById('pp-map-mode').addEventListener('change',e=>{
@@ -545,7 +755,7 @@
         });
         document.getElementById('pp-zoom-in').onclick=()=>map.zoomIn();
         document.getElementById('pp-zoom-out').onclick=()=>map.zoomOut();
-        document.getElementById('pp-fit-bounds').onclick=()=>{if(bounds.isValid())map.fitBounds(bounds,{padding:[50,50],maxZoom:17});};
+        document.getElementById('pp-fit-bounds').onclick=()=>{const visibleBounds=spatialLayer.getBounds();if(visibleBounds.isValid())map.fitBounds(visibleBounds,{padding:[50,50],maxZoom:17});else if(bounds.isValid())map.fitBounds(bounds,{padding:[50,50],maxZoom:17});};
         document.getElementById('pp-locate').onclick=()=>{if(navigator.geolocation)navigator.geolocation.getCurrentPosition(p=>map.flyTo([p.coords.latitude,p.coords.longitude],16),()=>{});};
 
         // FILTERS
@@ -562,67 +772,39 @@
             updateStats();
         };
 
-        fDesa.addEventListener('change',()=>{
-            const s=fDesa.value;
-            if(!s){applyF();return;}
-            const m=bf.find(x=>(x.f.properties?.nama||x.f.properties?.name||x.f.properties?.NAMOBJ||x.f.properties?.WADMKC)===s);
-            if(m){map.fitBounds(m.l.getBounds(),{padding:[60,60],maxZoom:16});m.l.setStyle({color:'#d59b32',weight:4,fillOpacity:0.2});setTimeout(()=>m.l.setStyle({color:'#059669',weight:2,fillOpacity:0.06}),1800);}
-            applyF();
-        });
-        fDens.addEventListener('change',applyF);
+        fDesa.addEventListener('change',()=>{applyF();renderSpatialFeatures(true);});
+        fDens.addEventListener('change',()=>{applyF();renderSpatialFeatures(true);});
 
         // STATS
-        const updateStats=()=>{let tr=0,tk=0,tp=0;mcg.eachLayer(l=>{if(l.rumahData){tr++;tk+=l.rumahData.jumlah_kk;tp+=l.rumahData.jumlah_penduduk;}});document.getElementById('pp-total-rumah').textContent=tr.toLocaleString('id-ID');document.getElementById('pp-total-kk').textContent=tk.toLocaleString('id-ID');document.getElementById('pp-total-penduduk').textContent=tp.toLocaleString('id-ID');};
+        const updateStats=()=>{const datasets=new Set(visibleSpatialFeatures.map(f=>f.properties?.dataset).filter(Boolean));const opds=new Set(visibleSpatialFeatures.map(f=>f.properties?.opd).filter(Boolean));document.getElementById('pp-total-rumah').textContent=visibleSpatialFeatures.length.toLocaleString('id-ID');document.getElementById('pp-total-kk').textContent=datasets.size.toLocaleString('id-ID');document.getElementById('pp-total-penduduk').textContent=opds.size.toLocaleString('id-ID');};
 
         // SEARCH
         const sIn=document.getElementById('pp-search');
         const sRes=document.getElementById('pp-search-results');
-        const dCard=document.getElementById('pp-detail-card');
-        const dCont=document.getElementById('pp-detail-content');
-
-        const showD=data=>{
-            const bc=data.status_ekonomi==='Miskin'?'pp-detail-badge--danger':data.status_ekonomi==='Menengah'?'pp-detail-badge--warning':'pp-detail-badge--success';
-            dCont.innerHTML=`<div class="pp-detail-grid">
-                <div><div class="pp-detail-item-label">Nama Kepala Keluarga</div><div class="pp-detail-item-value">${esc(data.nama_kepala_keluarga||data.nama)}</div></div>
-                <div><div class="pp-detail-item-label">Status Ekonomi</div><span class="pp-detail-badge ${bc}">${esc(data.status_ekonomi||'-')}</span></div>
-                <div><div class="pp-detail-item-label">Nomor KK</div><div class="pp-detail-item-value" style="font-family:monospace;font-size:0.75rem;">${esc(data.nomor_kk||'-')}</div></div>
-                <div><div class="pp-detail-item-label">Jumlah Anggota</div><div class="pp-detail-item-value">${data.penduduk_count||0} orang</div></div>
-                <div class="pp-detail-divider"></div>
-                <div style="grid-column:1/-1;"><div class="pp-detail-item-label">Alamat</div><div class="pp-detail-item-value">${esc(data.alamat||'-')}</div></div>
-                <div><div class="pp-detail-item-label">Desa</div><div class="pp-detail-item-value">${esc(data.desa||'-')}</div></div>
-                <div><div class="pp-detail-item-label">Kode Rumah</div><div class="pp-detail-item-value">${esc(data.kode_rumah||'-')}</div></div>
-                ${data.anggota&&data.anggota.length?`<div class="pp-detail-divider"></div><div style="grid-column:1/-1;"><div class="pp-detail-item-label">Anggota Keluarga</div><div class="pp-detail-item-value" style="font-size:0.75rem;line-height:1.7;color:#475569;">${data.anggota.map(a=>`<span style="font-weight:600;color:#0f172a;">${esc(a.nama)}</span> <span style="color:#94a3b8;">(${esc(a.status||'-')})</span>`).join('<br>')}</div></div>`:''}
-            </div>`;
-            dCard.classList.add('is-visible');
-            dCard.scrollIntoView({behavior:'smooth',block:'nearest'});
-            const lat=parseFloat(data.lat),lng=parseFloat(data.lng);
-            if(Number.isFinite(lat)&&Number.isFinite(lng)&&lat!==0&&lng!==0)map.flyTo([lat,lng],17,{duration:1.2});
-        };
-
         sIn.addEventListener('input',e=>{
             const q=e.target.value.toLowerCase().trim();
             if(q.length<2){sRes.classList.remove('is-open');return;}
-            const f=pendudukData.filter(p=>(p.nama||'').toLowerCase().includes(q)).slice(0,10);
+            const f=spatialFeatures.filter(feature=>{
+                const p=feature.properties||{};
+                return [p.name,p.dataset,p.opd,...Object.keys(p.attributes||{}),...Object.values(p.attributes||{})].some(value=>String(value||'').toLowerCase().includes(q));
+            }).slice(0,10);
             if(f.length===0){sRes.innerHTML=`<div class="pp-search-empty">Tidak ada hasil ditemukan</div>`;sRes.classList.add('is-open');return;}
-            sRes.innerHTML=f.map((p,i)=>`<div class="pp-search-item" data-idx="${i}" data-lat="${p.lat}" data-lng="${p.lng}"><div class="pp-search-item-name">${esc(p.nama)}</div><div class="pp-search-item-meta">${esc(p.alamat||'Alamat tidak tersedia')} &bull; ${esc(p.desa||'Desa tidak tersedia')}</div></div>`).join('');
+            sRes.innerHTML=f.map((feature,i)=>`<div class="pp-search-item" data-idx="${i}"><div class="pp-search-item-name">${esc(feature.properties?.name||feature.properties?.dataset||'Lokasi')}</div><div class="pp-search-item-meta">${esc(feature.properties?.opd||'OPD')} &bull; ${esc(feature.properties?.dataset||'Data sektoral')}${feature.properties?.is_demo?' · DEMO':''}</div></div>`).join('');
             sRes.classList.add('is-open');
-            sRes.querySelectorAll('.pp-search-item').forEach(it=>{it.onclick=()=>{const idx=parseInt(it.dataset.idx);showD(f[idx]);sIn.value='';sRes.classList.remove('is-open');};});
+            sRes.querySelectorAll('.pp-search-item').forEach(it=>{it.onclick=()=>{const feature=f[parseInt(it.dataset.idx)];opdFilter.value=feature.properties?.opd||'';datasetFilter.value=feature.properties?.dataset||'';statusFilter.value=feature.properties?.is_demo?'demo':'published';renderSpatialFeatures(false);const target=L.geoJSON(feature);if(target.getBounds().isValid())map.flyToBounds(target.getBounds(),{padding:[50,50],maxZoom:16,duration:.8});sIn.value='';sRes.classList.remove('is-open');};});
         });
         document.addEventListener('click',e=>{if(!e.target.closest('#pp-search')&&!e.target.closest('.pp-search-results'))sRes.classList.remove('is-open');});
 
         // CLEAR
-        document.getElementById('pp-clear').onclick=()=>{sIn.value='';dCard.classList.remove('is-visible');fDesa.value='';fDens.value='';document.getElementById('pp-map-mode').value='osm';if(currentLayer!==osm){map.removeLayer(currentLayer);currentLayer=osm;map.addLayer(currentLayer);}applyF();if(bounds.isValid())map.fitBounds(bounds,{padding:[50,50],maxZoom:16});};
-        document.getElementById('pp-detail-close').onclick=()=>dCard.classList.remove('is-visible');
+        document.getElementById('pp-clear').onclick=()=>{sIn.value='';fDesa.value='';fDens.value='';statusFilter.value='all';indicatorSelect.value='';renderChoropleth();renderSpatialFeatures(false);document.getElementById('pp-map-mode').value='osm';if(currentLayer!==osm){map.removeLayer(currentLayer);currentLayer=osm;map.addLayer(osm);}applyF();const visibleBounds=boundaryLayer.getBounds();if(visibleBounds.isValid())map.fitBounds(visibleBounds,{padding:[50,50],maxZoom:11});};
 
         // LAYER CONTROL
-        L.control.layers({'Street Map':osm,'Satellite':satellite,'Topografi':topo},{'Rumah':mcg}).addTo(map);
+        L.control.layers({'Peta jalan':osm,'Satelit':satellite,'Topografi':topo},{'Batas kecamatan':boundaryLayer,'Sebaran per kecamatan':choroplethLayer,'Lokasi data sektoral':spatialLayer}).addTo(map);
 
         // INIT
+        statusFilter.value='all';
+        renderSpatialFeatures(true);
         updateStats();
-        const ds=document.getElementById('pp-filter-disease');
-        if(![...ds.options].some(o=>o.value==='all'))ds.insertBefore(new Option('Semua Penyakit','all'),ds.options[1]);
-        ds.value='all';
-        setTimeout(()=>ds.dispatchEvent(new Event('change',{bubbles:true})),700);
 
         // LEAFLET STYLES
         const st=document.createElement('style');
@@ -630,4 +812,4 @@
         document.head.appendChild(st);
     });
     </script>
-</x-filament::page>
+</x-filament-panels::page>

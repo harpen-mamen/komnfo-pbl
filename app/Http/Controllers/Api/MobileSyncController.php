@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\Dusun;
+use Illuminate\Support\Collection;
 use App\Models\Keluarga;
 use App\Models\MobileSyncOperation;
 use App\Models\Penduduk;
 use App\Models\Rumah;
 use App\Models\SubmissionBatch;
 use App\Models\SubmissionBatchItem;
-use App\Services\BatchApprovalService;
 use App\Services\SubmissionBatchService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use Throwable;
@@ -93,7 +93,7 @@ class MobileSyncController
         // Pass 2: Submit batch via service layer
         // This ensures full validation, conflict check, snapshot, versioning, workflow
         $submittedBatch = null;
-        $kecamatanId = $request->user()->kecamatan_id ?? $request->user()->desa?->kecamatan_id;
+        $kecamatanId = $request->user()->kecamatan_id ?? $request->user()->desa?->parent_id;
 
         if ($kecamatanId !== null && !empty($entityPayloads)) {
             try {
@@ -124,7 +124,7 @@ class MobileSyncController
                         return $result;
                     });
                 }
-            } catch (\Throwable $e) {
+            } catch (Throwable $e) {
                 // If batch submission fails, rollback by marking operations as failed
                 MobileSyncOperation::query()
                     ->where("user_id", $request->user()->id)
@@ -176,50 +176,50 @@ class MobileSyncController
                 ->where("operation_id", $operation["operation_id"])
                 ->first();
 
-                if ($existing) {
-                    $result = $this->buildResult($operation, $existing->status, $existing->server_id, null, $existing->batch_id);
+            if ($existing) {
+                $result = $this->buildResult($operation, $existing->status, $existing->server_id, null, $existing->batch_id);
 
-                    // Enhance with batch status if batch exists
-                    if ($existing->batch_id) {
-                        $batch = SubmissionBatch::query()->find($existing->batch_id);
-                        if ($batch) {
-                            $result["batch_status"] = $batch->status;
-                            $result["batch_status_label"] = SubmissionBatch::statusLabel($batch->status);
-                        }
+                // Enhance with batch status if batch exists
+                if ($existing->batch_id) {
+                    $batch = SubmissionBatch::query()->find($existing->batch_id);
+                    if ($batch) {
+                        $result["batch_status"] = $batch->status;
+                        $result["batch_status_label"] = SubmissionBatch::statusLabel($batch->status);
                     }
-
-                    return $result;
                 }
 
-                // Create entity
-                $module = $operation["dataset"];
-                $serverId = match ($module) {
-                    "rumah" => $this->storeRumah($request, $operation["payload"]),
-                    "keluarga" => $this->storeKeluarga($request, $operation["payload"], $localIdToServerId),
-                    "penduduk" => $this->storePenduduk($request, $operation["payload"], $localIdToServerId),
-                };
+                return $result;
+            }
 
-                // Track local-to-server mapping
-                $localIdToServerId[$operation["local_id"]] = $serverId;
+            // Create entity
+            $module = $operation["dataset"];
+            $serverId = match ($module) {
+                "rumah" => $this->storeRumah($request, $operation["payload"]),
+                "keluarga" => $this->storeKeluarga($request, $operation["payload"], $localIdToServerId),
+                "penduduk" => $this->storePenduduk($request, $operation["payload"], $localIdToServerId),
+            };
 
-                // Group entity IDs by module for batch submission
-                $this->groupEntityPayload($module, $serverId, $entityPayloads);
+            // Track local-to-server mapping
+            $localIdToServerId[$operation["local_id"]] = $serverId;
 
-                // Record mobile sync operation
-                MobileSyncOperation::query()->create([
-                    "operation_id" => $operation["operation_id"],
-                    "user_id" => $request->user()->id,
-                    "device_id" => $deviceId,
-                    "dataset" => $operation["dataset"],
-                    "local_id" => $operation["local_id"],
-                    "base_version" => $operation["base_version"] ?? 0,
-                    "payload" => $operation["payload"],
-                    "status" => "accepted",
-                    "server_id" => $serverId,
-                    "processed_at" => Carbon::now(),
-                ]);
+            // Group entity IDs by module for batch submission
+            $this->groupEntityPayload($module, $serverId, $entityPayloads);
 
-                return $this->buildResult($operation, "accepted", $serverId, null, null);
+            // Record mobile sync operation
+            MobileSyncOperation::query()->create([
+                "operation_id" => $operation["operation_id"],
+                "user_id" => $request->user()->id,
+                "device_id" => $deviceId,
+                "dataset" => $operation["dataset"],
+                "local_id" => $operation["local_id"],
+                "base_version" => $operation["base_version"] ?? 0,
+                "payload" => $operation["payload"],
+                "status" => "accepted",
+                "server_id" => $serverId,
+                "processed_at" => Carbon::now(),
+            ]);
+
+            return $this->buildResult($operation, "accepted", $serverId, null, null);
         } catch (ValidationException $exception) {
             return $this->buildResult(
                 $operation,
@@ -360,7 +360,7 @@ class MobileSyncController
         ])->validate();
 
         $this->assertDesa($request, (int) $data["desa_id"]);
-        if (!empty($data["dusun_id"]) && !\App\Models\Dusun::query()->whereKey($data["dusun_id"])->where("desa_id", $data["desa_id"])->exists()) {
+        if (!empty($data["dusun_id"]) && !Dusun::query()->whereKey($data["dusun_id"])->where("desa_id", $data["desa_id"])->exists()) {
             throw ValidationException::withMessages(["dusun_id" => "Dusun tidak berada pada desa yang dipilih."]);
         }
 
@@ -533,7 +533,7 @@ class MobileSyncController
     private function buildResponse(
         $operationResults,
         ?SubmissionBatch $submittedBatch,
-        ?\Illuminate\Support\Collection $batchesById,
+        ?Collection $batchesById,
         ?string $error = null,
     ): JsonResponse {
         $responseBatchId = $submittedBatch?->id ?? $operationResults->pluck("batch_id")->filter()->first();
@@ -554,3 +554,4 @@ class MobileSyncController
         return response()->json($data);
     }
 }
+

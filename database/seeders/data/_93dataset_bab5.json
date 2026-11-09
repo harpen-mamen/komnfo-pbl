@@ -1,0 +1,392 @@
+{
+    "DISHUB": [
+        "2.09",
+        {
+            "5.49": [
+                "Prasarana Transportasi Laut",
+                "tahunan",
+                {
+                    "nama": [
+                        "Nama",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "jenis": [
+                        "Jenis",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "kondisi": [
+                        "Kondisi",
+                        "enum",
+                        true,
+                        [
+                            "Baik",
+                            "Rusak"
+                        ]
+                    ],
+                    "kapasitas": [
+                        "Kapasitas",
+                        "decimal",
+                        false,
+                        "Unit"
+                    ]
+                }
+            ],
+            "5.50": [
+                "Kendaraan Bermotor",
+                "tahunan",
+                {
+                    "jenis": [
+                        "Jenis",
+                        "enum",
+                        true,
+                        [
+                            "R2",
+                            "R4",
+                            "R6"
+                        ]
+                    ],
+                    "tahun": [
+                        "Tahun",
+                        "integer",
+                        true,
+                        null
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Unit"
+                    ]
+                }
+            ],
+            "5.51": [
+                "Kecelakaan Lalu Lintas",
+                "tahunan",
+                {
+                    "bulan": [
+                        "Bulan",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "kecelakaan": [
+                        "Kecelakaan",
+                        "integer",
+                        false,
+                        "Kasus"
+                    ],
+                    "meninggal": [
+                        "Meninggal",
+                        "integer",
+                        false,
+                        "Orang"
+                    ]
+                }
+            ],
+            "5.52": [
+                "Prasarana Jalan",
+                "tahunan",
+                {
+                    "jenis": [
+                        "Jenis",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Unit"
+                    ]
+                }
+            ],
+            "5.53": [
+                "Trayek Kendaraan Umum",
+                "tahunan",
+                {
+                    "trayek": [
+                        "Trayek",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Unit"
+                    ]
+                }
+            ],
+            "5.54": [
+                "Jumlah Terminal",
+                "tahunan",
+                {
+                    "nama": [
+                        "Nama",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "tipe": [
+                        "Tipe",
+                        "enum",
+                        true,
+                        [
+                            "A",
+                            "B",
+                            "C"
+                        ]
+                    ],
+                    "kondisi": [
+                        "Kondisi",
+                        "enum",
+                        true,
+                        [
+                            "Baik",
+                            "Rusak"
+                        ]
+                    ]
+                }
+            ],
+            "5.55": [
+                "Halte",
+                "tahunan",
+                {
+                    "lokasi": [
+                        "Lokasi",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "kondisi": [
+                        "Kondisi",
+                        "enum",
+                        true,
+                        [
+                            "Baik",
+                            "Rusak"
+                        ]
+                    ]
+                }
+            ]
+        }
+    ],
+    "DPUPR": [
+        "1.03",
+        {
+            "5.56": [
+                "Rencana Teknis RTBL",
+                "tahunan",
+                {
+                    "jenis": [
+                        "Jenis",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "lokasi": [
+                        "Lokasi",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "tahun": [
+                        "Tahun",
+                        "integer",
+                        true,
+                        null
+                    ],
+                    "lokasi_peta": [
+                        "Lokasi atau kawasan pada peta",
+                        "json",
+                        false,
+                        null,
+                        "geometry:any"
+                    ]
+                }
+            ],
+            "5.57": [
+                "Pengairan",
+                "tahunan",
+                {
+                    "jenis": [
+                        "Jenis",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "luas": [
+                        "Luas",
+                        "decimal",
+                        false,
+                        "Ha"
+                    ]
+                }
+            ],
+            "5.58": [
+                "Air Minum",
+                "tahunan",
+                {
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "sumber": [
+                        "Sumber",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "terlayani": [
+                        "KK Terlayani",
+                        "integer",
+                        false,
+                        "KK"
+                    ],
+                    "lokasi_peta": [
+                        "Lokasi sarana air minum",
+                        "json",
+                        false,
+                        null,
+                        "geometry:point"
+                    ]
+                }
+            ],
+            "5.59": [
+                "Kondisi Jalan Jembatan",
+                "tahunan",
+                {
+                    "ruas": [
+                        "Ruas",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "panjang": [
+                        "Panjang",
+                        "decimal",
+                        false,
+                        "Km"
+                    ],
+                    "kondisi": [
+                        "Kondisi",
+                        "enum",
+                        true,
+                        [
+                            "Baik",
+                            "Sedang",
+                            "Rusak",
+                            "Rusak Berat"
+                        ]
+                    ],
+                    "geometri": [
+                        "Ruas jalan atau lokasi jembatan pada peta",
+                        "json",
+                        false,
+                        null,
+                        "geometry:any"
+                    ]
+                }
+            ]
+        }
+    ],
+    "PERPUS": [
+        "2.17",
+        {
+            "5.60": [
+                "Perpustakaan dan Kearsipan",
+                "tahunan",
+                {
+                    "jenis": [
+                        "Jenis",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Unit"
+                    ]
+                }
+            ]
+        }
+    ],
+    "PERKIM": [
+        "1.04",
+        {
+            "5.61": [
+                "Rumah Tidak Layak Huni",
+                "tahunan",
+                {
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "integer",
+                        false,
+                        "Unit"
+                    ]
+                }
+            ],
+            "5.62": [
+                "Tempat Pemakaman Umum",
+                "tahunan",
+                {
+                    "lokasi": [
+                        "Lokasi",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "luas": [
+                        "Luas",
+                        "decimal",
+                        false,
+                        "Ha"
+                    ]
+                }
+            ],
+            "5.63": [
+                "PSU Jalan Drainase",
+                "tahunan",
+                {
+                    "lokasi": [
+                        "Lokasi",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "jenis": [
+                        "Jenis",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "kondisi": [
+                        "Kondisi",
+                        "enum",
+                        true,
+                        [
+                            "Baik",
+                            "Rusak"
+                        ]
+                    ]
+                }
+            ]
+        }
+    ]
+}

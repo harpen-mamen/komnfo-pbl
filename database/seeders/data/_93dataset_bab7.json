@@ -1,0 +1,200 @@
+{
+    "BPKPD": [
+        "2.18",
+        {
+            "7.73": [
+                "Penyerapan Anggaran PD",
+                "tahunan",
+                {
+                    "nama_opd": [
+                        "Nama OPD",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "pagu": [
+                        "Pagu",
+                        "decimal",
+                        false,
+                        "Rp"
+                    ],
+                    "realisasi": [
+                        "Realisasi",
+                        "decimal",
+                        false,
+                        "Rp"
+                    ],
+                    "persen": [
+                        "Persen",
+                        "decimal",
+                        false,
+                        "Persen"
+                    ]
+                }
+            ],
+            "7.74": [
+                "Penyerapan Anggaran Kecamatan",
+                "tahunan",
+                {
+                    "kecamatan": [
+                        "Kecamatan",
+                        "string",
+                        true,
+                        "wilayah"
+                    ],
+                    "pagu": [
+                        "Pagu",
+                        "decimal",
+                        false,
+                        "Rp"
+                    ],
+                    "realisasi": [
+                        "Realisasi",
+                        "decimal",
+                        false,
+                        "Rp"
+                    ]
+                }
+            ],
+            "7.75": [
+                "Realisasi Anggaran",
+                "tahunan",
+                {
+                    "komponen": [
+                        "Komponen",
+                        "enum",
+                        true,
+                        [
+                            "PAD",
+                            "Transfer",
+                            "Belanja"
+                        ]
+                    ],
+                    "jumlah": [
+                        "Jumlah",
+                        "decimal",
+                        false,
+                        "Rp"
+                    ]
+                }
+            ],
+            "7.76": [
+                "Pajak dan Retribusi",
+                "tahunan",
+                {
+                    "jenis": [
+                        "Jenis Pajak",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "target": [
+                        "Target",
+                        "decimal",
+                        false,
+                        "Rp"
+                    ],
+                    "realisasi": [
+                        "Realisasi",
+                        "decimal",
+                        false,
+                        "Rp"
+                    ]
+                }
+            ]
+        }
+    ],
+    "INSPEKTORAT": [
+        "2.18",
+        {
+            "7.77": [
+                "Realisasi Kegiatan Inspektorat",
+                "tahunan",
+                {
+                    "kegiatan": [
+                        "Kegiatan",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "target": [
+                        "Target",
+                        "decimal",
+                        false,
+                        "Nilai"
+                    ],
+                    "realisasi": [
+                        "Realisasi",
+                        "decimal",
+                        false,
+                        "Nilai"
+                    ]
+                }
+            ]
+        }
+    ],
+    "BAPPELITBANG": [
+        "2.14",
+        {
+            "7.78": [
+                "Capaian Kinerja Bapelitbang",
+                "tahunan",
+                {
+                    "program": [
+                        "Program",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "indikator": [
+                        "Indikator",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "target": [
+                        "Target",
+                        "decimal",
+                        false,
+                        "Nilai"
+                    ],
+                    "realisasi": [
+                        "Realisasi",
+                        "decimal",
+                        false,
+                        "Nilai"
+                    ]
+                }
+            ]
+        }
+    ],
+    "KESBANGPOL": [
+        "2.18",
+        {
+            "7.79": [
+                "Capaian Kinerja Kesbangpol",
+                "tahunan",
+                {
+                    "kegiatan": [
+                        "Kegiatan",
+                        "string",
+                        true,
+                        null
+                    ],
+                    "target": [
+                        "Target",
+                        "decimal",
+                        false,
+                        "Nilai"
+                    ],
+                    "realisasi": [
+                        "Realisasi",
+                        "decimal",
+                        false,
+                        "Nilai"
+                    ]
+                }
+            ]
+        }
+    ]
+}

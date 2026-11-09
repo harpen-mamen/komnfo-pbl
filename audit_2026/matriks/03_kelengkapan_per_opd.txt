@@ -1,0 +1,40 @@
+=== MATRIKS KELENGKAPAN FORMAT INPUT PER OPD ===
+BKPSDM       | fields=22   | values=0   | period: master, tahunan, event
+BKPSDMD      | fields=12   | values=0   | period: tahunan
+KESBANGPOL   | fields=13   | values=0   | period: tahunan, master, event
+BPBD         | fields=6    | values=0   | period: master, tahunan
+BAPENDA      | fields=0    | values=0   | period: 
+BPKPD        | fields=30   | values=2   | period: tahunan, master, bulanan
+BATAS        | fields=20   | values=0   | period: master, event
+BAPPEDA      | fields=0    | values=0   | period: 
+BAPPELITBANG | fields=16   | values=0   | period: tahunan, bulanan
+DUKCAPIL     | fields=33   | values=2   | period: tahunan, bulanan
+DINKES       | fields=74   | values=4   | period: bulanan, tahunan, real_time, master, harian
+KETPANGAN    | fields=21   | values=0   | period: tahunan, harian, bulanan
+DISKOMINFO   | fields=22   | values=6   | period: tahunan, master
+KOPERASI     | fields=19   | values=0   | period: tahunan, master
+DLH          | fields=23   | values=0   | period: tahunan, triwulanan, master, harian
+DISTPAR      | fields=0    | values=0   | period: 
+PARIWISATA   | fields=23   | values=0   | period: bulanan, tahunan, master
+PUPR         | fields=0    | values=0   | period: 
+DPUPR        | fields=39   | values=2   | period: tahunan, master, event
+DPMD         | fields=22   | values=0   | period: tahunan, master
+DPPKB        | fields=18   | values=0   | period: tahunan, bulanan
+DP3A         | fields=18   | values=0   | period: tahunan, master, event
+DISPORA      | fields=19   | values=0   | period: tahunan, master, event
+DPMPTSP      | fields=17   | values=3   | period: tahunan, triwulanan, bulanan
+dispendik    | fields=0    | values=0   | period: 
+DISDIK       | fields=84   | values=2   | period: tahunan, master, semesteran
+PERIKANAN    | fields=41   | values=0   | period: tahunan, bulanan, master
+DISPERINDAG  | fields=34   | values=0   | period: tahunan, bulanan, master
+DISTAMAN     | fields=10   | values=0   | period: tahunan, master
+PERPUS       | fields=13   | values=0   | period: tahunan, master, bulanan
+DISTAN       | fields=32   | values=0   | period: tahunan, master, bulanan
+DISHUB       | fields=45   | values=3   | period: tahunan, master, event, harian
+PERKIM       | fields=17   | values=0   | period: tahunan, master
+DINSOS       | fields=21   | values=0   | period: tahunan, master
+DISNAKER     | fields=22   | values=0   | period: tahunan, semesteran, master, event
+INSPEKTORAT  | fields=15   | values=0   | period: tahunan, event
+SATPOLPP     | fields=22   | values=0   | period: tahunan, event, master
+SETDA        | fields=25   | values=0   | period: master, tahunan, event
+SETWAN       | fields=18   | values=0   | period: master, tahunan, event

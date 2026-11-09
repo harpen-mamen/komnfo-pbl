@@ -1,16 +1,14 @@
-# SIPDT Mobile
+﻿# SIPDT Mobile
 
-Aplikasi mobile offline-first khusus `Admin Desa` untuk pendataan lapangan Kabupaten Kepulauan Sangihe.
+Aplikasi offline-first untuk pendataan titik lapangan Kabupaten Kepulauan Sangihe.
 
-## Scope aplikasi
+## Cakupan
 
-- Rumah dan koordinat GPS.
-- Kartu Keluarga yang terhubung ke Rumah.
-- Penduduk yang terhubung ke Kartu Keluarga.
-- Draft lokal yang dikirim sekaligus ketika jaringan tersedia.
-- Peta Rumah dari data desa yang sudah tersimpan di server.
-
-Data Kesehatan dan Pendidikan tidak berada di aplikasi ini. Keduanya tetap dikelola oleh Admin/Operator OPD melalui dashboard web.
+- Input titik Rumah dan Infrastruktur beserta koordinat GPS.
+- Peta menampilkan titik lokal/offline dan semua titik lapangan server, termasuk yang menunggu verifikasi; tersedia layer peta jalan dan citra satelit.
+- Pilih keluarga dari data OPD yang sudah terbit untuk desa petugas. Mobile menyimpan referensi ID keluarga, bukan membuat atau mengubah data KK/Penduduk.
+- Draft tersimpan lokal saat offline. Server memvalidasi desa pada cakupan akun.
+- Submission titik masuk ke alur verifikasi lapangan Kecamatan.
 
 ## Menjalankan
 
@@ -28,18 +26,21 @@ flutter pub get
 flutter run
 ```
 
-Android emulator menggunakan `http://10.0.2.2:8000/api/v1`. Untuk perangkat fisik:
+Android emulator memakai `http://10.0.2.2:8000/api/v1` secara default. Untuk perangkat fisik:
 
 ```powershell
 flutter run --dart-define=SIPDT_API_BASE_URL=http://192.168.1.10:8000/api/v1
 ```
 
-Ganti alamat IP sesuai komputer server. Akun harus memiliki role `admin_desa` dan `desa_id`.
+Ganti IP sesuai komputer server. HP dan komputer harus pada jaringan yang sama dan firewall perlu mengizinkan TCP port 8000. Akun `admin_lapangan` atau `admin_desa` harus terikat ke desa, atau ke kecamatan untuk memilih desa dalam wilayah tugasnya; perangkat harus diaktivasi lewat panel web. Server memvalidasi desa pada setiap lookup dan kiriman.
+
+## Sumber keluarga OPD
+
+OPD DUKCAPIL mengelola dataset `DATA_KELUARGA_DESA` (cakupan `desa`). Isi `nomor_kk`, `nama_kepala_keluarga`, dan opsional `jumlah_anggota` melalui Nilai Data OPD, lalu kirim, verifikasi, dan terbitkan. Lookup mobile hanya menampilkan keluarga terbit yang wilayahnya sama dengan desa rumah. Kiriman mobile menyimpan referensi ID dataset untuk menautkan titik; data KK dan Penduduk tidak disalin ke submission dan tetap dikelola OPD.
 
 ## Alur kerja
 
-1. Admin Desa login.
-2. Bootstrap mengambil data Rumah, KK, Penduduk, Desa, dan Dusun milik desa tersebut.
-3. Admin Desa membuat Rumah dan mengambil titik GPS, lalu membuat KK dan Penduduk melalui relasi yang tersedia.
-4. Semua input masuk ke tab `Pengiriman Draft` dengan status menunggu.
-5. Saat jaringan tersedia, tekan tombol kirim. Server memproses Rumah → KK → Penduduk secara berurutan ke tabel domain web.
+1. Petugas masuk dari perangkat yang sudah diaktivasi.
+2. Petugas mencatat titik Rumah atau Infrastruktur dan mengambil GPS.
+3. Untuk Rumah, petugas dapat memilih keluarga terbit dari OPD untuk desanya.
+4. Draft dikirim sebagai submission lapangan untuk ditinjau Kecamatan.

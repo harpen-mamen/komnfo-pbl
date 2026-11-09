@@ -3,14 +3,12 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Penduduk;
-use App\Models\Rumah;
 use App\Support\PanelAccess;
 use Filament\Widgets\ChartWidget;
-use Illuminate\Support\Facades\DB;
 
 class ReligionAgeGroupWidget extends ChartWidget
 {
-    protected static ?string $heading = 'Agama per Kelompok Usia';
+    protected ?string $heading = 'Agama per Kelompok Usia';
     protected static ?int $sort = 7;
 
     public static function canView(): bool
@@ -52,8 +50,10 @@ class ReligionAgeGroupWidget extends ChartWidget
                     ->visibleToCurrentUser()
                     ->inApprovedBatch()
                     ->where('agama', $religion)
-                    ->whereRaw("YEAR(FROM_DAYS(DATEDIFF(NOW(), tanggal_lahir))) BETWEEN ? AND ?", 
-                        [$range['min'], $range['max']])
+                    ->whereRaw(
+                        "YEAR(FROM_DAYS(DATEDIFF(NOW(), tanggal_lahir))) BETWEEN ? AND ?",
+                        [$range['min'], $range['max']]
+                    )
                     ->count();
                 $data[] = $count;
             }

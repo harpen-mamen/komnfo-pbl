@@ -1,4 +1,4 @@
-<x-filament::page>
+<x-filament-panels::page>
     <div class="space-y-6">
         <!-- Upload Form -->
         <div class="card-kominfo">
@@ -10,7 +10,7 @@
                 {{ $this->form }}
 
                 <div class="flex flex-wrap items-center gap-3 pt-4">
-                    <x-filament::button type="submit" icon="heroicon-o-upload" class="btn-kominfo-primary">
+                    <x-filament::button type="submit" icon="heroicon-o-arrow-up-tray" class="btn-kominfo-primary">
                         Import Data Penduduk
                     </x-filament::button>
 
@@ -64,4 +64,4 @@
             </div>
         </div>
     </div>
-</x-filament::page>
+</x-filament-panels::page>

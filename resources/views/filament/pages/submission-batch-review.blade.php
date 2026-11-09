@@ -1,4 +1,4 @@
-<x-filament::page>
+<x-filament-panels::page>
     <div class="space-y-6">
         <div class="grid gap-4 md:grid-cols-3">
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -10,9 +10,13 @@
             <div class="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
                 <div class="text-sm text-slate-500">Status</div>
                 <div class="mt-2 text-lg font-semibold text-slate-900">{{ \App\Models\SubmissionBatch::statusLabel($this->record->status) }}</div>
-                <div class="mt-4 text-sm text-slate-500">Periode</div>
+                <div class="mt-4 text-sm text-slate-500">
+                    {{ $this->record->module === \App\Models\SubmissionBatch::MODULE_LAPANGAN ? 'Sumber kiriman' : 'Periode' }}
+                </div>
                 <div class="mt-1 text-base font-medium text-slate-800">
-                    @if ($this->record->module === \App\Models\SubmissionBatch::MODULE_KESEHATAN)
+                    @if ($this->record->module === \App\Models\SubmissionBatch::MODULE_LAPANGAN)
+                        {{ $this->record->isFromMobile() ? 'Aplikasi Mobile · Titik koordinat' : 'Web · Titik lapangan' }}
+                    @elseif ($this->record->module === \App\Models\SubmissionBatch::MODULE_KESEHATAN)
                         Bulan {{ $this->record->periode_bulan ?? '-' }} / {{ $this->record->periode_tahun ?? '-' }}
                     @elseif ($this->record->module === \App\Models\SubmissionBatch::MODULE_PENDIDIKAN)
                         Semester {{ ucfirst($this->record->semester ?? '-') }} / {{ $this->record->periode_tahun ?? '-' }}
@@ -46,7 +50,11 @@
             <div class="flex flex-wrap items-center justify-between gap-3">
                 <div>
                     <h2 class="text-base font-semibold text-slate-900">Isi Batch</h2>
-                    <p class="mt-1 text-sm text-slate-500">Kominfo melihat seluruh data di dalam batch ini berdasarkan modul.</p>
+                    <p class="mt-1 text-sm text-slate-500">
+                        {{ $this->record->isFromMobile()
+                            ? 'Batch ini berisi titik koordinat hasil survei mobile dan referensi keluarga OPD yang dipilih untuk desa terkait.'
+                            : 'Kominfo melihat seluruh data di dalam batch ini berdasarkan modul.' }}
+                    </p>
                 </div>
                 <div class="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-slate-600">
                     {{ count($this->getBatchItems()) }} item
@@ -217,4 +225,4 @@
             </div>
         </section>
     </div>
-</x-filament::page>
+</x-filament-panels::page>

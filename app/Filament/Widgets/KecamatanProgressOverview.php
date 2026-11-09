@@ -2,14 +2,13 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Desa;
-use App\Models\Keluarga;
-use App\Models\Penduduk;
-use App\Models\Rumah;
+use Filament\Widgets\StatsOverviewWidget\Stat;
+use App\Models\Wilayah;
+use App\Models\MobileFieldPoint;
+use App\Models\SubmissionBatch;
 use App\Support\PanelAccess;
 use Carbon\Carbon;
 use Filament\Widgets\StatsOverviewWidget;
-use Filament\Widgets\StatsOverviewWidget\Card;
 
 class KecamatanProgressOverview extends StatsOverviewWidget
 {
@@ -22,13 +21,11 @@ class KecamatanProgressOverview extends StatsOverviewWidget
     {
         $today = Carbon::today();
 
+        $kecamatanId = PanelAccess::user()?->kecamatan_id ?: PanelAccess::user()?->desa?->parent_id;
         return [
-            Card::make('Penduduk Kecamatan', Penduduk::query()->visibleToCurrentUser()->inApprovedBatch()->count())->icon('heroicon-o-identification')->color('primary'),
-            Card::make('KK Kecamatan', Keluarga::query()->visibleToCurrentUser()->inApprovedBatch()->count())->icon('heroicon-o-user-group')->color('success'),
-            Card::make('Rumah Kecamatan', Rumah::query()->visibleToCurrentUser()->inApprovedBatch()->count())->icon('heroicon-o-home')->color('warning'),
-            Card::make('Data Hari Ini', Penduduk::query()->visibleToCurrentUser()->whereDate('created_at', $today)->count())->icon('heroicon-o-calendar')->color('gray'),
-            Card::make('Import Hari Ini', \App\Models\ImportPendudukLog::query()->visibleToCurrentUser()->whereDate('created_at', $today)->count())->icon('heroicon-o-upload')->color('gray'),
-            Card::make('Desa Aktif', Desa::query()->where('kecamatan_id', PanelAccess::user()?->kecamatan_id)->count())->icon('heroicon-o-map')->color('primary'),
+            Stat::make('Titik Mobile Hari Ini', MobileFieldPoint::query()->whereDate('created_at', $today)->count())->icon('heroicon-o-map-pin')->color('primary'),
+            Stat::make('Kiriman Hari Ini', SubmissionBatch::query()->where('kecamatan_id', $kecamatanId)->whereDate('created_at', $today)->where('module', SubmissionBatch::MODULE_LAPANGAN)->count())->icon('heroicon-o-arrow-up-tray')->color('success'),
+            Stat::make('Desa Aktif', Wilayah::query()->where('parent_id', $kecamatanId)->whereIn('tipe', [Wilayah::TIPE_DESA, Wilayah::TIPE_KAMPUNG])->where('aktif', true)->count())->icon('heroicon-o-map')->color('primary'),
         ];
     }
 }
